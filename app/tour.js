@@ -46,7 +46,7 @@ window.CS61A_TOUR = (function () {
   // In order: when several are on screen at once, they are shown one after another.
   const STEPS = [
     { id: 'modes', find: one('.home .mode-switch'), title: 'Choose a mode',
-      html: '<p><b>Practice Mode</b> lets you check answers and see solutions as you go. <b>Exam Mode</b> is a timed exam with no feedback until you submit: a full past midterm, or questions you pick by topic (including <b>Gleam</b>).</p><p>In Practice Mode, choose a <b>Language</b> first (Python, Gleam, or All). Then set it up below, and start.</p>' },
+      html: '<p><b>Practice Mode</b> lets you check answers and see solutions as you go. <b>Exam Mode</b> is a timed exam with no feedback until you submit: a full past midterm or final, or questions you pick by topic (including <b>Gleam</b> and <b>SQL</b>).</p><p>In Practice Mode, choose a <b>Language</b> first (Python, Gleam, SQL, or All). Then set it up below, and start.</p>' },
     directions('practice'),
     directions('exam'),
     // The first scope note on screen (data/in_scope.js), in the left pane or beside a part.

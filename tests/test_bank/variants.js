@@ -453,4 +453,180 @@ module.exports = {
       { 'A+': '(no + s for s in f(n, k) if not s or s[0] != no)' },
     ],
   },
+  // ───────────── Finals ─────────────
+  'fa25f-3a': {
+    wrong: [
+      { b: 'number and x in' },
+      { b: 'x in' },
+      { b: 'not number or x in' },
+      { c: 'equals == 1' },
+      { c: 'not number' },
+      { c: 'number and equals == 1' },
+      { c: 'not number and equals >= 1' },
+      { c: 'True' },
+    ],
+  },
+  'fa25f-3b': {
+    wrong: [
+      { e: 'x = next(eq)' },
+      { e: 'next(ans)' },
+      { e: 'x = ans[0]' },
+      { e: 'x = 0' },
+      { g: "{'+': -1, '-': 1}" },
+      { g: "{'+': 1, '-': 1}" },
+    ],
+  },
+  'fa25f-3c': {
+    wrong: [
+      { h: 'True' },
+      { h: 'False' },
+      { h: 'evaluate(eq, [0])' },
+      { j: 'feasible(eq[:n] + [x] + eq[n:], allowed)' },
+      { j: 'feasible(eq[:n] + [x] + eq[n+1:])' },
+      { j: 'evaluate(eq[:n] + [x] + eq[n+1:], [])' },
+      { j: 'feasible(eq[n+1:], allowed)' },
+      { j: 'feasible(eq[:n] + eq[n+1:], allowed)' },
+    ],
+    alternatives: [
+      { j: 'feasible(eq[:n] + [x] + eq[n + 1:], allowed)' },
+      { j: 'feasible(list(eq[:n]) + [x] + list(eq[n+1:]), allowed)' },
+    ],
+  },
+  'fa25f-3d': {
+    wrong: [
+      { n: 'lambda a: evaluate(a, equation)' },
+      { n: 'evaluate(equation, a)' },
+      { n: 'lambda a: feasible(equation, a)' },
+      { n: 'lambda a: True' },
+      { n: 'lambda a: is_equation(equation)' },
+    ],
+    alternatives: [
+      { n: 'lambda answers: evaluate(equation, list(answers))' },
+    ],
+  },
+  'fa25f-4a': {
+    wrong: [
+      { b: 't.label' },
+      { b: 'sum([result[b] for b in t.branches])' },
+      { b: 't.label + len(t.branches)' },
+      { b: 't.label + sum([b.label for b in t.branches])' },
+    ],
+    alternatives: [
+      { b: 't.label + sum([sums(b)[b] for b in t.branches])' },
+      { b: 'sum([result[b] for b in t.branches] + [t.label])' },
+    ],
+  },
+  'fa25f-4b': {
+    wrong: [
+      { c: 'abs(n - d[node])' },
+      { c: 'n - (total - d[node])' },
+      { c: 'abs(total - n)' },
+      { c: 'd[node]' },
+    ],
+  },
+  'fa25f-6a': {
+    wrong: [
+      { b: 't = s.rest' },
+      { c: 's == t' },
+      { c: 's.first == t.rest.first' },
+      { c: 's.first != t.first' },
+      { d: 't = t.rest' },
+      { d: 's, t = t, t.rest' },
+      { d: 's = s.rest' },
+    ],
+    alternatives: [
+      { d: 's = s.rest\nt = t.rest' },
+    ],
+  },
+  'fa25f-7': {
+    wrong: [
+      { b: 'self.groups' },
+      { b: 'DiscGroup.groups[1:]' },
+      { e: 'self.group.students = [self]' },
+      { e: 'self.group.students + [self]' },
+      { f: 'len(DiscGroup.groups) + 1' },
+      { f: '0' },
+      { g: 'DiscGroup.groups = [self]' },
+      { g: 'self.groups = self.groups + [self]' },
+    ],
+  },
+  'fa25f-9b': {
+    wrong: [
+      { 'A+': 'one_cut(one_cut(t, n), n)' },
+      { 'A+': 'one_cut(t, n)' },
+      { 'A+': 'min([one_cut(one_cut(t, k), n) for k in range(g(t))], key=g)' },
+      { 'A+': 'min([one_cut(t, k) for k in range(g(t))], key=lambda t: abs(n - g(t)))' },
+    ],
+  },
+  'sp25f-3': {
+    wrong: [
+      { b: 's[u]' },
+      { b: 's[t]' },
+      { b: 's[i]' },
+      { b: 's[t - u + i]' },
+    ],
+    alternatives: [
+      { b: 's[u] if i == t else s[t]' },
+    ],
+  },
+  'sp25f-4a': {
+    wrong: [
+      { c: 'append(offspring(b, x))' },
+      { c: 'extend(b.branches)' },
+      { c: 'extend([b.label for b in b.branches])' },
+    ],
+    alternatives: [
+      { c: 'extend(sorted(offspring(b, x)))' },
+    ],
+  },
+  'sp25f-5': {
+    wrong: [
+      { b: 'self.where[p] = len(self.where) + 1' },
+      { b: 'self.where[p] = len(folks)' },
+      { b: 'self.where[p] = 0' },
+      { c: 'self.boat.where[self.name]' },
+      { c: 'len(self.boat.where)' },
+      { f: 'self.name' },
+      { f: 'Captain.claimed[boat]' },
+    ],
+  },
+  'sp25f-6a': {
+    wrong: [
+      { d: 'digits[:k]' },
+      { d: 'digits[k+1:]' },
+      { e: 'int(digits[k:])' },
+      { e: 'int(digits[0])' },
+      { e: 'digits[:k]' },
+    ],
+  },
+  'sp25f-6b': {
+    wrong: [],
+  },
+  'sp25f-6c': {
+    wrong: [
+      { i: 'int(digits.first)' },
+      { i: 'first + int(digits.first)' },
+      { i: 'first * 10 + digits.first' },
+      { j: 'digits.rest' },
+      { j: 'join_link(digits)' },
+    ],
+  },
+  'sp25f-9a': {
+    wrong: [
+      { 'A+': 's[x]' },
+      { 'A+': 's[{t: u}.get(x, x)]' },
+      { 'A+': '{t: s[u], u: s[t]}.get(x)' },
+    ],
+    alternatives: [
+      { 'A+': '{t: s[u], u: s[t]}.get(x, s[x])' },
+      { 'A+': 's[{u: t, t: u}.get(x, x)]' },
+    ],
+  },
+  'sp25f-9b': {
+    wrong: [
+      { 'A+': 'next(f(digits))' },
+      { 'A+': 'filter(lambda x: eval(x) == n, f(digits))' },
+      { 'A+': 'next(filter(lambda x: eval(x) != n, f(digits)))' },
+    ],
+  },
 };

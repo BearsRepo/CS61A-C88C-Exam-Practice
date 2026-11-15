@@ -15,9 +15,11 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 global.window = {};
 require(path.join(ROOT, 'app', 'data', 'questions.js'));
+require(path.join(ROOT, 'app', 'data', 'final_questions.js'));
 require(path.join(ROOT, 'app', 'data', 'test_suites.js'));
 const B = window.CS61A_BANK;
-const SUITES = window.CS61A_TEST_SUITES.suites;
+// ONLY=<regex> checks just the matching suites (e.g. ONLY=fa25f); PROGRESS=1 prints each version's time to stderr.
+const SUITES = window.CS61A_TEST_SUITES.suites.filter((t) => !process.env.ONLY || new RegExp(process.env.ONLY).test(t.id));
 const VARIANTS = require('./test_bank/variants.js');
 const HARNESS = fs.readFileSync(path.join(ROOT, 'app', 'runner.js'), 'utf8').match(/const HARNESS = String\.raw`([\s\S]*?)`;/)[1];
 
@@ -27,17 +29,27 @@ const HARNESS = fs.readFileSync(path.join(ROOT, 'app', 'runner.js'), 'utf8').mat
 // is_strip(s) behaves exactly like the official is_strip(s) and is_strip(t)), and fa23-4a, whose select-all blank (a) has
 // three correct options, so no single answer fills it. fa23-5aplus and sp23-2b can't run without part (a)'s definitions, and Run Code
 // runs the student's code alone before any tests.
+// Finals: What Would Python Display, environment diagrams and orders of growth as above; Fall 2025 Q5 (async, nothing to
+// run) and the Scheme questions (not Python); Spring 2025 Q4(b) (graft: tree mutation, out of scope this semester).
+// SQL questions are checked by verify_sql_bank.js.
 const EXCLUDED = ['fa25-1', 'sp25-1', 'fa25-2', 'sp25-2', 'sp25-2c', 'sp25-3b', 'fa24-1', 'fa24-2', 'sp24-1', 'sp24-2', 'sp24-4b',
-  'fa23-1', 'fa23-2', 'fa23-4a', 'fa23-5aplus', 'sp23-1', 'sp23-2b', 'sp23-3a-iii'];
+  'fa23-1', 'fa23-2', 'fa23-4a', 'fa23-5aplus', 'sp23-1', 'sp23-2b', 'sp23-3a-iii',
+  'fa25f-1', 'fa25f-2', 'fa25f-2c', 'fa25f-5', 'fa25f-6b', 'fa25f-6c', 'fa25f-9a', 'fa25f-8a', 'fa25f-8b',
+  'sp25f-1', 'sp25f-2', 'sp25f-2c', 'sp25f-4b', 'sp25f-7a', 'sp25f-7b', 'sp25f-8a', 'sp25f-8b'];
 
 let problems = 0;
 const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };
 
 const partsOf = (pid) => B.QUESTIONS.filter((q) => q.problem === pid && q.blank);
+// Select-all blanks of the finals with several correct options are checked one option at a time (each correct option
+// alone passes, each wrong one alone fails): several picked together are joined with " | " in the editor, which isn't
+// one piece of code. The suite's setupNote tells students to test one option at a time.
+const perOption = (q) => B.PROBLEMS[q.problem].exam.endsWith('f');
 const officialAnswer = (q) => {
   const k = B.ANSWER_KEY[q.id];
   if (q.type === 'single_choice') return { choice: typeof k.correct === 'number' ? k.correct : k.correct[0] };
-  if (q.type === 'multi_select') return { choices: [...k.correct].sort((a, b) => a - b) };
+  // A select-all blank with several correct options (a final's) is filled with one of them; see `perOption` below.
+  if (q.type === 'multi_select') return k.correct.length > 1 && perOption(q) ? { choice: k.correct[0] } : { choices: [...k.correct].sort((a, b) => a - b) };
   return { text: k.accepted[0] };
 };
 const textOf = (q, ans) => {
@@ -87,6 +99,8 @@ for (const t of SUITES) {
     if (q.type === 'single_choice') {
       const right = officialAnswer(q).choice;
       q.choices.forEach((c, i) => { if (i !== right) add(`(${q.blank}) wrong choice: ${c}`, { [q.blank]: c }, false); });
+    } else if (q.type === 'multi_select' && officialAnswer(q).choice !== undefined) {
+      q.choices.forEach((c, i) => { if (i !== k.correct[0]) add(`(${q.blank}) ${k.correct.includes(i) ? 'correct' : 'wrong'} option alone: ${c}`, { [q.blank]: c }, k.correct.includes(i)); });
     } else if (q.type === 'multi_select') {
       const right = officialAnswer(q).choices.join();
       for (let mask = 1; mask < 1 << q.choices.length; mask++) {
@@ -108,7 +122,7 @@ fs.writeFileSync(path.join(dir, 'harness.py'), HARNESS);
 fs.writeFileSync(path.join(dir, 'jobs.json'), JSON.stringify(jobs));
 let results;
 try {
-  results = JSON.parse(execFileSync('python3', ['-I', path.join(__dirname, 'verify_test_bank.py'), dir], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+  results = JSON.parse(execFileSync('python3', ['-I', path.join(__dirname, 'verify_test_bank.py'), dir], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', process.env.PROGRESS ? 'inherit' : 'pipe'], env: { ...process.env } }));
 } catch (e) {
   console.log(e.stdout || '', e.stderr || '');
   process.exit(1);
