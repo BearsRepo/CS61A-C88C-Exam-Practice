@@ -12,6 +12,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 global.window = {};
 require(path.join(__dirname, '..', '..', 'app', 'data', 'questions.js'));
+require(path.join(__dirname, '..', '..', 'app', 'data', 'final_questions.js'));
 require(path.join(__dirname, '..', '..', 'app', 'data', 'test_suites.js'));
 const B = window.CS61A_BANK;
 const SUITES = window.CS61A_TEST_SUITES.suites;

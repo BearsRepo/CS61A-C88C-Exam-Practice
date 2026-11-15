@@ -20,11 +20,16 @@
   const ALL_TOPICS = TOPICS.concat(GL.TOPICS);
   const topicById = (id) => ALL_TOPICS.find((t) => t.id === id);
   const isGleam = (pid) => Object.prototype.hasOwnProperty.call(GL.PROBLEMS, pid);
+  // SQL questions are in the Python bank's PROBLEMS (lang: 'sql'), so a full past final keeps its SQL question in
+  // place. Everywhere else they are their own language: the SQL section of Practice Mode and the SQL exam chip.
+  const isSql = (pid) => !!PMAP[pid] && PMAP[pid].lang === 'sql';
+  const PY_TOPICS = TOPICS.filter((t) => !t.lang);
+  const SQL_TOPICS = TOPICS.filter((t) => t.lang === 'sql');
   const LANGS = [
     { id: 'all', name: 'All' }, // every question of every available language
     { id: 'python', name: 'Python' },
     { id: 'gleam', name: 'Gleam' },
-    { id: 'sql', name: 'SQL', soon: true },
+    { id: 'sql', name: 'SQL', soon: !Object.keys(PROBLEMS).some(isSql) },
   ];
   // Scope for this semester (data/in_scope.js). Out-of-scope parts stay in the bank, so saved sessions and past
   // attempts that include them still load (QMAP and ORDER cover every part); they are only left out of new
@@ -37,8 +42,12 @@
     if ((p && p.status === 'out') || (own && own.status === 'out')) return false;
     return !(q.topics.length && q.topics.every((t) => OUT_TOPICS.has(t)));
   }
-  const QUESTIONS = ALL_QUESTIONS.filter(inScope);
+  const QUESTIONS = ALL_QUESTIONS.filter(inScope); // Python and SQL (Exam Mode, full past exams)
+  const PY_QUESTIONS = QUESTIONS.filter((q) => !isSql(q.problem));
+  const SQL_QUESTIONS = QUESTIONS.filter((q) => isSql(q.problem));
   const GL_QUESTIONS = GL.QUESTIONS.filter(inScope);
+  // SQL sources are the exams that have an SQL question.
+  const SQL_SOURCES = Object.keys(EXAMS).filter((id) => Object.keys(PROBLEMS).some((pid) => isSql(pid) && PROBLEMS[pid].exam === id));
   const EVERY_QUESTION = ALL_QUESTIONS.concat(GL.QUESTIONS); // id lookups and blank links, both languages
   // Exam Mode: the Python bank, plus the Gleam exam-prep worksheets in topic-based exams only (the "Gleam" chip).
   // Full past exams stay Python midterms. Gleam lecture examples are Practice Mode only.
@@ -46,9 +55,11 @@
   const EXAM_QUESTIONS = QUESTIONS.concat(GL_QUESTIONS.filter((q) => isExamPrep(q.problem)));
   const EXAM_PIDS = Object.keys(PROBLEMS).concat(Object.keys(GL.PROBLEMS).filter(isExamPrep));
   const GLEAM_CHIP = 'gleam'; // the topic-based exam filter chip for Gleam questions (kept with the topic chips)
+  const SQL_CHIP = 'sql';     // the same for SQL questions
   const scopeNote = (map, id) => { const e = scopeEntry(map, id); return e && e.status === 'note' && e.note ? e.note : ''; };
   const scopeNoteHTML = (text) => (text ? `<div class="scope-note" role="note"><b>Scope note:</b> ${inline(text)}</div>` : '');
-  const TOPICS_IN_SCOPE = TOPICS.map((t) => t.id).filter((id) => !OUT_TOPICS.has(id));
+  const TOPICS_IN_SCOPE = PY_TOPICS.map((t) => t.id).filter((id) => !OUT_TOPICS.has(id));
+  const SQL_TOPICS_IN_SCOPE = SQL_TOPICS.map((t) => t.id).filter((id) => !OUT_TOPICS.has(id));
   const GUIDES = window.CS61A_GUIDES || {}; // topic id -> study-guide concepts (data/study_guides.js)
   const TOUR = window.CS61A_TOUR || null;   // first-visit tour and one-time tips (tour.js)
   const QMAP = Object.fromEntries(EVERY_QUESTION.map((q) => [q.id, q]));
@@ -63,11 +74,21 @@
   // ───────────────────────────── State & persistence ─────────────────────────────
   // Practice Mode filters. lang picks the bank; topics/exams filter Python, glTopics/glSources filter Gleam (each
   // language keeps its own selection when you switch).
-  const DEFAULT_PREFS = { mode: 'practice', lang: 'python', topics: [], exams: Object.keys(EXAMS), glTopics: [], glSources: Object.keys(GL.SOURCES), difficulties: DIFFS.slice(), size: 5, timerOn: true, minutes: 25 };
-  // Neither exam PDF states a time limit, so exams start from this editable default (labeled as such in the UI).
-  const EXAM_DEFAULT_MINUTES = 120;
+  // sqlTopics/sqlSources filter SQL; SQL sources are exam ids too, but each language section filters its own questions.
+  const DEFAULT_PREFS = { mode: 'practice', lang: 'python', topics: [], exams: Object.keys(EXAMS), glTopics: [], glSources: Object.keys(GL.SOURCES), sqlTopics: [], sqlSources: SQL_SOURCES.slice(), difficulties: DIFFS.slice(), size: 5, timerOn: true, minutes: 25 };
+  // The exam PDFs don't state a time limit, so exams start from an editable default (labeled as such in the UI):
+  // 120 minutes for a midterm, 180 for a final.
+  const EXAM_KINDS = [
+    { id: 'mt2', name: 'Midterm 2', minutes: 120 },
+    { id: 'final', name: 'Final', minutes: 180 },
+  ];
+  const examKindOf = (examId) => (EXAMS[examId] && EXAMS[examId].kind === 'final' ? 'final' : 'mt2');
+  const examsOfKind = (kind) => Object.keys(EXAMS).filter((id) => examKindOf(id) === kind);
+  const kindMinutes = (kind) => EXAM_KINDS.find((k) => k.id === kind).minutes;
+  const EXAM_DEFAULT_MINUTES = kindMinutes('mt2');
   const EXAM_MAX_MINUTES = 300;
-  const DEFAULT_EXAM_PREFS = { kind: 'full', examId: Object.keys(EXAMS)[0], topics: [], picked: [], timerOn: true, minutes: EXAM_DEFAULT_MINUTES };
+  // examKind: which past exams the Full past exam step lists ('mt2' or 'final'); examId is one of them.
+  const DEFAULT_EXAM_PREFS = { kind: 'full', examKind: 'mt2', examId: examsOfKind('mt2')[0], topics: [], picked: [], timerOn: true, minutes: EXAM_DEFAULT_MINUTES };
   const STORE_VERSION = 5; // v1: prefs/session/notes/annotations; v2: + exam, attempts, examPrefs; v3: + reviews, frozen grades;
                            // v4: practice notes/annotations move onto the practice session (no longer shared across sessions)
                            // v5: bold around code renders as bold, so text highlights in that prose are moved to match
@@ -157,10 +178,10 @@
   const store = {
     version: STORE_VERSION, // same storage key as v1, so practice sessions saved before exams existed still load
     prefs: cleanPrefs(Object.assign({}, DEFAULT_PREFS, isObj(saved && saved.prefs) ? saved.prefs : {}), DEFAULT_PREFS,
-      { topics: TOPICS_IN_SCOPE, exams: Object.keys(EXAMS), glTopics: GL.TOPICS.map((t) => t.id), glSources: Object.keys(GL.SOURCES), difficulties: DIFFS }),
+      { topics: TOPICS_IN_SCOPE, exams: Object.keys(EXAMS), glTopics: GL.TOPICS.map((t) => t.id), glSources: Object.keys(GL.SOURCES), sqlTopics: SQL_TOPICS_IN_SCOPE, sqlSources: SQL_SOURCES, difficulties: DIFFS }),
     session: migrateSession(saved && saved.session), // the practice set; carries its own notes/annotations (see below)
     examPrefs: cleanPrefs(Object.assign({}, DEFAULT_EXAM_PREFS, isObj(saved && saved.examPrefs) ? saved.examPrefs : {}), DEFAULT_EXAM_PREFS,
-      { topics: TOPICS_IN_SCOPE.concat(GLEAM_CHIP), picked: EXAM_PIDS }),
+      { topics: TOPICS_IN_SCOPE.concat(GLEAM_CHIP, SQL_CHIP), picked: EXAM_PIDS }),
     exam: migrateAttempt(saved && saved.exam),         // the exam in progress (never submitted), or null
     attempts: (Array.isArray(saved && saved.attempts) ? saved.attempts : []).map(migrateAttempt).filter(Boolean), // submitted exams, oldest first
     reviews: (saved && saved.reviews && typeof saved.reviews === 'object') ? saved.reviews : {}, // attemptId -> review workspace
@@ -196,6 +217,12 @@
     store.prefs.glSources = Object.keys(GL.SOURCES).filter((id) => store.prefs.glSources.includes(id) || !knownSources.includes(id));
   }
   store.prefs.glSourcesKnown = Object.keys(GL.SOURCES);
+  // And for SQL sources (finals with an SQL question are added over time).
+  const knownSql = Array.isArray(saved && saved.prefs && saved.prefs.sqlSourcesKnown) ? saved.prefs.sqlSourcesKnown : null;
+  if (knownSql && knownSql.every((id) => !SQL_SOURCES.includes(id) || store.prefs.sqlSources.includes(id))) {
+    store.prefs.sqlSources = SQL_SOURCES.filter((id) => store.prefs.sqlSources.includes(id) || !knownSql.includes(id));
+  }
+  store.prefs.sqlSourcesKnown = SQL_SOURCES.slice();
   if (!LANGS.some((l) => l.id === store.prefs.lang && !l.soon)) store.prefs.lang = 'python';
   // Before v5, bold around code (e.g. **Do not mutate `s`.**) showed its ** as text. Those characters are gone now, so
   // a highlight saved before v5 in such prose is moved to the same words: each offset in the old text maps to the
@@ -218,6 +245,9 @@
     }));
   }
   if (!EXAMS[store.examPrefs.examId]) store.examPrefs.examId = DEFAULT_EXAM_PREFS.examId;
+  // Saves from before finals have no examKind: it follows the saved exam (a midterm).
+  if (!EXAM_KINDS.some((k) => k.id === store.examPrefs.examKind)) store.examPrefs.examKind = examKindOf(store.examPrefs.examId);
+  if (examKindOf(store.examPrefs.examId) !== store.examPrefs.examKind) store.examPrefs.examId = examsOfKind(store.examPrefs.examKind)[0];
   // Set size is any whole number of question groups (up to how many match; see sizeMax). Older saves could hold
   // 'all' from the former dropdown, which now starts again from the default. The former Question Types filter is gone,
   // so a saved selection of types is dropped and never narrows a new set.
@@ -329,9 +359,11 @@
     const want = key.correct.slice().sort().join(',');
     return (a || []).slice().sort().join(',') === want;
   }
+  // SQL keywords and names are case-insensitive, so typed SQL answers are compared ignoring case.
   function matchesOfficial(q, a) {
     const key = ANSWER_KEY[q.id];
-    return !!(key && key.accepted && key.accepted.some((x) => norm(x) === norm(a)));
+    const n = isSql(q.problem) ? (x) => norm(x).toLowerCase() : norm;
+    return !!(key && key.accepted && key.accepted.some((x) => n(x) === n(a)));
   }
   // Answer elimination: a visual study aid kept per part in s.eliminated[qid] = [choice indices].
   // Never read by grading. Lives on the session, so a new session starts clean and resuming restores it.
@@ -406,6 +438,7 @@
   const editors = {}; // problemId -> { pid, wrap, cm, blanks, hl, current } — kept alive across re-renders
 
   function fileName(pid) {
+    if (isSql(pid)) return 'query.sql';
     if (isGleam(pid)) {
       const g = PMAP[pid].code.match(/^(?:pub\s+)?fn\s+(\w+)/m);
       return `${g ? g[1] : 'your_code'}.gleam`;
@@ -528,11 +561,12 @@
       wrap.appendChild(ta);
       return { pid, wrap, cm: null, blanks: [], hl: {}, current: null };
     }
-    // Gleam code uses the Gleam mode (gleam_mode.js) and 2-space indents, as Gleam's formatter does.
+    // Gleam code uses the Gleam mode (gleam_mode.js) and 2-space indents, as Gleam's formatter does. SQL uses
+    // CodeMirror's SQLite mode.
     const gleam = isGleam(pid);
     const unit = gleam ? 2 : 4;
     const cm = window.CodeMirror(wrap, {
-      value, mode: gleam ? 'gleam' : 'python', theme: 'monokai', lineNumbers: true, indentUnit: unit, tabSize: unit,
+      value, mode: gleam ? 'gleam' : isSql(pid) ? 'text/x-sqlite' : 'python', theme: 'monokai', lineNumbers: true, indentUnit: unit, tabSize: unit,
       indentWithTabs: false, matchBrackets: true, autoCloseBrackets: true, viewportMargin: Infinity,
       screenReaderLabel: 'Scratch code editor',
       extraKeys: {
@@ -2370,29 +2404,34 @@
 
   // ───────────────────────────── Bank filtering & sessions ─────────────────────────────
   // The Practice filters for the chosen language. Each language is a section with its own bank, topics (in this
-  // semester's scope), sources and selections; "All" uses both sections. Topic and source ids never repeat across
-  // languages (Gleam ones start with gl-), so the combined lists filter both banks at once, and no topic chosen in
-  // either section means every topic of both.
+  // semester's scope), sources and selections; "All" uses every section. Topic ids never repeat across languages
+  // (Gleam ones start with gl-, SQL ones with sql-), so no topic chosen in any section means every topic of all of
+  // them. Source ids can repeat (a final is a source of both Python and SQL), so each section checks its own sources.
   const LANG_SECTIONS = {
-    python: (p) => ({ id: 'python', name: 'Python', questions: QUESTIONS, topicList: TOPICS.filter((t) => !OUT_TOPICS.has(t.id)), topics: p.topics, topicsPref: 'topics',
-      sourceList: Object.values(EXAMS), sources: p.exams, sourcesPref: 'exams' }),
+    python: (p) => ({ id: 'python', name: 'Python', questions: PY_QUESTIONS, topicList: PY_TOPICS.filter((t) => !OUT_TOPICS.has(t.id)), topics: p.topics, topicsPref: 'topics',
+      sourceList: Object.values(EXAMS), sources: p.exams, sourcesPref: 'exams', byKind: true }),
     gleam: (p) => ({ id: 'gleam', name: 'Gleam', questions: GL_QUESTIONS, topicList: GL.TOPICS, topics: p.glTopics, topicsPref: 'glTopics',
       sourceList: Object.values(GL.SOURCES), sources: p.glSources, sourcesPref: 'glSources' }),
+    sql: (p) => ({ id: 'sql', name: 'SQL', questions: SQL_QUESTIONS, topicList: SQL_TOPICS.filter((t) => !OUT_TOPICS.has(t.id)), topics: p.sqlTopics, topicsPref: 'sqlTopics',
+      sourceList: SQL_SOURCES.map((id) => EXAMS[id]), sources: p.sqlSources, sourcesPref: 'sqlSources' }),
   };
+  const LANG_ORDER = ['python', 'gleam', 'sql'].filter((id) => !LANGS.find((l) => l.id === id).soon);
   function langView(prefs) {
     const all = prefs.lang === 'all';
-    const sections = (all ? ['python', 'gleam'] : [prefs.lang === 'gleam' ? 'gleam' : 'python']).map((id) => LANG_SECTIONS[id](prefs));
+    const sections = (all ? LANG_ORDER : [LANG_ORDER.includes(prefs.lang) ? prefs.lang : 'python']).map((id) => LANG_SECTIONS[id](prefs));
     const cat = (k) => sections.flatMap((s) => s[k]);
     const one = sections[0].id;
     return { lang: all ? 'all' : one, sections, questions: cat('questions'), topicList: cat('topicList'), topics: cat('topics'),
       sourceList: cat('sourceList'), sources: cat('sources'),
       sourcesLabel: all ? 'Exams & sources' : one === 'gleam' ? 'Sources' : 'Exams',
-      allSources: all ? 'All exams and sources' : one === 'gleam' ? 'All sources' : 'All midterms' };
+      allSources: all ? 'All exams and sources' : one === 'gleam' ? 'All sources' : 'All exams',
+      // q's own section's sources (the same exam can be selected for Python and not for SQL)
+      sourceOk: (q) => { const sec = sections.find((s) => s.questions.includes(q)); return !!sec && sec.sources.includes(PMAP[q.problem].exam); } };
   }
   function filtered(prefs, ignoreTopics) {
     const v = langView(prefs);
     return v.questions.filter((q) =>
-      v.sources.includes(PMAP[q.problem].exam) &&
+      v.sourceOk(q) &&
       prefs.difficulties.includes(q.difficulty) &&
       (ignoreTopics || v.topics.length === 0 || q.topics.some((t) => v.topics.includes(t))));
   }
@@ -2436,9 +2475,9 @@
     const n = setSize();
     const chosen = new Set(pids.slice().sort(() => Math.random() - 0.5).slice(0, n));
     const v = langView(p);
-    const ids = v.questions.filter((q) => chosen.has(q.problem) && v.sources.includes(PMAP[q.problem].exam))
+    const ids = v.questions.filter((q) => chosen.has(q.problem) && v.sourceOk(q))
       .sort((a, b) => ORDER[a.id] - ORDER[b.id]).map((q) => q.id);
-    const prefix = { gleam: 'Gleam · ', all: 'All languages · ' }[v.lang] || '';
+    const prefix = { gleam: 'Gleam · ', sql: 'SQL · ', all: 'All languages · ' }[v.lang] || '';
     newSession(ids, prefix + topicNames(v.topics));
   }
   function finishSession() {
@@ -2683,7 +2722,14 @@
         return optRow('checkbox', sec.topicsPref, t.id, t.name, sec.topics.includes(t.id), count ? String(count) : 'soon', !count);
       }).join('')}</div>`).join('')}
       <p class="hint">Numbers are questions (each may have several parts). Leave everything unchecked to include all topics.</p>`;
-    const examsBody = v.sections.map((sec) => `${heading(sec)}<div class="dd-list">${sec.sourceList.map((e) => optRow('checkbox', sec.sourcesPref, e.id, e.label, sec.sources.includes(e.id))).join('')}</div>`).join('');
+    // Python's exams are listed under Midterm 2 and Final, each with its own Select all / Clear.
+    const sourceRows = (sec, list) => `<div class="dd-list">${list.map((e) => optRow('checkbox', sec.sourcesPref, e.id, e.label, sec.sources.includes(e.id))).join('')}</div>`;
+    const examsBody = v.sections.map((sec) => heading(sec) + (!sec.byKind ? sourceRows(sec, sec.sourceList)
+      : EXAM_KINDS.map((k) => {
+        const list = sec.sourceList.filter((e) => examKindOf(e.id) === k.id);
+        return list.length ? `<div class="dd-sub"><span class="dd-sub-name">${esc(k.name)}</span>
+          <span class="dd-sub-tools"><button class="link" data-action="sources-kind" data-pref="${sec.sourcesPref}" data-kind="${k.id}" data-on="1" aria-label="Select all ${esc(k.name)} exams">Select all</button><button class="link" data-action="sources-kind" data-pref="${sec.sourcesPref}" data-kind="${k.id}" data-on="" aria-label="Clear ${esc(k.name)} exams">Clear</button></span></div>${sourceRows(sec, list)}` : '';
+      }).join(''))).join('');
     // Language: each one has its own question bank, topics and sources. SQL is listed but not available yet.
     const langRow = `<div class="lang-row" role="radiogroup" aria-label="Language">
         <span class="lang-label" aria-hidden="true">Language</span>
@@ -2759,9 +2805,11 @@
   function pickCandidates() {
     const p = store.examPrefs;
     const q = ui.examQuery.trim().toLowerCase();
-    // The Gleam chip matches every Gleam question (the exam-prep worksheets); other chips match Python topics.
+    // The Gleam chip matches every Gleam question (the exam-prep worksheets), the SQL chip every SQL question; other
+    // chips match Python topics.
     return EXAM_PIDS.filter((pid) => partsOf(pid).length &&
-      (!p.topics.length || groupTopics(pid).some((t) => p.topics.includes(t)) || (isGleam(pid) && p.topics.includes(GLEAM_CHIP))) &&
+      (!p.topics.length || groupTopics(pid).some((t) => p.topics.includes(t)) || (isGleam(pid) && p.topics.includes(GLEAM_CHIP))
+        || (isSql(pid) && p.topics.includes(SQL_CHIP))) &&
       (!q || groupLine(pid).toLowerCase().includes(q)));
   }
   function pickListHTML() {
@@ -2798,7 +2846,13 @@
       <span class="kind-txt"><b>${title}</b><small>${sub}</small></span>${extra || ''}</label>`;
     let config;
     if (p.kind === 'full') {
-      config = `<div class="kind-list" role="radiogroup" aria-label="Past exam">${Object.values(EXAMS).map((e) => {
+      // Midterm 2 or Final first, then that kind's past exams. Past exams come from semesters without Gleam.
+      config = `<div class="kind-note" role="note"><b>No Gleam questions in this mode.</b> Full past exams are from semesters before Gleam was taught. For Gleam practice, use Practice Mode or a Topic-based exam.</div>
+        <div class="kind-row exam-kind-row" role="radiogroup" aria-label="Midterm 2 or Final">${EXAM_KINDS.map((k) => {
+          const n = examsOfKind(k.id).length;
+          return opt('exam-type', 'examKind', k.id, p.examKind === k.id, esc(k.name), `${n} past exam${n === 1 ? '' : 's'}`);
+        }).join('')}</div>
+        <div class="kind-list" role="radiogroup" aria-label="Past exam">${examsOfKind(p.examKind).map((id) => EXAMS[id]).map((e) => {
         const gs = examGroups(e.id);
         const parts = gs.reduce((t, pid) => t + partsOf(pid).length, 0);
         const pts = gs.reduce((t, pid) => t + (groupPoints(pid) || 0), 0);
@@ -2806,8 +2860,9 @@
         return opt('exam-id', 'examId', e.id, p.examId === e.id, esc(e.label), `${gs.length} questions · ${parts} parts · ${fmtPts(pts)} points · original order`, badge);
       }).join('')}</div>`;
     } else {
-      const avail = TOPICS.filter((t) => Object.keys(PROBLEMS).some((pid) => groupTopics(pid).includes(t.id)));
+      const avail = PY_TOPICS.filter((t) => Object.keys(PROBLEMS).some((pid) => groupTopics(pid).includes(t.id)));
       if (EXAM_PIDS.some(isGleam)) avail.push({ id: GLEAM_CHIP, name: 'Gleam' }); // after the Python topics
+      if (EXAM_PIDS.some((pid) => isSql(pid) && partsOf(pid).length)) avail.push({ id: SQL_CHIP, name: 'SQL' });
       config = `<div class="chips" role="group" aria-label="Filter by topic">${avail.map((t) =>
         `<button class="chip" id="xt-${t.id}" data-action="xtopic" data-id="${t.id}" aria-pressed="${p.topics.includes(t.id)}">${esc(t.name)}</button>`).join('')}        ${p.topics.length ? '<button class="link" data-action="xtopics-clear">Clear filters</button>' : ''}</div>
         <input type="search" id="exam-search" class="pick-search" placeholder="Search by name, exam, or question number" value="${esc(ui.examQuery)}" aria-label="Search questions" autocomplete="off">
@@ -2822,11 +2877,11 @@
         <label><input type="radio" id="exam-timer-on" name="exam-timer" data-xpref="timerOn" value="on" ${p.timerOn ? 'checked' : ''}> Countdown</label>
         <label><input type="number" id="exam-min" min="1" max="${EXAM_MAX_MINUTES}" step="1" value="${esc(p.minutes)}" ${p.timerOn ? '' : 'disabled'} aria-label="Minutes (1 to ${EXAM_MAX_MINUTES})"> min</label>
       </div>
-      ${examMinutesOk(p) ? `<p class="hint">${EXAM_DEFAULT_MINUTES} minutes is this site's suggested default, <b>not</b> an official time limit (the exams' limits aren't recorded here). Use any whole number from 1 to ${EXAM_MAX_MINUTES}. The timer pauses only when you Save &amp; Leave, and the exam is submitted automatically at 0:00.</p>`
+      ${examMinutesOk(p) ? `<p class="hint">${p.kind === 'full' && p.examKind === 'final' ? `${kindMinutes('final')} minutes is this site's suggested default for a final` : `${EXAM_DEFAULT_MINUTES} minutes is this site's suggested default`}, <b>not</b> an official time limit (the exams' limits aren't recorded here). Use any whole number from 1 to ${EXAM_MAX_MINUTES}. The timer pauses only when you Save &amp; Leave, and the exam is submitted automatically at 0:00.</p>`
         : `<p class="err" role="alert">Enter a whole number from 1 to ${EXAM_MAX_MINUTES}.</p>`}`;
     return `<section class="setup-card exam-setup" aria-label="Exam setup">
       <div class="step"><h3><span class="step-n">1</span>Exam type</h3><div class="kind-row" role="radiogroup" aria-label="Exam type">
-        ${opt('exam-kind', 'kind', 'full', p.kind === 'full', 'Full past exam', 'Every question of one midterm, in its original order')}
+        ${opt('exam-kind', 'kind', 'full', p.kind === 'full', 'Full past exam', 'Every question of one midterm or final, in its original order')}
         ${opt('exam-kind', 'kind', 'custom', p.kind === 'custom', 'Topic-based exam', 'Pick specific questions, filtered by topic')}</div></div>
       <div class="step"><h3><span class="step-n">2</span>${p.kind === 'full' ? 'Choose an exam' : 'Choose questions'}</h3>${config}</div>
       <div class="step"><h3><span class="step-n">3</span>Timer</h3>${timer}</div>
@@ -2928,7 +2983,7 @@
           <div id="editor-host"></div>
           ${runSlotHTML(g.pid)}
         </div>
-        <p class="editor-hint">${review ? 'Your review answers (below) appear in the blanks: <span class="key-fill key-mc">selected choice</span> <span class="key-fill key-typed">typed answer</span>. Edit the code freely; your submitted version is kept. <kbd>Tab</kbd> indents, <kbd>⌘/</kbd> toggles a comment.</p>' : `<span id="fill-hint">${fillHintHTML(autoFillOn(cur()))}</span> Click a blank to jump to its part. You can also type notes or <code>${isGleam(g.pid) ? '//' : '#'}</code> comments anywhere in the code; nothing is run. <kbd>Tab</kbd> indents, <kbd>⌘/</kbd> toggles a comment.</p>`}
+        <p class="editor-hint">${review ? 'Your review answers (below) appear in the blanks: <span class="key-fill key-mc">selected choice</span> <span class="key-fill key-typed">typed answer</span>. Edit the code freely; your submitted version is kept. <kbd>Tab</kbd> indents, <kbd>⌘/</kbd> toggles a comment.</p>' : `<span id="fill-hint">${fillHintHTML(autoFillOn(cur()))}</span> Click a blank to jump to its part. You can also type notes or <code>${isGleam(g.pid) ? '//' : isSql(g.pid) ? '--' : '#'}</code> comments anywhere in the code; nothing is run. <kbd>Tab</kbd> indents, <kbd>⌘/</kbd> toggles a comment.</p>`}
         <div class="annot-text" data-annot="outro"></div>
         <svg class="annot-layer" aria-hidden="true"></svg>
       </article>
@@ -2941,10 +2996,12 @@
   // shows no feedback until submission (and real exams have no interpreter).
   // Gleam questions run with gleam_runner.js instead (same API and result shape), with their own tests from
   // data/gleam_questions.js.
+  // SQL questions run with sql_runner.js (SQLite in the browser), with tests from data/sql_tests.js.
   const RUNNER = window.CS61A_RUNNER || null;
   const GLEAM_RUNNER = window.CS61A_GLEAM_RUNNER || null;
-  const runnerFor = (pid) => (isGleam(pid) ? GLEAM_RUNNER : RUNNER);
-  const langOf = (pid) => (isGleam(pid) ? 'Gleam' : 'Python');
+  const SQL_RUNNER = window.CS61A_SQL_RUNNER || null;
+  const runnerFor = (pid) => (isGleam(pid) ? GLEAM_RUNNER : isSql(pid) ? SQL_RUNNER : RUNNER);
+  const langOf = (pid) => (isGleam(pid) ? 'Gleam' : isSql(pid) ? 'SQL' : 'Python');
   const runnerAllowed = (s, pid) => !!runnerFor(pid) && !!s && (!isExam(s) || isReview(s));
   const runLimitMs = (pid) => (isGleam(pid) && GL.RUN_LIMITS[pid]) || runnerFor(pid).config.RUN_TIMEOUT_MS;
   const runs = new Map();         // `${session key}:${pid}` -> { id, phase } while running, then the result
@@ -2972,6 +3029,11 @@
   // Gleam problems: their test cases in data/gleam_questions.js, checked by tests/verify_gleam_bank.js; each input
   // is Gleam code (usually one assert).
   function suiteFor(pid) {
+    // SQL problems: their cases in data/sql_tests.js, checked by tests/verify_sql_bank.js.
+    if (isSql(pid)) {
+      const t = window.CS61A_SQL_TESTS && window.CS61A_SQL_TESTS.suites && window.CS61A_SQL_TESTS.suites[pid];
+      return isObj(t) && Array.isArray(t.cases) && t.cases.length && t.cases.every((c) => isObj(c) && typeof c.input === 'string' && Array.isArray(c.expect)) ? t : null;
+    }
     if (isGleam(pid)) {
       const t = GL.TESTS[pid];
       return isObj(t) && Array.isArray(t.cases) && t.cases.length && t.cases.every((c) => isObj(c) && typeof c.input === 'string') ? t : null;
@@ -2987,8 +3049,8 @@
   function runSlotHTML(pid) {
     if (!runnerAllowed(cur(), pid)) return `<div class="run-slot" id="run-slot-${pid}" data-run-slot="${pid}" hidden></div>`;
     const suite = suiteFor(pid);
-    // Python Tutor steps through Python only, so Gleam questions don't offer it.
-    const tutor = isGleam(pid) ? '' : `<button class="btn btn-sm" id="tutor-btn" data-action="open-tutor" title="Step through this code in Python Tutor. Opens pythontutor.com in a new tab with the code from the editor.">Python Tutor ↗</button>
+    // Python Tutor steps through Python only, so Gleam and SQL questions don't offer it.
+    const tutor = isGleam(pid) || isSql(pid) ? '' : `<button class="btn btn-sm" id="tutor-btn" data-action="open-tutor" title="Step through this code in Python Tutor. Opens pythontutor.com in a new tab with the code from the editor.">Python Tutor ↗</button>
         <span class="tutor-msg" id="tutor-msg" role="status" aria-live="polite" hidden></span>`;
     return `<div class="run-slot" id="run-slot-${pid}" data-run-slot="${pid}" data-lang="${langOf(pid).toLowerCase()}">
       <div class="run-bar">
@@ -3024,8 +3086,8 @@
       return `<p class="run-msg">Stopped after ${Math.round(r.limitMs / 1000)} seconds: the code may have an infinite loop or very slow recursion. ${lang} was restarted, so you can run again.</p>`;
     }
     if (r.status === 'load-error') {
-      return lang === 'Gleam'
-        ? '<p class="run-msg">Couldn’t load the Gleam compiler in your browser. Reload the page and press Run Code to try again.</p>'
+      return lang === 'Gleam' || lang === 'SQL'
+        ? `<p class="run-msg">Couldn’t load ${lang === 'SQL' ? 'SQLite' : 'the Gleam compiler'} in your browser. Reload the page and press Run Code to try again.</p>`
         : '<p class="run-msg">Couldn’t load Python in your browser. Check your internet connection (the runtime is downloaded the first time) and press Run Code to try again.</p>';
     }
     if (r.status === 'crash') return `<p class="run-msg">${lang} stopped unexpectedly (for example, recursion too deep for the browser). It has been restarted; you can run again.</p>`;
@@ -3042,7 +3104,8 @@
   };
   const NOT_RUN_WHY = (lang, gleam) => ({
     error: gleam ? 'Tests did not run because your code doesn’t compile (see Console Output above). Fix it and run again.'
-      : 'Tests did not run because your code raised an error (see Console Output above). Fix it and run again.',
+      : lang === 'SQL' ? 'Tests did not run because your SQL raised an error (see Console Output above). Fix it and run again.'
+        : 'Tests did not run because your code raised an error (see Console Output above). Fix it and run again.',
     timeout: 'Tests did not run because your code timed out.',
     crash: `Tests did not run because ${lang} stopped unexpectedly.`,
     'load-error': `Tests did not run because ${lang} could not be loaded.`,
@@ -3069,7 +3132,7 @@
       else if (!c.examples.length) body = `${block('Input', c.input)}${c.error ? block('Error', c.error, 'run-err') : ''}`;
       else {
         body = c.examples.map((x) => `<div class="case-ex${x.ok ? '' : ' case-ex-bad'}">
-          ${block('Input', x.source.replace(/\n$/, '').split('\n').map((l, j) => (j ? '... ' : '>>> ') + l).join('\n'))}
+          ${block('Input', lang === 'SQL' ? x.source.replace(/\n$/, '') : x.source.replace(/\n$/, '').split('\n').map((l, j) => (j ? '... ' : '>>> ') + l).join('\n'))}
           ${block('Expected', trim(x.want) || '(no output)')}
           ${block('Actual', trim(x.got) || (x.error ? '(raised an error)' : '(no output)'), x.ok ? '' : 'case-bad')}
           ${x.truncated ? '<p class="run-msg">Output was cut off.</p>' : ''}
@@ -3106,7 +3169,12 @@
     'load-error': 'Couldn’t load Gleam',
     crash: 'Gleam restarted',
   });
-  const runStatus = (pid) => (isGleam(pid) ? GLEAM_STATUS : RUN_STATUS);
+  const SQL_STATUS = Object.assign({}, RUN_STATUS, {
+    loading: 'Loading SQLite… (the first run takes a moment)',
+    'load-error': 'Couldn’t load SQLite',
+    crash: 'SQLite restarted',
+  });
+  const runStatus = (pid) => (isGleam(pid) ? GLEAM_STATUS : isSql(pid) ? SQL_STATUS : RUN_STATUS);
   // Refresh the run bar + console for the problem on screen, from the result stored for *this* session and problem.
   function renderRunPanel() {
     const slot = leftPid && document.getElementById(`run-slot-${leftPid}`);
@@ -3137,7 +3205,8 @@
     const suite = suiteFor(pid);
     const tests = suite && {
       setup: suite.setup || '',
-      cases: suite.cases.map((c) => ({ name: typeof c.name === 'string' ? c.name : '', origin: CASE_ORIGIN[c.origin] ? c.origin : null, input: c.input })),
+      cases: suite.cases.map((c) => Object.assign({ name: typeof c.name === 'string' ? c.name : '', origin: CASE_ORIGIN[c.origin] ? c.origin : null, input: c.input },
+        isSql(pid) ? { data: c.data, expect: c.expect, ordered: !!c.ordered } : {})),
     };
     const limitMs = runLimitMs(pid);
     const id = ++runSeq;
@@ -3148,6 +3217,7 @@
       tests,
       files: isGleam(pid) ? GL.FILES[pid] : undefined, // a Gleam problem's own JavaScript (@external) files
       timeoutMs: isGleam(pid) ? limitMs : undefined,
+      tables: isSql(pid) ? PMAP[pid].sqlSetup || '' : undefined, // SQL: the tables printed with the question
       onPhase: (phase, progress) => { const r = runs.get(key); if (r && r.id === id && r.phase) { r.phase = phase; r.progress = progress; renderRunPanel(); } },
     });
     runBusy = false;
@@ -3761,8 +3831,13 @@
       if (leftObserver) leftObserver.disconnect();
       leftPid = null;
       app.dataset.shell = '';
+      // An open menu that scrolls (a long Exams list) keeps its place while options are checked.
+      const panel = app.querySelector('.dd.open .dd-panel');
+      const menuScroll = panel ? { menu: ui.menu, top: panel.scrollTop } : null;
       app.innerHTML = ui.screen === 'results' ? renderResults() : ui.screen === 'exam-results' ? renderExamResults(attemptById(ui.attemptId))
         : ui.screen === 'landing' ? renderLanding() : renderHome();
+      const reopened = menuScroll && menuScroll.menu === ui.menu && app.querySelector('.dd.open .dd-panel');
+      if (reopened) reopened.scrollTop = menuScroll.top;
       document.title = ui.screen === 'exam-results' ? 'Exam results · CS 61A & C88C Exam Practice' : 'CS 61A & C88C Exam Practice';
     }
 
@@ -3841,6 +3916,12 @@
       case 'topics-all': langView(p).sections.forEach((sec) => { p[sec.topicsPref] = sec.topicList.filter((t) => sec.questions.some((x) => x.topics.includes(t.id))).map((t) => t.id); }); break;
       case 'topics-none': langView(p).sections.forEach((sec) => { p[sec.topicsPref] = []; }); break;
       case 'lang': p.lang = btn.dataset.v; ui.sizeDraft = null; break;
+      case 'sources-kind': { // Exams menu: select or clear every Midterm 2 / Final exam of one language
+        const ids = examsOfKind(btn.dataset.kind);
+        const pref = btn.dataset.pref;
+        p[pref] = btn.dataset.on ? Object.keys(EXAMS).filter((id) => p[pref].includes(id) || ids.includes(id)) : p[pref].filter((id) => !ids.includes(id));
+        break;
+      }
       case 'size-step': {
         const typed = ui.sizeDraft != null ? parseSize(ui.sizeDraft) : null;
         const max = sizeMax();
@@ -4063,7 +4144,13 @@
     const xpref = el.dataset && el.dataset.xpref;
     if (xpref) { // exam setup radios
       const xp = store.examPrefs;
-      if (xpref === 'timerOn') xp.timerOn = el.value === 'on'; else xp[xpref] = el.value;
+      if (xpref === 'timerOn') xp.timerOn = el.value === 'on';
+      else if (xpref === 'examKind') { // Midterm 2 / Final: pick that kind's first exam and its default time
+        const was = xp.examKind;
+        xp.examKind = el.value;
+        if (examKindOf(xp.examId) !== xp.examKind) xp.examId = examsOfKind(xp.examKind)[0];
+        if (xp.minutes === kindMinutes(was)) xp.minutes = kindMinutes(xp.examKind); // a time the student typed is kept
+      } else xp[xpref] = el.value;
       save(); render(); return;
     }
     if (el.dataset && el.dataset.pick) { // topic-based exam: add/remove a question group (keeps pick order)

@@ -11,6 +11,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 global.window = {};
 require(path.join(__dirname, '..', '..', 'app', 'data', 'questions.js'));
+require(path.join(__dirname, '..', '..', 'app', 'data', 'final_questions.js'));
 require(path.join(__dirname, '..', '..', 'app', 'data', 'in_scope.js'));
 const B = window.CS61A_BANK;
 const SC = window.CS61A_SCOPE;
@@ -20,7 +21,9 @@ const HIDDEN = new Set(B.QUESTIONS.filter(hidden).map((q) => q.id));
 const examIds = (e) => B.QUESTIONS.filter((q) => B.PROBLEMS[q.problem].exam === e && !HIDDEN.has(q.id)).map((q) => q.id);
 const ALL_EXAMS = Object.keys(B.EXAMS);
 
-ok(HIDDEN.size === 24, `24 parts are out of scope (${HIDDEN.size})`);
+ok(HIDDEN.size === 45, `45 parts are out of scope: 24 of the midterms, 21 of the finals (${HIDDEN.size})`);
+ok(['fa25f-2c', 'fa25f-5a', 'fa25f-6e', 'fa25f-9a', 'sp25f-2d', 'sp25f-4e', 'sp25f-7b-ii'].every((id) => HIDDEN.has(id)), 'finals: orders of growth, async, Scheme and tree mutation are hidden');
+ok(['fa25f-6a', 'fa25f-7c', 'fa25f-8c', 'sp25f-5c', 'sp25f-8b'].every((id) => !HIDDEN.has(id)), 'finals: the Python linked-list part, the OOP parts with a note and the SQL parts stay in scope');
 ok(['sp24-1a', 'sp24-1b', 'sp24-1d', 'sp24-4aplus', 'sp23-4e', 'fa22-4b-c', 'sp23-2f', 'fa25-1c'].every((id) => HIDDEN.has(id)), 'mutation, repr and orders-of-growth parts are hidden');
 ok(['sp24-1c', 'fa25-3a', 'sp25-3a', 'fa23-3a', 'fa22-1c', 'fa21-5b-a'].every((id) => !HIDDEN.has(id)), 'parts that only carry a note stay in scope');
 
@@ -53,7 +56,7 @@ ok(['sp24-1c', 'fa25-3a', 'sp25-3a', 'fa23-3a', 'fa22-1c', 'fa21-5b-a'].every((i
   await click('[data-action="menu"][data-id="topics"]');
   await click('[data-action="start"]'); await page.waitForSelector('#pane-right .part');
   let S = await st();
-  const inScopeCount = B.QUESTIONS.length - HIDDEN.size;
+  const inScopeCount = B.QUESTIONS.filter((q) => !HIDDEN.has(q.id) && B.PROBLEMS[q.problem].lang !== 'sql').length; // Python practice: no SQL
   ok(S.session.ids.length === inScopeCount && S.session.ids.every((id) => !HIDDEN.has(id)), `practice with every filter on: ${S.session.ids.length} parts, none out of scope (expected ${inScopeCount})`);
 
   await seed({ prefs: { ...prefs, topics: ['efficiency', 'trees'] } });

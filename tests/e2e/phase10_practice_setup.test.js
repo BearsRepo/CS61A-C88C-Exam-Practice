@@ -12,9 +12,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 global.window = {};
 require(path.join(__dirname, '..', '..', 'app', 'data', 'questions.js'));
+require(path.join(__dirname, '..', '..', 'app', 'data', 'final_questions.js'));
 const B = window.CS61A_BANK;
 const partsOf = (pid) => B.QUESTIONS.filter((q) => q.problem === pid).map((q) => q.id);
-const groupsMatching = (exams, diffs, topics) => [...new Set(B.QUESTIONS.filter((q) => exams.includes(B.PROBLEMS[q.problem].exam) && diffs.includes(q.difficulty)
+// Python practice (the default language) never includes SQL questions.
+const groupsMatching = (exams, diffs, topics) => [...new Set(B.QUESTIONS.filter((q) => B.PROBLEMS[q.problem].lang !== 'sql' && exams.includes(B.PROBLEMS[q.problem].exam) && diffs.includes(q.difficulty)
   && (!topics.length || q.topics.some((t) => topics.includes(t)))).map((q) => q.problem))];
 
 (async () => {
@@ -127,7 +129,7 @@ const groupsMatching = (exams, diffs, topics) => [...new Set(B.QUESTIONS.filter(
 
   // ── Exam Mode untouched ──
   await seed({ prefs: { mode: 'exam', exams: all, examsKnown: all }, examPrefs: { kind: 'full', examId: 'fa25', topics: [], picked: [], timerOn: false, minutes: 120 } });
-  ok(await page.$$eval('.kind-list .kind-opt', (l) => l.length) === all.length && !(await page.$('#set-size')), '15. Exam Mode: full exams listed, no practice set size');
+  ok(await page.$$eval('.kind-list .kind-opt', (l) => l.length) === all.filter((e) => B.EXAMS[e].kind === 'mt2').length && !(await page.$('#set-size')), '15. Exam Mode: full exams listed (the midterms, the default kind), no practice set size');
 
   // ── phone width ──
   await page.setViewport({ width: 390, height: 844 });

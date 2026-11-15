@@ -56,8 +56,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(await has('#exam-kind-full:checked'), 'full past exam selected by default');
   const fullRows = await page.$$eval('.kind-list .kind-opt', (ls) => ls.map((l) => l.textContent.replace(/\s+/g, ' ').trim()));
   const fullPts = { fa25: 50, sp25: 50, fa24: 45, sp24: 50, fa23: 45, sp23: 45, fa22: 44, fa21: 50 }; // the PDFs' part values (fa22 prints 45; its Q6(b) parts sum to 5 of the 6 printed)
-  ok(fullRows.length === 8 && Object.values(B.EXAMS).every((e, i) => fullRows[i].startsWith(e.label) && new RegExp(`${fullPts[e.id]} points`).test(fullRows[i]) && /Complete/.test(fullRows[i])),
-    `all eight exams listed with their PDF point totals + Complete tag`);
+  ok(fullRows.length === 8 && Object.values(B.EXAMS).filter((e) => e.kind === 'mt2').every((e, i) => fullRows[i].startsWith(e.label) && new RegExp(`${fullPts[e.id]} points`).test(fullRows[i]) && /Complete/.test(fullRows[i])),
+    `Midterm 2 (the default kind) lists all eight midterms with their PDF point totals + Complete tag`);
   await click('#exam-id-sp25');
   await click('#exam-timer-off');
   ok(await page.$eval('#exam-min', (i) => i.disabled), 'untimed disables minutes');
@@ -211,7 +211,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await click('#exam-kind-custom');
   ok(await has('#pick-list') && await page.$eval('[data-action="start-exam"]', (b) => b.disabled), 'topic-based: picker shown, Start disabled with nothing selected');
   const allRows = await page.$$eval('#pick-list .pick-name', (ns) => ns.map((n) => n.textContent));
-  ok(allRows.filter((r) => r.startsWith('What Would Python Display?')).length === 6 && allRows.some((r) => r === 'Exclusive — Fall 2025 MT2 — Q4 — Lists & Mutation, Linked Lists, Recursion' || r.startsWith('Exclusive — Fall 2025 MT2 — Q4 —')), '15. duplicate names disambiguated by exam; "Name — Exam — Q# — Topics" format');
+  const wwpd = Object.keys(B.PROBLEMS).filter((pid) => B.PROBLEMS[pid].title === 'What Would Python Display?' && parts(pid).length).length; // midterms and finals
+  ok(allRows.filter((r) => r.startsWith('What Would Python Display?')).length === wwpd && wwpd >= 8 && allRows.some((r) => r === 'Exclusive — Fall 2025 MT2 — Q4 — Lists & Mutation, Linked Lists, Recursion' || r.startsWith('Exclusive — Fall 2025 MT2 — Q4 —')), '15. duplicate names disambiguated by exam; "Name — Exam — Q# — Topics" format');
   await click('#xt-trees');
   const treeRows = await page.$$eval('#pick-list [data-pick]', (cs) => cs.map((c) => c.dataset.pick));
   const treeExpect = Object.keys(B.PROBLEMS).filter((pid) => parts(pid).some((q) => q.topics.includes('trees')));

@@ -154,7 +154,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const recTopicsOk = recs.every((pid) => parts(pid).some((q) => q.topics.some((t) => B.QUESTIONS.find((x) => x.id === 'fa25-1b').topics.includes(t))));
   ok(recTopicsOk && (await page.$$eval('.rec-topic', (ts) => ts.every((t) => t.querySelectorAll('.rec-row').length <= 3))), 'each recommendation shares a missed topic; at most 3 per topic');
   const recLabel = await page.$eval('.rec-row', (r) => r.textContent.replace(/\s+/g, ' ').trim());
-  ok(/Midterm 2 · Q/.test(recLabel), `recommendation shows exam/term + question: "${recLabel.slice(0, 70)}"`);
+  ok(/(Midterm 2|Final) · Q/.test(recLabel), `recommendation shows exam/term + question: "${recLabel.slice(0, 70)}"`);
   // Practice action
   const target = recs[0];
   await click(`[data-action="practice-group"][data-pid="${target}"]`);
@@ -196,7 +196,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const sm0 = await text('.score-main');
   ok(/No automatically graded questions/.test(sm0) && !/0 \/ 0|0%/.test(sm0), `zero auto-gradable: "${sm0.slice(0, 60)}"`);
   // a topic without a guide → fallback (simulate by checking guide coverage: every bank topic with questions has a guide)
-  const bankTopics = [...new Set(B.QUESTIONS.flatMap((q) => q.topics))];
+  // Python topics in scope. SQL topics have no guides yet (like Gleam's: no study guides written by Claude), and Async and
+  // Scheme are out of scope; those show the "No study guide for this topic yet" fallback.
+  const NO_GUIDE = new Set(['async', 'scheme', ...B.TOPICS.filter((t) => t.lang === 'sql').map((t) => t.id)]);
+  const bankTopics = [...new Set(B.QUESTIONS.flatMap((q) => q.topics))].filter((t) => !NO_GUIDE.has(t));
   ok(bankTopics.every((t) => G[t] && G[t].length >= 2 && G[t].length <= 4), `every topic in the bank has a 2–4 concept guide (${bankTopics.length} topics)`);
   ok(Object.values(G).flat().every((c) => c.title && c.body && c.body.length > 80 && c.pitfall), 'every concept has a title, a substantive explanation and a tip');
 
