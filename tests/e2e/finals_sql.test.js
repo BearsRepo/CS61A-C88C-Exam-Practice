@@ -134,12 +134,43 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   r = await run();
   ok(/^Passed [0-2]\/3 tests/.test(r.tests), `>= 20 fails the "exactly 20 students" test (${r.tests})`);
 
-  // sp25f-8b (select-all in SQL): one correct option passes; the note explains how to test options
+  // sp25f-8b (select-all in SQL): one checked option runs as usual; several are each run and tested on their own
   await click('[data-action="next"]'); await wait(200);
   await click('[data-action="next"]'); await page.waitForSelector('#c-sp25f-8b-6');
   await click('#c-sp25f-8b-6');
   r = await run();
-  ok(r.tests === 'Passed 2/2 tests!' && /select only that one/.test(r.note), `a correct option alone passes, with the select-all note (${r.tests})`);
+  ok(r.tests === 'Passed 2/2 tests!' && !(await has('.run-option')), `one checked option: a single run, and it passes (${r.tests})`);
+  const slot = () => page.evaluate(() => { const e = [...document.querySelectorAll('.cm-slot')].pop(); return { text: e.textContent, more: e.dataset.more || '' }; });
+  await click('#c-sp25f-8b-3');
+  await click('#c-sp25f-8b-7');
+  let sl = await slot();
+  ok(sl.text === 'a.size >= b.size * 0.5 AND b.size >= a.size * 0.5' && sl.more === '+2 more', `the blank shows the first checked option and "+2 more" ("${sl.text}" ${sl.more})`);
+  const options = async () => { await click('#run-btn'); await finished(); return page.$$eval('.run-option', (os) => os.map((o) => ({ letter: o.dataset.option, sum: (o.querySelector('.run-option-sum') || {}).textContent }))); };
+  let opts = await options();
+  ok(opts.map((o) => o.letter).join() === 'D,G,H' && opts.every((o) => o.sum === 'Passed 2/2 tests') && /Completed/.test(await text('#run-status')),
+    `all three correct options checked: each is run on its own and passes (${opts.map((o) => `${o.letter} ${o.sum}`).join('; ')})`);
+  await click('#part-sp25f-8b [data-action="check"]');
+  ok(/Correct/.test(await text('#part-sp25f-8b')), 'and Check Answer agrees: correct');
+  await click('#c-sp25f-8b-6'); await click('#c-sp25f-8b-7'); // now D (right) and A (wrong)
+  await click('#c-sp25f-8b-0');
+  opts = await options();
+  ok(opts.map((o) => o.letter).join() === 'A,D' && /^Passed [01]\/2/.test(opts[0].sum) && opts[1].sum === 'Passed 2/2 tests', `a right and a wrong option: the results show which one fails (${opts.map((o) => `${o.letter} ${o.sum}`).join('; ')})`);
+  sl = await slot();
+  ok(sl.text === 'a.size >= b.size * 0.5' && sl.more === '+1 more', 'the blank shows option A (the first checked) and "+1 more"');
+
+  // The same for a Python select-all blank (Spring 2025 Q3(a))
+  await page.evaluate((k) => {
+    const ids = ['sp25f-3a', 'sp25f-3b', 'sp25f-3c', 'sp25f-3d'];
+    const store = { version: 5, prefs: { mode: 'practice', timerOn: false }, session: { ids, index: 0, title: 'Select-all test', answers: { 'sp25f-3a': [0, 2, 4], 'sp25f-3b': 's[t + u - i]', 'sp25f-3c': 2, 'sp25f-3d': 3 }, timer: null, startedAt: Date.now(), finished: false } };
+    localStorage.setItem(k, JSON.stringify(store)); Storage.prototype.setItem = function () {};
+  }, KEY);
+  await page.goto(APP_URL);
+  await click('[data-action="enter"]');
+  await click('.resume [data-action="resume"]'); await page.waitForSelector('#run-btn');
+  await click('#run-btn'); await page.waitForFunction(() => { const s = document.querySelector('#run-status'); return s && /Completed|Error|Timed|Couldn/.test(s.textContent) && !document.querySelector('#run-btn').disabled; }, { timeout: 120000 });
+  opts = await page.$$eval('.run-option', (os) => os.map((o) => ({ letter: o.dataset.option, sum: (o.querySelector('.run-option-sum') || {}).textContent })));
+  ok(opts.map((o) => o.letter).join() === 'A,C,E' && /^Passed [0-1]\/2/.test(opts[0].sum) && opts[1].sum === 'Passed 2/2 tests' && opts[2].sum === 'Passed 2/2 tests',
+    `Python: options A (wrong), C and E (right) each run on their own (${opts.map((o) => `${o.letter} ${o.sum}`).join('; ')})`);
 
   // ── Exam Mode: full past exam ──
   await fresh();

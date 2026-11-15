@@ -4,8 +4,8 @@
 // For every SQL problem, the code is filled the way the app fills it (each blank replaced by an answer), then:
 //   - must PASS every case: the official answer and every accepted alternative;
 //   - must FAIL at least one case: every wrong multiple-choice option and every plausible wrong answer in WRONG below.
-// A select-all blank is checked one option at a time (each correct option alone passes, each wrong one alone fails);
-// several options together are joined with " | " in the editor, which isn't meaningful SQL.
+// A select-all blank is checked one option at a time (each correct option alone passes, each wrong one alone fails), the
+// way Run Code tests each checked option on its own.
 // It also checks that each question's printed tables load and that the official answer runs on them.
 'use strict';
 const fs = require('fs');

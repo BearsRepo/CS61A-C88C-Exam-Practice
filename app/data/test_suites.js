@@ -247,8 +247,6 @@ def to_link(t):
     except StopIteration:
         return Link.empty
 `;
-  // A select-all blank with several correct options: picking more than one joins them with " | " in the editor.
-  const SELECT_ONE_NOTE = 'A select-all blank is tested with the options you selected. With more than one selected, they are joined with “|”, which is not one piece of code; to test an option, select only that one.';
 
   const suites = [
     {
@@ -1396,7 +1394,7 @@ Tree(1)
     {
       id: 'sp25f-3-tests', problem: 'sp25f-3', verified: true,
       verification: verification({ passing: 7, failing: 13 }, FINALS_DATE),
-      provenance: EXAM, setup: '', setupNote: SELECT_ONE_NOTE, setupFrom: [],
+      provenance: EXAM, setup: '', setupFrom: [],
       cases: [
         exam(`>>> letters = ['p', 'q', 'r', 's']
 >>> swap(letters, 0, 2)
@@ -1436,7 +1434,7 @@ Tree(1)
     {
       id: 'sp25f-5-tests', problem: 'sp25f-5', verified: true,
       verification: verification({ passing: 3, failing: 20 }, FINALS_DATE),
-      provenance: EXAM, setup: '', setupNote: SELECT_ONE_NOTE, setupFrom: [],
+      provenance: EXAM, setup: '', setupFrom: [],
       cases: [
         exam(`>>> bella, finn, hank = Rower('Bella'), Captain('Finn'), Captain('Hank')
 >>> Boat(5).add([Rower('Ace'), bella, Rower('Charlie'), finn, Rower('Ginger')])

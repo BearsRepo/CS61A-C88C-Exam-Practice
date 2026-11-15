@@ -13,7 +13,8 @@
 //
 // Validation (tests/verify_sql_bank.js): every case passes with the official answer and every accepted alternative,
 // and the suite fails for every wrong multiple-choice option and listed plausible wrong answer. A select-all blank
-// is checked one option at a time: each correct option alone passes and each wrong one alone fails.
+// is checked one option at a time: each correct option alone passes and each wrong one alone fails. (Run Code does the
+// same when a student checks several options: each one is run and tested on its own.)
 window.CS61A_SQL_TESTS = (function () {
   const FA25_TABLES = `CREATE TABLE discussions(id, ta, room);
 INSERT INTO discussions VALUES (1, 'Rhys', 'VLSB203'), (2, 'Amr', 'Evans2'), (0, 'Janet', 'Soda310'), (12, 'Caleb', 'Cory241'), (3, 'Amr', 'Wheeler150');
@@ -67,7 +68,6 @@ INSERT INTO kinds VALUES ('yes', 'plant'), ('no', 'rock');` },
       ],
     },
     'sp25f-8b': {
-      setupNote: 'Blank (b) is select-all. Run Code tests the code with the options you selected; with more than one selected they are joined with “|”, which is not valid here. To test an option, select only that one.',
       cases: [
         { name: 'The tables printed in the exam', origin: 'exam', input: '', columns: ['name', 'COUNT(*)'],
           expect: [['bombardiro crocodillo', 1], ['brr brr patapim', 2], ['capuchino assassino', 2], ['chimpanzini bananini', 2], ['lirili larila', 1], ['tralalero tralala', 2]] },

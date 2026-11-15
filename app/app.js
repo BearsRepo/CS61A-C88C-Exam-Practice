@@ -359,10 +359,12 @@
     const want = key.correct.slice().sort().join(',');
     return (a || []).slice().sort().join(',') === want;
   }
-  // SQL keywords and names are case-insensitive, so typed SQL answers are compared ignoring case.
+  // SQL: SQLite treats keywords and names the same in any case, but quoted text ('yes' vs 'Yes') is a different value.
+  // So typed SQL answers are compared ignoring case outside quotes and exactly inside them, like Run Code would.
+  const sqlCase = (s) => s.split("'").map((part, i) => (i % 2 ? part : part.toLowerCase())).join("'");
   function matchesOfficial(q, a) {
     const key = ANSWER_KEY[q.id];
-    const n = isSql(q.problem) ? (x) => norm(x).toLowerCase() : norm;
+    const n = isSql(q.problem) ? (x) => sqlCase(norm(x)) : norm;
     return !!(key && key.accepted && key.accepted.some((x) => n(x) === n(a)));
   }
   // Answer elimination: a visual study aid kept per part in s.eliminated[qid] = [choice indices].
@@ -462,14 +464,15 @@
     const ids = s ? s.ids : [];
     return EVERY_QUESTION.find((q) => q.problem === pid && q.blank === name && ids.includes(q.id)) || null;
   }
-  // What a blank should display: { text, kind: 'mc' | 'typed' } or null when unanswered.
+  // What a blank should display: { text, kind: 'mc' | 'typed', more } or null when unanswered. A select-all blank shows its
+  // first checked option, and `more` counts the other checked ones (Run Code tests each checked option on its own).
   function blankFill(pid, name) {
     const q = partForBlank(pid, name);
     const s = cur();
     if (!q || !s) return null;
     const a = s.answers[q.id];
     if (q.type === 'single_choice') return Number.isInteger(a) ? { text: q.choices[a], kind: 'mc' } : null;
-    if (q.type === 'multi_select') return a && a.length ? { text: a.map((i) => q.choices[i]).join(' | '), kind: 'mc' } : null;
+    if (q.type === 'multi_select') return a && a.length ? { text: q.choices[a[0]], kind: 'mc', more: a.length - 1 } : null;
     return hasAnswer(s, q.id) ? { text: String(a).replace(/\s+$/, ''), kind: 'typed' } : null;
   }
   // Exam Settings → Auto-fill Code (an exam in progress only). On by default for every new exam; the choice is kept on
@@ -490,6 +493,8 @@
       const cls = `cm-slot ${f ? `filled filled-${f.kind}` : 'empty'}${ed.current === b.name ? ' current' : ''}`;
       if (b.el.textContent !== text) { b.el.textContent = text; b.mark.changed(); }
       if (b.el.className !== cls) b.el.className = cls;
+      const more = f && f.more ? `+${f.more} more` : '';
+      if ((b.el.dataset.more || '') !== more) { if (more) b.el.dataset.more = more; else delete b.el.dataset.more; b.mark.changed(); }
       b.el.title = f ? `Blank (${b.name}): your answer. Click to go to this part.` : `Blank (${b.name}). Click to go to this part.`;
     });
     updateTutorBtn(ed.pid);
@@ -3015,12 +3020,13 @@
   }
   // Exactly what the editor shows: its current text, with each blank replaced by the student's current answer
   // (indented like the on-screen widget), or left as ___(a)___ when unanswered, which then fails clearly.
-  function runnableCode(pid) {
+  // `over` (optional) maps a blank name to the text to use instead (one option of a select-all blank).
+  function runnableCode(pid, over) {
     const ed = editors[pid];
     if (!ed) return '';
     const text = ed.cm ? ed.cm.getValue() : ed.wrap.querySelector('textarea').value;
     return text.split('\n').map((line) => line.replace(TOKEN_RE, (m, name, col) => {
-      const f = blankFill(pid, name);
+      const f = over && over[name] !== undefined ? { text: over[name] } : blankFill(pid, name);
       return f ? f.text.split('\n').map((l, i) => (i ? ' '.repeat(col) + l : l)).join('\n') : `___(${name})___`;
     })).join('\n');
   }
@@ -3078,6 +3084,13 @@
   // Console Output for one run, then Test Results when the problem has a verified suite.
   // r.lang and r.limitMs are recorded by runCode (which language ran, and its time limit).
   function runOutputHTML(r) {
+    if (r.options) { // a select-all blank with several checked options: each one was run on its own
+      return `<p class="run-msg run-options-note">${r.options.length} options are checked in blank (${esc(r.blank)}), so each one was run and tested on its own.</p>`
+        + r.options.map((o) => `<section class="run-option" data-option="${o.letter}">
+          <div class="run-option-head"><b>Option ${o.letter}</b> <code>${esc(o.text)}</code>${o.result.tests ? ` <span class="run-option-sum ${o.result.tests.passed === o.result.tests.total ? 'tests-all' : 'tests-some'}">${o.result.tests.total - o.result.tests.notRun ? `Passed ${o.result.tests.passed}/${plural(o.result.tests.total, 'test')}` : 'Tests not run'}</span>` : ''}</div>
+          ${consoleHTML(Object.assign({ lang: r.lang, limitMs: r.limitMs }, o.result))}${o.result.tests ? testsHTML(o.result.tests, r) : ''}
+        </section>`).join('');
+    }
     return consoleHTML(r) + (r.tests ? testsHTML(r.tests, r) : '');
   }
   function consoleHTML(r) {
@@ -3201,7 +3214,12 @@
     if (!pid || !runnerAllowed(s, pid) || runBusy) return;
     const runner = runnerFor(pid);
     const key = runKey(s, pid);
-    const code = runnableCode(pid); // read now: later edits belong to the next run
+    // A select-all blank with several checked options: run (and test) the code once per option, each on its own, so
+    // every checked option gets its own verdict. (If two such blanks had several options, only the first is varied.)
+    const multi = EVERY_QUESTION.find((q) => q.problem === pid && q.type === 'multi_select' && q.blank && s.ids.includes(q.id)
+      && Array.isArray(s.answers[q.id]) && s.answers[q.id].length > 1);
+    const variants = multi ? s.answers[multi.id].map((i) => ({ letter: String.fromCharCode(65 + i), text: multi.choices[i], code: runnableCode(pid, { [multi.blank]: multi.choices[i] }) }))
+      : [{ code: runnableCode(pid) }]; // read now: later edits belong to the next run
     const suite = suiteFor(pid);
     const tests = suite && {
       setup: suite.setup || '',
@@ -3213,19 +3231,33 @@
     runBusy = true;
     runs.set(key, { id, phase: runner.ready ? 'running' : 'loading' });
     renderRunPanel();
-    const result = await runner.run(code, {
+    const runOne = (code) => runner.run(code, {
       tests,
       files: isGleam(pid) ? GL.FILES[pid] : undefined, // a Gleam problem's own JavaScript (@external) files
       timeoutMs: isGleam(pid) ? limitMs : undefined,
       tables: isSql(pid) ? PMAP[pid].sqlSetup || '' : undefined, // SQL: the tables printed with the question
       onPhase: (phase, progress) => { const r = runs.get(key); if (r && r.id === id && r.phase) { r.phase = phase; r.progress = progress; renderRunPanel(); } },
     });
+    const results = [];
+    for (const v of variants) {
+      const res = await runOne(v.code);
+      if (res.tests && suite && typeof suite.setupNote === 'string') res.tests.setupNote = suite.setupNote;
+      results.push(res);
+    }
     runBusy = false;
-    if (result.tests && suite && typeof suite.setupNote === 'string') result.tests.setupNote = suite.setupNote;
+    // One option: its result as is. Several: each option's result, and an overall status (the first problem, if any).
+    const result = !multi ? results[0] : {
+      status: (results.find((x) => x.status !== 'ok') || results[0]).status,
+      ms: results.reduce((t, x) => t + (x.ms || 0), 0),
+      blank: multi.blank,
+      options: variants.map((v, i) => ({ letter: v.letter, text: v.text, result: results[i] })),
+      tests: suite ? { passed: results.filter((x) => x.tests && x.tests.total && x.tests.passed === x.tests.total).length, total: results.length, notRun: 0, perOption: true } : null,
+    };
     if (runs.get(key) && runs.get(key).id === id) runs.set(key, Object.assign({ id, lang: langOf(pid), limitMs }, result));
     renderRunPanel(); // shows the result only if this question is still on screen; otherwise it waits for it
     const t = result.tests;
-    const testsSaid = !t ? '' : t.total - t.notRun ? ` Passed ${t.passed} of ${plural(t.total, 'test')}.` : ' Tests not run.';
+    const testsSaid = !t ? '' : t.perOption ? ` ${t.passed} of ${t.total} checked options passed every test.`
+      : t.total - t.notRun ? ` Passed ${t.passed} of ${plural(t.total, 'test')}.` : ' Tests not run.';
     if (runKey(cur(), leftPid) === key) announce(`Run finished: ${runStatus(pid)[result.status]}.${testsSaid}`);
   }
   // Build the left pane for a group. Runs only when the group changes, so annotations, the editor,

@@ -42,8 +42,7 @@ const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };
 
 const partsOf = (pid) => B.QUESTIONS.filter((q) => q.problem === pid && q.blank);
 // Select-all blanks of the finals with several correct options are checked one option at a time (each correct option
-// alone passes, each wrong one alone fails): several picked together are joined with " | " in the editor, which isn't
-// one piece of code. The suite's setupNote tells students to test one option at a time.
+// alone passes, each wrong one alone fails), the way Run Code tests each checked option of such a blank on its own.
 const perOption = (q) => B.PROBLEMS[q.problem].exam.endsWith('f');
 const officialAnswer = (q) => {
   const k = B.ANSWER_KEY[q.id];
