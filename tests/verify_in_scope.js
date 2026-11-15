@@ -10,7 +10,7 @@ const vm = require('vm');
 const DATA = path.join(__dirname, '..', 'app', 'data');
 const sandbox = { window: {} };
 vm.createContext(sandbox);
-for (const f of ['questions.js', 'in_scope.js']) vm.runInContext(fs.readFileSync(path.join(DATA, f), 'utf8'), sandbox, { filename: f });
+for (const f of ['questions.js', 'final_questions.js', 'in_scope.js']) vm.runInContext(fs.readFileSync(path.join(DATA, f), 'utf8'), sandbox, { filename: f });
 const { TOPICS, EXAMS, PROBLEMS, QUESTIONS } = sandbox.window.CS61A_BANK;
 const SCOPE = sandbox.window.CS61A_SCOPE;
 
@@ -31,8 +31,8 @@ const suggest = (id, pool) => {
   return near.length ? ` (did you mean ${near.slice(0, 3).map((x) => `'${x}'`).join(', ')}?)` : '';
 };
 let before = failures;
-Object.keys(problems).forEach((id) => { if (!PROBLEMS[id]) fail(`problems['${id}'] is not a problem in questions.js${suggest(id, Object.keys(PROBLEMS))}`); });
-Object.keys(questions).forEach((id) => { if (!QIDS.has(id)) fail(`questions['${id}'] is not a question part in questions.js${suggest(id, [...QIDS])}`); });
+Object.keys(problems).forEach((id) => { if (!PROBLEMS[id]) fail(`problems['${id}'] is not a problem in the bank${suggest(id, Object.keys(PROBLEMS))}`); });
+Object.keys(questions).forEach((id) => { if (!QIDS.has(id)) fail(`questions['${id}'] is not a question part in the bank${suggest(id, [...QIDS])}`); });
 [...outTopics].forEach((t) => { if (!TOPICS.some((x) => x.id === t)) fail(`outOfScopeTopics has unknown topic '${t}'`); });
 if (failures === before) pass(`all ${Object.keys(problems).length} problem ids, ${Object.keys(questions).length} part ids and ${outTopics.size} topic ids exist`);
 

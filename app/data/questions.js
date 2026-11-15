@@ -32,21 +32,29 @@ window.CS61A_BANK = (function () {
     { id: 'generators', name: 'Generators', blurb: 'yield, yield from' },
     { id: 'oop', name: 'OOP', blurb: 'Classes, inheritance, attributes' },
     { id: 'efficiency', name: 'Efficiency', blurb: 'Order of growth' },
+    // Final exams only (data/final_questions.js). Async and Scheme are out of scope (data/in_scope.js).
+    { id: 'async', name: 'Async', blurb: 'Coroutines, async / await' },
+    { id: 'scheme', name: 'Scheme', blurb: 'Scheme procedures, lists and macros' },
+    // SQL topics (lang: 'sql'): listed under the SQL language in Practice Mode and behind the SQL chip in Exam Mode,
+    // never with the Python topics.
+    { id: 'sql-joins', name: 'Joins', blurb: 'JOIN, self-joins, WHERE', lang: 'sql' },
+    { id: 'sql-agg', name: 'Aggregation', blurb: 'GROUP BY, HAVING, COUNT, ORDER BY', lang: 'sql' },
   ];
 
   // complete: every question of the original PDF is transcribed (checked against the PDFs' point values:
   // Fall 2025, Spring 2025, Spring 2024 and Fall 2021 total 50 points; Fall 2024, Fall 2023 and Spring 2023 total 45;
   // Fall 2022 prints 45 but its part values sum to 44, because Q6(b) prints 6 points over parts worth 1 + 1 + 2 + 1).
   // Set it to false for a partial transcription; Exam Mode then labels the full exam as incomplete.
+  // kind: 'mt2' or 'final' (finals are in data/final_questions.js); Exam Mode lists full past exams by kind.
   const EXAMS = {
-    fa25: { id: 'fa25', label: 'Fall 2025 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    sp25: { id: 'sp25', label: 'Spring 2025 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    fa24: { id: 'fa24', label: 'Fall 2024 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    sp24: { id: 'sp24', label: 'Spring 2024 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    fa23: { id: 'fa23', label: 'Fall 2023 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    sp23: { id: 'sp23', label: 'Spring 2023 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    fa22: { id: 'fa22', label: 'Fall 2022 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
-    fa21: { id: 'fa21', label: 'Fall 2021 Midterm 2', url: 'https://cs61a.org/resources/', complete: true },
+    fa25: { id: 'fa25', label: 'Fall 2025 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    sp25: { id: 'sp25', label: 'Spring 2025 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    fa24: { id: 'fa24', label: 'Fall 2024 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    sp24: { id: 'sp24', label: 'Spring 2024 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    fa23: { id: 'fa23', label: 'Fall 2023 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    sp23: { id: 'sp23', label: 'Spring 2023 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    fa22: { id: 'fa22', label: 'Fall 2022 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
+    fa21: { id: 'fa21', label: 'Fall 2021 Midterm 2', kind: 'mt2', url: 'https://cs61a.org/resources/', complete: true },
   };
 
   const BUBBLE_NOTE = 'For questions with circular bubbles, select exactly one choice. For questions with square checkboxes, you may select multiple choices.';
