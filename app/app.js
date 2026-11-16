@@ -51,6 +51,7 @@
   const TOPICS_IN_SCOPE = TOPICS.map((t) => t.id).filter((id) => !OUT_TOPICS.has(id));
   const GUIDES = window.CS61A_GUIDES || {}; // topic id -> study-guide concepts (data/study_guides.js)
   const TOUR = window.CS61A_TOUR || null;   // first-visit tour and one-time tips (tour.js)
+  const AUTH = window.CS61A_AUTH || null;   // anonymous Supabase sign-in (auth.js); never waited on
   const QMAP = Object.fromEntries(EVERY_QUESTION.map((q) => [q.id, q]));
   const ORDER = Object.fromEntries(EVERY_QUESTION.map((q, i) => [q.id, i]));
   const STORE_KEY = 'cs61a-practice:v1';
@@ -2728,7 +2729,7 @@
 
       <div class="feedback-row"><a class="btn btn-sm btn-home btn-feedback" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer">${icon('msg')}Give Feedback</a><span class="feedback-note">Your feedback can make this platform better!</span></div>
       <div class="notice">No account needed. Your answers, code notes and annotations are saved in <b>this browser on this device</b> and are gone if you clear site data.</div>
-      <p class="disclaimer">Privacy: this site uses Cloudflare Web Analytics, which collects aggregate traffic statistics (such as visits and page views) without cookies. Your answers, code, grades and exam history stay in your browser’s localStorage and are never sent anywhere, unless you choose Python Tutor on a question, which opens pythontutor.com with that question’s code.</p>
+      <p class="disclaimer">Privacy: this site uses Cloudflare Web Analytics, which collects aggregate traffic statistics (such as visits and page views) without cookies. It also gives this browser an anonymous ID through Supabase, with no name, email or password. Your answers, code, grades and exam history stay in your browser’s localStorage and are never sent anywhere, unless you choose Python Tutor on a question, which opens pythontutor.com with that question’s code.</p>
       <p class="disclaimer">Independent student project, not an official UC Berkeley / CS 61A service. Questions and answers are transcribed from CS 61A Midterm 2 (Fall 2025, Spring 2025, Fall 2024, Spring 2024, Fall 2023, Spring 2023, Fall 2022 and Fall 2021) and, for Gleam, from this semester’s exam-prep worksheets and lecture examples, and credited on each question. Explanations were written for this prototype and are not official.</p>
     </main>`;
   }
@@ -3719,6 +3720,9 @@
   function render() {
     // Removing a focused input fires blur/change handlers that may call render() again; defer those.
     if (rendering) { queueMicrotask(render); return; }
+    // Past the welcome page by any route (Start Practicing, a Resume button, an exam reopening by itself), make sure
+    // there is an anonymous session. Runs in the background; does nothing once signed in or when sign-in is off.
+    if (AUTH && ui.screen !== 'landing') AUTH.ensureSession();
     rendering = true;
     try { renderNow(); } finally { rendering = false; }
   }
