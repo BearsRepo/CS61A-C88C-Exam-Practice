@@ -20,6 +20,8 @@ window.CS61A_AUTH = (() => {
   let inflight = null;
   let libLoading = null;
   let lastFailAt = 0;
+  let warnedSecret = false;
+  const readyListeners = []; // analytics.js waits for a signed-in client through onReady()
 
   // A secret or service_role key must never reach the browser. Refuse to run rather than use one by mistake.
   function looksSecret(key) {
@@ -29,13 +31,16 @@ window.CS61A_AUTH = (() => {
     try { return JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'service_role'; } catch (e) { return false; }
   }
   // { url, key } when sign-in should run here, or { off: reason }.
-  function settings() {
+  function settings(quiet) {
     const c = (window.CS61A_CONFIG && window.CS61A_CONFIG.supabase) || {};
     const url = typeof c.url === 'string' ? c.url.trim().replace(/\/+$/, '') : '';
     const key = typeof c.publishableKey === 'string' ? c.publishableKey.trim() : '';
     if (!url || !key) return { off: 'not configured' };
     if (looksSecret(key)) {
-      console.error(TAG, 'Refusing to sign in: config.js holds a secret or service_role key. Use the publishable key only, and remove the secret key from the repository.');
+      if (!quiet && !warnedSecret) { // once per page, when sign-in is actually attempted
+        warnedSecret = true;
+        console.error(TAG, 'Refusing to sign in: config.js holds a secret or service_role key. Use the publishable key only, and remove the secret key from the repository.');
+      }
       return { off: 'secret key refused' };
     }
     if (!/^https:\/\//.test(url)) return { off: 'url must start with https://' };
@@ -107,6 +112,7 @@ window.CS61A_AUTH = (() => {
       const profile = await ensureProfile(user.id);
       state = { ...EMPTY, status: 'ready', userId: user.id, isAnonymous: user.is_anonymous !== false, session, profile };
       console.info(TAG, `${session === 'created' ? 'Signed in anonymously' : 'Anonymous session restored'}; profile ${profile}.`);
+      readyListeners.splice(0).forEach((fn) => { try { fn(); } catch (e) { console.warn(TAG, 'ready listener failed', e); } });
     } catch (e) {
       lastFailAt = Date.now();
       state = { ...EMPTY, status: 'error', error: describe(e) };
@@ -130,5 +136,14 @@ window.CS61A_AUTH = (() => {
   }
   window.addEventListener('online', () => { if (state.status === 'error') retry(); });
 
-  return { ensureSession, retry, status: snapshot };
+  // For analytics.js (Phase 2): whether sign-in can run on this page at all (configured, allowed host, not an
+  // automated browser), the signed-in client once ready, and a one-time callback for when it becomes ready.
+  const available = () => !settings(true).off;
+  const getClient = () => (state.status === 'ready' ? client : null);
+  function onReady(fn) {
+    if (state.status === 'ready') { fn(); return; }
+    readyListeners.push(fn);
+  }
+
+  return { ensureSession, retry, status: snapshot, available, getClient, onReady };
 })();

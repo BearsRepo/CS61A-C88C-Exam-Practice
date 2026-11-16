@@ -15,4 +15,9 @@ window.CS61A_CONFIG = {
     publishableKey: 'sb_publishable_xVYlTCg5atItNHdOIjBq9g_OqCUZ4Vn', // sb_publishable_…
     hosts: ['jacobkao-cal.github.io', 'localhost', '127.0.0.1'],
   },
+  // Usage tracking (analytics.js, Supabase Phase 2). Runs only where sign-in runs. Set enabled: false to stop sending
+  // anything (the safe rollback); the tables and their data stay as they are.
+  analytics: {
+    enabled: true,
+  },
 };

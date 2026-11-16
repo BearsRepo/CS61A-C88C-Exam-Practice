@@ -118,7 +118,8 @@ function installFake() {
     page.on('dialog', (d) => d.accept());
     return page;
   }
-  const ON = { supabase: { url: SB, publishableKey: PUB, hosts: ['localhost'], allowAutomation: true } };
+  // Usage tracking (Phase 2) has its own suite (analytics.test.js); here it stays off so only sign-in is exercised.
+  const ON = { supabase: { url: SB, publishableKey: PUB, hosts: ['localhost'], allowAutomation: true }, analytics: { enabled: false } };
   const status = (page) => page.evaluate(() => window.CS61A_AUTH.status());
   const settled = (page) => page.waitForFunction(() => !['idle', 'pending'].includes(window.CS61A_AUTH.status().status), { timeout: 8000, polling: 100 }).then(() => status(page)); // timed polling: a background tab gets no animation frames
   const fakeLog = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('fake-sb-log') || '[]'));
