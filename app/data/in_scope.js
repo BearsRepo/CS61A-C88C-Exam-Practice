@@ -1,11 +1,14 @@
-// What is in scope for the current exam. Edit this file each semester; questions.js never changes.
+// What is in scope for the current exam. Edit this file each semester; questions.js and final_questions.js never change.
 //
-// The question bank is past CS 61A Midterm 2 exams. In Fall 2026 they are practice for CS 61A Midterm 3 and
-// C88C Midterm 2, which cover about the same material.
+// The question bank is past CS 61A Midterm 2 and Final exams. In Fall 2026 the midterms are practice for CS 61A
+// Midterm 3 and C88C Midterm 2, which cover about the same material, and the finals are practice for the final.
 //
-// Source: Ed post #1237, "Midterm 3 Practice: Past Midterm 2 Exam Index"
+// Source for the midterms: Ed post #1237, "Midterm 3 Practice: Past Midterm 2 Exam Index"
 //   https://edstem.org/us/courses/100850/discussion/8416140
 // Out of scope this semester: mutating linked lists and trees, repr / __repr__, orders of growth, nonlocal.
+// Finals: there is no Ed post for the final yet (2026-11-15). The final is expected to be about 2/3 Python and 1/3
+// Gleam + SQL. The midterm rules above are applied to the finals ('inferred'), plus Scheme (replaced by Gleam) and
+// async / coroutines (not on this semester's syllabus).
 //
 // Shape:
 //   outOfScopeTopics – topic ids (from TOPICS in questions.js). The topic is shown as not in scope, and a question
@@ -25,9 +28,9 @@
 // Check this file with: node tests/verify_in_scope.js
 
 window.CS61A_SCOPE = {
-  label: 'CS 61A Midterm 3 / C88C Midterm 2 (Fall 2026)',
+  label: 'CS 61A Midterm 3 and Final / C88C Midterm 2 (Fall 2026)',
   source: 'https://edstem.org/us/courses/100850/discussion/8416140',
-  outOfScopeTopics: ['efficiency'],
+  outOfScopeTopics: ['efficiency', 'async', 'scheme'],
 
   problems: {
     // Spring 2023 Q2 uses __repr__ (the Ed post marks all of Q2)
@@ -48,6 +51,82 @@ window.CS61A_SCOPE = {
       note: 'The `Snake` class defines a `__str__` method, which is no longer taught. All you need to know: printing a `Snake` object shows its name.' },
     'sp24-1': { status: 'note', source: 'ed',
       note: 'Parts (a) and (b) use the `shake` function, which mutates a linked list (out of scope), so they were removed, along with part (d) (orders of growth). The remaining part (c) only uses the `cruel` function and is in scope.' },
+
+    // Fall 2025 Final
+    'fa25f-2c': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'fa25f-5': { status: 'out', reason: 'Async / coroutines (not on this semester’s syllabus)', source: 'inferred' },
+    'fa25f-6b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa25f-6c': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa25f-9a': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa25f-7': { status: 'note', source: 'inferred',
+      note: 'The `Student` and `DiscGroup` classes define `__str__` methods, which are no longer taught. All you need to know: printing an object shows the string its `__str__` returns, and `{self.group}` in an f-string puts in the group’s string.' },
+    // Spring 2025 Final
+    'sp25f-2c': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'sp25f-4b': { status: 'out', reason: 'Mutates a tree', source: 'inferred' },
+    'sp25f-7a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'sp25f-7b': { status: 'out', reason: 'Scheme macros (replaced by Gleam)', source: 'inferred' },
+    'sp25f-5': { status: 'note', source: 'inferred',
+      note: 'The `Rower` class defines a `__str__` method, which is no longer taught. All you need to know: printing a rower (as `print(self, ...)` and `print(hank)` do) shows the string `__str__` returns. Blank (c) is inside that method, but it is an ordinary dictionary lookup.' },
+    // Fall 2024 Final
+    'fa24f-5c': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'fa24f-5c-v': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'fa24f-7a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa24f-7b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa24f-7b-iv': { status: 'out', reason: 'Scheme and orders of growth', source: 'inferred' },
+    'fa24f-7c': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa24f-9a': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa24f-4b': { status: 'note', source: 'inferred',
+      note: 'The `MissDict` class defines a `__str__` method, which is no longer taught. All you need to know: `print(double)` shows the string `__str__` returns.' },
+    'fa24f-6b': { status: 'note', source: 'inferred',
+      note: 'The second example prints a tree with the course `Tree` class’s `__str__` method (one label per line, indented by depth), which is no longer taught. The first example shows the same kind of tree with `repr`.' },
+    // Spring 2024 Final
+    'sp24f-4a': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'sp24f-4b': { status: 'out', reason: 'Mutates a linked list (calls cycle)', source: 'inferred' },
+    'sp24f-5b': { status: 'out', reason: 'Mutates a tree', source: 'inferred' },
+    'sp24f-5b-iv': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'sp24f-6': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'sp24f-6d': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'sp24f-7': { status: 'out', reason: 'Mutates a tree (A+ question)', source: 'inferred' },
+    'sp24f-3a': { status: 'note', source: 'inferred',
+      note: 'The `Domino` class defines a `__repr__` method, which is no longer taught. All you need to know: Python shows a domino using the string `__repr__` returns, so `Domino([3, 4])` is shown as `3-4`. Blank (e) writes that string.' },
+    'sp24f-3b': { status: 'note', source: 'inferred',
+      note: 'Dominos are shown as `5-2`, `3-4` and so on because of the `Domino` class’s `__repr__` method (from part (a)), which is no longer taught.' },
+    'sp24f-3b-ii': { status: 'note', source: 'inferred',
+      note: 'Dominos are shown as `5-2`, `4-3` and so on because of the `Domino` class’s `__repr__` method, which is no longer taught.' },
+    'sp24f-3c': { status: 'note', source: 'inferred',
+      note: '`repr(d)` calls the `Domino` class’s `__repr__` method (no longer taught): it gives a string like `\'3-4\'`. That is all you need for blanks (g) and (k).' },
+    // Fall 2023 Final
+    'fa23f-5': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa23f-6': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa23f-6d': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa23f-7': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa23f-7d': { status: 'out', reason: 'Scheme interpreter (scheme_eval)', source: 'inferred' },
+    'fa23f-9a': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa23f-3': { status: 'note', source: 'inferred',
+      note: 'The `Expression` and `Word` classes define `__str__` methods, which are no longer taught. All you need to know: `print(e)` and `str(e)` use the string `__str__` returns, and `str(self.then)` calls the next word’s `__str__`.' },
+    // Spring 2023 Final
+    'sp23f-5b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'sp23f-5b-iv': { status: 'out', reason: 'Scheme and the Scheme interpreter (scheme_eval)', source: 'inferred' },
+    'sp23f-8b': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'sp23f-1': { status: 'note', source: 'inferred',
+      note: 'Parts (a) and (b) use `Chain.add`, which mutates a linked list (out of scope), so they were removed, along with part (d) (orders of growth). The remaining part (c) only uses `silver` and `bronze` and is in scope.' },
+    // Fall 2022 Final
+    'fa22f-2': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa22f-4b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa22f-8': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa22f-11': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa22f-1': { status: 'note', source: 'inferred',
+      note: 'The `Sub` class defines a `__repr__` method, which is no longer taught, so parts (j) and (n), which show how the interpreter displays a `Sub` or `Pub` instance, were removed. The other parts are in scope.' },
+    // Fall 2021 Final
+    'fa21f-4a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa21f-4b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa21f-4c': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa21f-5a': { status: 'out', reason: 'Regular expressions (not on this semester’s syllabus)', source: 'inferred' },
+    'fa21f-5b': { status: 'out', reason: 'BNF grammars (not on this semester’s syllabus)', source: 'inferred' },
+    // Fall 2020 Final
+    'fa20f-2b': { status: 'out', reason: 'Uses nonlocal', source: 'inferred' },
+    'fa20f-5a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa20f-5b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
   },
 
   questions: {
@@ -77,5 +156,12 @@ window.CS61A_SCOPE = {
     'fa22-5b-ii': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
     // Fall 2021
     'fa21-4b-iii': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    // Spring 2023 Final
+    'sp23f-1a': { status: 'out', reason: 'Mutates a linked list (Chain.add)', source: 'inferred' },
+    'sp23f-1b': { status: 'out', reason: 'Mutates a linked list (Chain.add)', source: 'inferred' },
+    'sp23f-1d': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    // Fall 2022 Final
+    'fa22f-1j': { status: 'out', reason: 'Uses __repr__', source: 'inferred' },
+    'fa22f-1n': { status: 'out', reason: 'Uses __repr__', source: 'inferred' },
   },
 };

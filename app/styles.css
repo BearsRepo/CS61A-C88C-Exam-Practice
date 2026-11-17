@@ -81,7 +81,12 @@ p code, li code, .rich code { background: var(--code-bg); padding: 0 3px; border
 .dd-step-btn { border: 0; background: none; color: var(--muted); font-size: 10px; line-height: 1; padding: 2px 5px; border-radius: 4px; cursor: pointer; }
 .dd-step-btn:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
 .dd-step-btn:disabled { opacity: .35; cursor: default; }
-.dd-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 100%; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px; box-shadow: 0 14px 40px rgba(0,0,0,.16); }
+.dd-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 50; min-width: 100%; background: var(--paper); border: 1px solid var(--line-strong); border-radius: 10px; padding: 10px; box-shadow: 0 14px 40px rgba(0,0,0,.16);
+  max-height: min(420px, 62vh); overflow-y: auto; overscroll-behavior: contain; } /* long lists (more past exams) scroll inside the menu */
+.dd-sub { display: flex; align-items: baseline; gap: 12px; padding: 8px 6px 4px; margin-top: 4px; border-top: 1px solid var(--line); }
+.dd-sub:first-child, .dd-group + .dd-sub { border-top: 0; margin-top: 0; }
+.dd-sub-name { flex: 1; font-size: 12.5px; font-weight: 700; }
+.dd-sub-tools { display: flex; gap: 12px; font-size: 12.5px; }
 .dd.wide .dd-panel { width: min(520px, 92vw); }
 .dd-tools { display: flex; gap: 14px; padding: 0 6px 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
 .dd-list { display: grid; gap: 2px; }
@@ -324,6 +329,14 @@ mark.hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0; }
 .cm-slot.filled-mc { color: #9ee8ff; background: rgba(102,217,239,.16); border-bottom: 2px solid #66d9ef; }
 .cm-slot.filled-typed { color: #c3f08a; background: rgba(166,226,46,.13); border-bottom: 2px dashed #a6e22e; }
 .cm-slot.current { outline: 2px solid #fdb515; outline-offset: 1px; }
+/* a select-all blank shows its first checked option; the tag counts the others (Run Code tests each one) */
+.cm-slot[data-more]::after { content: attr(data-more); margin-left: 6px; padding: 0 5px; border-radius: 999px; font-size: 11px; font-family: var(--sans); color: #1b1b1b; background: #9ee8ff; vertical-align: 1px; }
+.run-option { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 10px; }
+.run-option-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.run-option-head code { font-family: var(--mono); font-size: 12.5px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+.run-option-sum { font-weight: 700; }
+.run-option-sum.tests-all { color: var(--good); }
+.run-option-sum.tests-some { color: var(--bad); }
 .cm-slot:hover { filter: brightness(1.25); }
 .cm-hl { background: rgba(255,235,59,.38); }
 .key-fill { font-family: var(--mono); font-size: 11.5px; padding: 0 5px; border-radius: 3px; background: #272822; white-space: nowrap; }
@@ -502,6 +515,9 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .step-n { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; }
 .kind-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .kind-list { display: grid; gap: 8px; }
+.exam-kind-row { margin-bottom: 12px; }
+.kind-note { font-size: 13px; line-height: 1.45; color: var(--ink); background: var(--warn-soft); border: 1px solid #f0d27a; border-radius: 8px; padding: 8px 12px; margin: 0 0 12px; }
+.dd-sub-name { color: var(--ink); }
 .kind-opt { display: flex; align-items: center; gap: 10px; border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
 .kind-opt:hover { border-color: var(--line-strong); background: #fafbfc; }
 .kind-opt.on { border-color: var(--accent); background: var(--accent-soft); }

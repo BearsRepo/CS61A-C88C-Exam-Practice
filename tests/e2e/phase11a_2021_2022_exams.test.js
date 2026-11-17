@@ -12,6 +12,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 global.window = {};
 require(path.join(__dirname, '..', '..', 'app', 'data', 'questions.js'));
+require(path.join(__dirname, '..', '..', 'app', 'data', 'final_questions.js'));
 require(path.join(__dirname, '..', '..', 'app', 'data', 'test_suites.js'));
 const B = window.CS61A_BANK;
 const SUITES = window.CS61A_TEST_SUITES.suites;
@@ -49,13 +50,13 @@ ok(examIds('fa22').reduce((t, id) => t + qOf(id).points, 0) === 44 && B.PROBLEMS
   'fa22: part values sum to 44 (the PDF prints 45; Q6(b) prints 6.0 points over parts worth 1 + 1 + 2 + 1)');
 ok(B.QUESTIONS.length === new Set(B.QUESTIONS.map((q) => q.id)).size, `all ${B.QUESTIONS.length} question ids are unique`);
 ok(['fa25', 'sp25', 'fa24', 'sp24', 'fa23', 'sp23'].every((e) => examIds(e).length === { fa25: 33, sp25: 29, fa24: 31, sp24: 30, fa23: 27, sp23: 26 }[e]), 'earlier exams unchanged in size');
-ok(B.QUESTIONS.filter((q) => /^(fa22|fa21)/.test(q.id)).every((q) => B.ANSWER_KEY[q.id] || q.id === 'fa22-8a'), 'every new subpart has an official answer (except the optional drawing, Q8)');
-ok(B.QUESTIONS.filter((q) => /^(fa22|fa21)/.test(q.id) && q.type === 'code').every((q) => q.points === 0), 'only 0-point parts (A+ and the optional drawing) are graded by course staff');
-ok(!SUITES.some((t) => /^(fa22|fa21)/.test(t.problem)), 'no Run Code test suites were added for the new exams');
+ok(B.QUESTIONS.filter((q) => /^(fa22|fa21)-/.test(q.id)).every((q) => B.ANSWER_KEY[q.id] || q.id === 'fa22-8a'), 'every new subpart has an official answer (except the optional drawing, Q8)');
+ok(B.QUESTIONS.filter((q) => /^(fa22|fa21)-/.test(q.id) && q.type === 'code').every((q) => q.points === 0), 'only 0-point parts (A+ and the optional drawing) are graded by course staff');
+ok(!SUITES.some((t) => /^(fa22|fa21)-/.test(t.problem)), 'no Run Code test suites were added for the new exams');
 const fig = B.PROBLEMS['fa22-2'].figure;
 ok(fig && fig.slots.length === 8, 'fa22 Q2: environment diagram figure with 8 typing blanks');
 ok(['fa22-4a', 'fa22-4b', 'fa22-6a', 'fa22-7', 'fa21-1'].every((pid) => B.PROBLEMS[pid].illustration && !B.PROBLEMS[pid].figure), 'the hydra, graph, tree and box-and-pointer pictures are illustrations, not diagram workspaces');
-ok(Object.keys(B.PROBLEMS).filter((pid) => /^fa21/.test(pid)).every((pid) => !B.PROBLEMS[pid].figure), 'fa21: no environment diagram questions');
+ok(Object.keys(B.PROBLEMS).filter((pid) => /^fa21-/.test(pid)).every((pid) => !B.PROBLEMS[pid].figure), 'fa21: no environment diagram questions');
 
 (async () => {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
@@ -97,7 +98,7 @@ ok(Object.keys(B.PROBLEMS).filter((pid) => /^fa21/.test(pid)).every((pid) => !B.
   await seed({ prefs: { ...prefs, exams: ['fa22', 'fa21'], topics: ['trees'], examsKnown: Object.keys(B.EXAMS) } });
   await click('[data-action="enter"]'); await click('[data-action="start"]'); await page.waitForSelector('#pane-right .part');
   S = await st();
-  const treeGroups = [...new Set(B.QUESTIONS.filter((q) => /^(fa22|fa21)/.test(q.id) && q.topics.includes('trees')).map((q) => q.problem))];
+  const treeGroups = [...new Set(B.QUESTIONS.filter((q) => /^(fa22|fa21)-/.test(q.id) && q.topics.includes('trees')).map((q) => q.problem))];
   ok(S.session.groups.length === treeGroups.length && S.session.groups.every((g) => treeGroups.includes(g.pid) && JSON.stringify(g.ids) === JSON.stringify(partsOf(g.pid).map((q) => q.id))),
     `Trees practice from 2021–2022: ${S.session.groups.length} complete question groups`);
 

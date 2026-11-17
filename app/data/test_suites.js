@@ -167,15 +167,198 @@ def product(s):
 `;
   const LINK_NOTE = 'These tests provide the course’s Link class (the exam uses it but does not print it).';
   const TREE_NOTE = 'These tests provide the course’s Tree class (the exam uses it but does not print it).';
-  const verification = (checks) => ({
+  const verification = (checks, date) => ({
     method: 'Automated validation (tests/verify_test_bank.js): passes with the official exam solution and every accepted alternative; fails for every wrong multiple-choice option and for each listed plausible wrong answer. Added cases’ expected values cross-checked against independent brute-force implementations where applicable.',
     checks,
-    date: '2026-10-30',
+    date: date || '2026-10-30',
     reviewedBy: 'Generated and validated by Claude Code; not yet reviewed by course staff',
   });
   const EXAM = 'Exam doctests from the problem’s docstring, plus added boundary cases written for this app (marked “Added”).';
   const exam = (input) => ({ input, origin: 'exam' });
   const added = (input) => ({ input, origin: 'added' });
+
+  // ── Finals: official solutions of earlier parts that a later part calls (copied from the exam solutions) ──
+  const FINALS_DATE = '2026-11-15';
+  const IS_EQUATION = `def is_equation(s):
+    number, equals = True, 0
+    for x in s:
+        ok = (number and (isinstance(x, int) or x == '?')) or (not number and x in ['+', '-', '='])
+        if not ok:
+            return False
+        if x == '=':
+            equals += 1
+        number = not number
+    return not number and equals == 1
+`;
+  const EVALUATE = `def evaluate(equation, answers):
+    assert is_equation(equation) and len(answers) == equation.count('?')
+    eq_iter, ans_iter = iter(equation), iter(answers)
+    return tally(eq_iter, ans_iter) == tally(eq_iter, ans_iter)
+
+def tally(eq, ans):
+    number, total = True, 0
+    multiplier = 1  # should always be either 1 or -1
+    for x in eq:
+        if number:
+            if x == '?':
+                x = next(ans)
+            total += multiplier * x
+        else:
+            if x == '=':
+                return total
+            else:
+                multiplier = {'+': 1, '-': -1}[x]  # Hint: use a dictionary
+        number = not number
+    return total
+`;
+  const SUMS = `def sums(t):
+    result = {}
+    def insert(t):
+        for b in t.branches:
+            insert(b)
+        result[t] = t.label + sum([result[b] for b in t.branches])
+    insert(t)
+    return result
+`;
+  const ONE_CUT = `def one_cut(t, n):
+    d = sums(t)
+    total = d.pop(t)  # remove the root node from the dictionary; total is the sum of its labels
+    target = min(d.keys(), key=lambda node: abs(n - (total - d[node])))
+    def cut(t):
+        return Tree(t.label, [cut(b) for b in t.branches if b is not target])
+    return cut(t)
+`;
+  const CAN_EQUAL = `def can_equal(digits, n):
+    if digits == '' and n == 0 :
+        return True
+    for k in range(1, len(digits) + 1 ):
+        if any ([can_equal( digits[k:] , n - sign * int(digits[:k]) ) for sign in [1, -1]]):
+            return True
+    return False
+`;
+  const JOIN_TO_LINK = `def join_link(s):
+    if s is Link.empty:
+        return ''
+    return s.first + join_link(s.rest)
+
+def to_link(t):
+    try:
+        return Link(next(t), to_link(t))
+    except StopIteration:
+        return Link.empty
+`;
+
+  const TENS = `def tens(s):
+    t = 0
+    for x in s:
+        t += x
+        if t > 10:
+            return False
+        if t == 10:
+            t = 0
+    return True
+`;
+  const PROMOTE = `def promote(s, i, j):
+    assert i >= 0 and i < j and j < len(s)
+    return s[:i] + [s[j]] + s[i:j] + s[j+1:]
+`;
+
+  const DOMINO = `class Domino:
+    def __init__(self, ns):
+        assert len(ns) == 2 and ns[0] in range(10) and ns[1] in range(10)
+        self.ns = ns
+
+    def align(self, first):
+        assert first in self.ns, 'first must be a number on the domino.'
+        if first != self.ns[0]:
+            self.ns = [self.ns[1], self.ns[0]]
+        return self
+
+    def __repr__(self):
+        return str(self.ns[0]) + '-' + str(self.ns[1])
+`;
+  const DROP = `def drop(d, ds):
+    return [x for x in ds if x is not d]
+`;
+
+  const IS_PAIR_SEQUENCE = `def is_pair_sequence(s):
+    return all([type(x) == tuple for x in s]) and all(map(lambda x: len(x) == 2, s))
+`;
+
+
+  // fa22f-7a's official code, including its docstring (the setup check only strips """ docstrings, and this one uses ''')
+  const THREE_FLIPS = `def three_flips(coin):
+    '''
+    >>> a = three_flips(iter("HTTHHT"))
+    >>> next(a)  # Coin flips 0, 1, and 2
+    'HTT'
+    >>> next(a)  # Coin flips 1, 2, and 3
+    'TTH'
+    >>> next(a)  # Coin flips 2, 3, and 4
+    'THH'
+    >>> next(a)  # Coin flips 3, 4, and 5
+    'HHT'
+    >>> next(a)  # A StopIteration exception is raised
+    StopIteration
+    '''
+    start = next(coin) + next(coin) + next(coin)
+    while True:
+        yield start
+        start = start[1:] + next(coin)
+`;
+
+  // The course's Link class with its __str__ method, which prints a linked list as <3 4 5> (nested ones as <<3> <4>>).
+  const LINK_STR = LINK + `    def __str__(self):
+        string = '<'
+        while self.rest is not Link.empty:
+            string += str(self.first) + ' '
+            self = self.rest
+        return string + str(self.first) + '>'
+`;
+  const LINK_STR_NOTE = 'These tests provide the course’s Link class with its __str__ method, which prints a linked list like <3 4 5> (the exam uses it but does not print it).';
+  const SEGMENT = `def segment(n, grouped):
+    part = Link.empty
+    parts = Link.empty
+    while n:
+        if part is Link.empty or grouped(n % 10, part.first):
+            part = Link(n % 10, part)
+        else:
+            parts = Link(part, parts)
+            part = Link(n % 10)
+        n = n // 10
+    return Link(part, parts)
+`;
+
+  const WINS = `class State:
+    electors = {}
+    def __init__(self, code, electors):
+        self.code = code
+        self.electors = electors
+        State.electors[code] = electors
+
+battleground = [State('AZ', 11), State('PA', 20), State('NV', 6),
+                State('GA', 16), State('WI', 10), State('MI', 16)]
+
+def print_all(s):
+    for x in s:
+        print(x)
+
+def wins(states, k):
+    if k <= 0 and not states:
+        yield Link.empty
+    if states:
+        first = states[0].electors
+        for win in wins(states[1:], k - first):
+            yield Link(states[0].code, win)
+        yield from wins(states[1:], k + first)
+`;
+  // The four original llamas' offspring trees, built from the exam's figure.
+  const LLAMAS = `originals = [Tree('Charlie', [Tree('Jaidyn', [Tree('Lee'), Tree('Max')]), Tree('Jules', [Tree('Alex'), Tree('Jess')])]),
+             Tree('Sidney', [Tree('Jaidyn', [Tree('Lee'), Tree('Max')]), Tree('Jackie', [Tree('Alex')])]),
+             Tree('Finley', [Tree('Jackie', [Tree('Alex')]), Tree('Jan', [Tree('Lee'), Tree('Max')]), Tree('Jess')]),
+             Tree('Frankie', [Tree('Jules', [Tree('Alex'), Tree('Jess')]), Tree('Jan', [Tree('Lee'), Tree('Max')])])]
+`;
+  const LLAMA_NOTE = 'These tests provide the course’s Tree class and originals, the four offspring trees built from the exam’s llama diagram (the exam assumes both are defined).';
 
   const suites = [
     {
@@ -1101,6 +1284,1245 @@ Tree(1, [Tree(4)])`),
 ['%.<>.', '.%.<>', '.<>.%', '<>.%.']
 >>> len(list(pack(9)))
 20`),
+      ],
+    },
+    // ───────────── Finals (Fall 2025, Spring 2025) ─────────────
+    {
+      id: 'fa25f-3a-tests', problem: 'fa25f-3a', verified: true,
+      verification: verification({ passing: 5, failing: 11 }, FINALS_DATE),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> is_equation([7, '+', 2, '=', '?', '+', 6])
+True
+>>> is_equation([-7, '+', '?', '=', '?', '-', 6])
+True`),
+        exam(`>>> is_equation([-7, '+', 2, '=', '?', '-'])          # No number at the end
+False
+>>> is_equation(['-', 7, '+', 2, '=', '?', '-', 6])   # No number at the start
+False
+>>> is_equation([-7, '+', 2, '?', '+', 6, '=', 9])    # Two adjacent numbers (2 and ?)
+False
+>>> is_equation([-7, '+', 2, '+', '-', 6, '=', 9])    # Two adjacent operators (+ and -)
+False
+>>> is_equation([-7, '+', 2, '=', '?', '=', 6])       # More than one =
+False`),
+        added(`>>> [is_equation([1, '=', 1]), is_equation(['?', '=', '?']), is_equation([0, '-', '?', '=', -3])]
+[True, True, True]`),
+        added(`>>> [is_equation([]), is_equation(['?']), is_equation([1, '+', 2]), is_equation([1, '=']), is_equation(['='])]
+[False, False, False, False, False]
+>>> [is_equation([1, '=', '1']), is_equation([1, '*', 2, '=', 2]), is_equation([1, '=', '=', 1])]
+[False, False, False]`),
+      ],
+    },
+    {
+      id: 'fa25f-3b-tests', problem: 'fa25f-3b', verified: true,
+      verification: verification({ passing: 2, failing: 15 }, FINALS_DATE),
+      provenance: EXAM, setup: IS_EQUATION, setupNote: 'These tests provide is_equation from part (a) (the official solution).', setupFrom: ['fa25f-3a'],
+      cases: [
+        exam(`>>> evaluate([7, '-', 2, '=', '?', '+', 4], [1])       # 7 - 2 == 1 + 4
+True
+>>> evaluate([7, '-', 2, '=', '?', '-', 4], [3])       # 7 - 2 != 3 - 4
+False`),
+        exam(`>>> evaluate([7, '-', 2, '=', 1, '+', 4], [])          # 7 - 2 == 1 + 4
+True
+>>> evaluate([7, '-', '?', '=', '?', '-', 4], [2, 9])  # 7 - 2 == 9 - 4
+True`),
+        added(`>>> [evaluate(['?', '=', '?'], [3, 3]), evaluate(['?', '=', '?'], [3, 4]), evaluate([5, '=', 5], [])]
+[True, False, True]
+>>> evaluate(['?', '-', '?', '-', '?', '=', 0], [3, 2, 1])  # 3 - 2 - 1 == 0
+True
+>>> evaluate([1, '-', 2, '=', '?', '+', -2], [1])  # -1 == 1 + -2
+True
+>>> evaluate([1, '=', '?', '-', '?'], [1, 2])  # 1 != 1 - 2
+False`),
+        added(`>>> tally(iter([4, '-', 1, '+', 2]), iter([]))  # no = : the whole list
+5
+>>> eq = iter([2, '-', '?', '=', '?'])
+>>> ans = iter([5, 9])
+>>> tally(eq, ans), tally(eq, ans)  # each side
+(-3, 9)`),
+      ],
+    },
+    {
+      id: 'fa25f-3c-tests', problem: 'fa25f-3c', verified: true,
+      verification: verification({ passing: 4, failing: 11 }, FINALS_DATE),
+      provenance: EXAM, setup: IS_EQUATION + '\n' + EVALUATE, setupNote: 'These tests provide is_equation, evaluate and tally from parts (a) and (b) (the official solutions).', setupFrom: ['fa25f-3a', 'fa25f-3b'],
+      cases: [
+        exam(`>>> feasible([7, '+', 2, '=', '?', '+', 6])    # the ? could be 3
+True
+>>> feasible(['?', '+', 2, '=', '?', '+', 6])  # the first ? could be 7 and the second 3
+True
+>>> feasible([-7, '+', 2, '=', '?', '+', 6])
+False`),
+        exam(`>>> feasible(['?', '+', 5, '=', '?', '-', 6])
+False
+>>> feasible(['?', '+', 5, '=', '?', '-', 6], range(-10, 10))  # -5 and 6, for example
+True`),
+        added(`>>> [feasible([1, '=', 1]), feasible([1, '=', 2])]  # no ? at all
+[True, False]
+>>> [feasible(['?', '+', '?', '=', 18]), feasible(['?', '+', '?', '=', 19])]
+[True, False]
+>>> [feasible(['?', '=', '?', '+', '?'], range(0, 1)), feasible(['?', '=', 3], range(4, 9))]
+[True, False]
+>>> feasible(['?', '=', '?', '+', 5], range(-10, 0))  # -1 = -6 + 5: every ? uses allowed, not the default range
+True`),
+      ],
+    },
+    {
+      id: 'fa25f-3d-tests', problem: 'fa25f-3d', verified: true,
+      verification: verification({ passing: 6, failing: 19 }, FINALS_DATE),
+      provenance: EXAM, setup: IS_EQUATION + '\n' + EVALUATE, setupNote: 'These tests provide is_equation, evaluate and tally from parts (a) and (b) (the official solutions).', setupFrom: ['fa25f-3a', 'fa25f-3b'],
+      cases: [
+        exam(`>>> print_all(solve([7, '+', 2, '=', '?', '+', 6]))
+[3]
+>>> print_all(solve(['?', '-', 2, '=', '?', '+', 6]))
+[8, 0]
+[9, 1]`),
+        exam(`>>> print_all(solve(['?', '=', '?', '+', '?'], range(1, 4)))
+[2, 1, 1]
+[3, 1, 2]
+[3, 2, 1]`),
+        added(`>>> list(solve([1, '=', 1])), list(solve([1, '=', 2]))  # no ?: one empty answer list, or none
+([[]], [])
+>>> list(solve(['?', '=', 5])), list(solve(['?', '=', 5], range(6, 9)))
+([[5]], [])
+>>> t = solve([7, '+', 2, '=', '?', '+', 6])
+>>> next(t)  # solve returns an iterator
+[3]`),
+      ],
+    },
+    {
+      id: 'fa25f-4a-tests', problem: 'fa25f-4a', verified: true,
+      verification: verification({ passing: 6, failing: 12 }, FINALS_DATE),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(6), Tree(7)])])
+>>> d = sums(t)
+>>> nodes = [t, t.branches[0], t.branches[0].branches[0], t.branches[2]]
+>>> [d[n] for n in nodes]
+[32, 9, 5, 18]`),
+        added(`>>> t = Tree(5)
+>>> sums(t) == {t: 5}
+True
+>>> t = Tree(1, [Tree(2, [Tree(3)])])
+>>> d = sums(t)
+>>> [d[t], d[t.branches[0]], d[t.branches[0].branches[0]], len(d)]
+[6, 5, 3, 3]`),
+        added(`>>> t = Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(6), Tree(7)])])
+>>> len(sums(t))  # one key per node
+7
+>>> u = Tree(-1, [Tree(4), Tree(-4)])
+>>> d = sums(u)
+>>> [d[u], d[u.branches[1]]]
+[-1, -4]`),
+      ],
+    },
+    {
+      id: 'fa25f-4b-tests', problem: 'fa25f-4b', verified: true,
+      verification: verification({ passing: 4, failing: 13 }, FINALS_DATE),
+      provenance: EXAM, setup: TREE + '\n' + SUMS, setupNote: 'These tests provide the course’s Tree class (the exam uses it but does not print it) and sums from part (a) (the official solution).', setupFrom: ['fa25f-4a'],
+      cases: [
+        exam(`>>> t = Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(6), Tree(7)])])  # sums to 32
+>>> one_cut(t, 30)  # cuts just the 3 to get 29
+Tree(2, [Tree(4, [Tree(5)]), Tree(5, [Tree(6), Tree(7)])])
+>>> one_cut(t, 26)  # cuts just the 6 to get 26
+Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(7)])])`),
+        exam(`>>> t = Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(6), Tree(7)])])
+>>> one_cut(t, 15)  # cuts the 5 node with 6 and 7 below it to get 14
+Tree(2, [Tree(4, [Tree(5)]), Tree(3)])
+>>> one_cut(t, 1)   # 14 is the smallest possible sum after one cut
+Tree(2, [Tree(4, [Tree(5)]), Tree(3)])`),
+        added(`>>> t = Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(6), Tree(7)])])
+>>> u = one_cut(t, 26)
+>>> t  # t is not mutated
+Tree(2, [Tree(4, [Tree(5)]), Tree(3), Tree(5, [Tree(6), Tree(7)])])`),
+        added(`>>> one_cut(Tree(1, [Tree(5)]), 100)  # the only cut
+Tree(1)
+>>> one_cut(Tree(1, [Tree(2, [Tree(3, [Tree(4)])])]), 3)  # cut deep in the tree: 1 + 2 = 3
+Tree(1, [Tree(2)])`),
+      ],
+    },
+    {
+      id: 'fa25f-6a-tests', problem: 'fa25f-6a', verified: true,
+      verification: verification({ passing: 4, failing: 10 }, FINALS_DATE),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> nums = Link(3, Link(1, Link(4, Link(1, Link(5, Link(2, Link(5, Link(3, Link(5)))))))))
+>>> match(nums, 2)  # 1 and 1; 5 and 5; 5 and 5
+3
+>>> {k: match(nums, k) for k in range(1, 8)}  # k=4: 5 and 5; k=7: 3 and 3
+{1: 0, 2: 3, 3: 0, 4: 1, 5: 0, 6: 0, 7: 1}`),
+        added(`>>> [match(Link.empty, 1), match(Link(1), 1), match(Link(1, Link(1)), 1), match(Link(1, Link(1)), 5)]
+[0, 0, 1, 0]
+>>> match(Link(2, Link(2, Link(2))), 1), match(Link(2, Link(2, Link(2))), 2)
+(2, 1)`),
+      ],
+    },
+    {
+      id: 'fa25f-7-tests', problem: 'fa25f-7', verified: true,
+      verification: verification({ passing: 4, failing: 20 }, FINALS_DATE),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> chris = Student("Chris", "kickstart")
+>>> pranav = Student("Pranav", "tortilla")
+>>> sebastian = Student("Sebastian", "tortilla")
+>>> print(chris)
+Student Chris is in Disc 0: kickstart (['Chris'])
+>>> print(pranav)
+Student Pranav is in Disc 1: tortilla (['Pranav', 'Sebastian'])
+>>> print(sebastian)
+Student Sebastian is in Disc 1: tortilla (['Pranav', 'Sebastian'])`),
+        added(`>>> s = [Student(str(i), 'k') for i in range(7)]  # a group holds at most 6 students
+>>> [x.group.id for x in s]
+[0, 0, 0, 0, 0, 0, 1]
+>>> len(DiscGroup.groups), len(DiscGroup.groups[0].students)
+(2, 6)`),
+        added(`>>> a, b, c = Student('A', 'x'), Student('B', 'y'), Student('C', 'x')
+>>> a.group is c.group, a.group is b.group
+(True, False)
+>>> [(g.id, g.keyword, [s.name for s in g.students]) for g in DiscGroup.groups]
+[(0, 'x', ['A', 'C']), (1, 'y', ['B'])]`),
+      ],
+    },
+    {
+      id: 'fa25f-9b-tests', problem: 'fa25f-9b', verified: true,
+      verification: verification({ passing: 1, failing: 4 }, FINALS_DATE),
+      provenance: EXAM, setup: TREE + '\n' + SUMS + '\n' + ONE_CUT, setupNote: 'These tests provide the course’s Tree class (the exam uses it but does not print it), and sums and one_cut from Question 4 (the official solutions).', setupFrom: ['fa25f-4a', 'fa25f-4b'],
+      cases: [
+        exam(`>>> t = Tree(2, [Tree(4, [Tree(5)]), Tree(3, [Tree(1)]), Tree(5, [Tree(6), Tree(7)])])
+>>> two_cut(t, 30)  # cut 1 and then 3; result sums to 29
+Tree(2, [Tree(4, [Tree(5)]), Tree(5, [Tree(6), Tree(7)])])
+>>> two_cut(t, 12)  # cut 3 and then 5; result sums to 11
+Tree(2, [Tree(4, [Tree(5)])])
+>>> two_cut(t, 6)   # cut 4 and then 5; result sums to 6
+Tree(2, [Tree(3, [Tree(1)])])`),
+        added(`>>> two_cut(Tree(1, [Tree(2), Tree(3)]), 100)  # three nodes: both non-root nodes go
+Tree(1)
+>>> t = Tree(1, [Tree(2), Tree(3), Tree(4)])
+>>> g(two_cut(t, 100)), t  # the best sum, and t is not mutated
+(5, Tree(1, [Tree(2), Tree(3), Tree(4)]))`),
+      ],
+    },
+    {
+      id: 'sp25f-3-tests', problem: 'sp25f-3', verified: true,
+      verification: verification({ passing: 7, failing: 13 }, FINALS_DATE),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> letters = ['p', 'q', 'r', 's']
+>>> swap(letters, 0, 2)
+['r', 'q', 'p', 's']
+>>> letters
+['p', 'q', 'r', 's']`),
+        added(`>>> swap([1, 2], 0, 1), swap([1, 2], 1, 0)
+([2, 1], [2, 1])
+>>> swap(list(range(5)), 4, 0)
+[4, 1, 2, 3, 0]
+>>> swap(['a', 'b', 'c'], 1, 1)  # same index: no change
+['a', 'b', 'c']
+>>> swap(['x'], 0, 0)
+['x']`),
+      ],
+    },
+    {
+      id: 'sp25f-4a-tests', problem: 'sp25f-4a', verified: true,
+      verification: verification({ passing: 4, failing: 9 }, FINALS_DATE),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> a = Tree(5, [Tree(6, [Tree(7), Tree(8)]), Tree(9, [Tree(10)])])
+>>> sorted(offspring(a, 6))
+[7, 8]
+>>> b = Tree(3, [Tree(5, [Tree(3, [Tree(3), Tree(5)])]), Tree(7, [Tree(3)])])
+>>> sorted(offspring(b, 3))
+[3, 5, 5, 7]`),
+        added(`>>> offspring(Tree(1), 1), offspring(Tree(1, [Tree(2)]), 1), offspring(Tree(1, [Tree(2)]), 2)
+([], [2], [])
+>>> sorted(offspring(Tree(1, [Tree(1, [Tree(1)])]), 1))
+[1, 1]
+>>> a = Tree(5, [Tree(6, [Tree(7), Tree(8)]), Tree(9, [Tree(10)])])
+>>> offspring(a, 4), sorted(offspring(a, 5))
+([], [6, 9])`),
+      ],
+    },
+    {
+      id: 'sp25f-5-tests', problem: 'sp25f-5', verified: true,
+      verification: verification({ passing: 3, failing: 20 }, FINALS_DATE),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> bella, finn, hank = Rower('Bella'), Captain('Finn'), Captain('Hank')
+>>> Boat(5).add([Rower('Ace'), bella, Rower('Charlie'), finn, Rower('Ginger')])
+>>> Boat(7).add([Rower('Daisy'), finn, hank, bella, Captain('Ellie')])
+Finn in Boat 5 Seat 3 already has a seat!
+Bella in Boat 5 Seat 1 already has a seat!
+Ellie won't sit. Hank is captain of Boat 7!
+>>> print(hank)
+Hank in Boat 7 Seat 1`),
+        added(`>>> b = Boat(1)
+>>> r = [Rower(n) for n in 'abc']
+>>> b.add(r)
+>>> [b.where[x] for x in r]
+[0, 1, 2]
+>>> print(r[2])
+c in Boat 1 Seat 2`),
+        added(`>>> x, y = Captain('X'), Captain('Y')
+>>> Boat(2).add([x])
+>>> Boat(3).add([y])  # one captain per boat is fine
+>>> print(x)
+X in Boat 2 Seat 0
+>>> print(y)
+Y in Boat 3 Seat 0`),
+        added(`>>> z = Captain('Z')
+>>> Boat(4).add([z])
+>>> b5 = Boat(5)
+>>> b5.add([z])  # already seated: Z doesn't claim boat 5
+Z in Boat 4 Seat 0 already has a seat!
+>>> b5.add([Captain('W')])
+>>> len(b5.where)
+1`),
+      ],
+    },
+    {
+      id: 'sp25f-6a-tests', problem: 'sp25f-6a', verified: true,
+      verification: verification({ passing: 1, failing: 20 }, FINALS_DATE),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> can_equal('45332', 14)   # 45-33+2 = 14
+True
+>>> can_equal('45332', 527)  # -4+533-2 = 527
+True
+>>> can_equal('45332', 38)   # 4+5-3+32 = 38
+True
+>>> can_equal('45332', 287)  # -45+332 = 287
+True
+>>> can_equal('45332', -287) # 45-332 = -287
+True`),
+        exam(`>>> can_equal('45332', 45)   # Impossible
+False
+>>> can_equal('45332', 39)   # Impossible
+False`),
+        added(`>>> [can_equal('', 0), can_equal('', 1), can_equal('5', 5), can_equal('5', -5), can_equal('5', 0)]
+[True, False, True, True, False]
+>>> [can_equal('12', 12), can_equal('12', 3), can_equal('12', -1), can_equal('12', 13), can_equal('12', 2)]
+[True, True, True, False, False]`),
+      ],
+    },
+    {
+      id: 'sp25f-6b-tests', problem: 'sp25f-6b', verified: true,
+      verification: verification({ passing: 1, failing: 12 }, FINALS_DATE),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> join_link(Link('cs', Link('6', Link('1a'))))
+'cs61a'`),
+        exam(`>>> to_link(iter([3, 5, 7, 9]))
+Link(3, Link(5, Link(7, Link(9))))`),
+        added(`>>> join_link(Link.empty), join_link(Link('a')), join_link(Link('', Link('b')))
+('', 'a', 'b')
+>>> to_link(iter([])) is Link.empty
+True
+>>> to_link(iter('ab')), to_link(map(abs, [-1]))
+(Link('a', Link('b')), Link(1))`),
+      ],
+    },
+    {
+      id: 'sp25f-6c-tests', problem: 'sp25f-6c', verified: true,
+      verification: verification({ passing: 4, failing: 9 }, FINALS_DATE),
+      provenance: EXAM, setup: LINK + '\n' + CAN_EQUAL + '\n' + JOIN_TO_LINK, setupNote: 'These tests provide the course’s Link class (the exam uses it but does not print it), and can_equal, join_link and to_link from parts (a) and (b) (the official solutions).', setupFrom: ['sp25f-6a', 'sp25f-6b'],
+      cases: [
+        exam(`>>> list(terms('45332', 38))   # 4+5-3+32 = 38
+[4, 5, -3, 32]
+>>> list(terms('45332', 527))  # -4+533-2 = 527
+[-4, 533, -2]`),
+        added(`>>> list(terms('5', 5)), list(terms('5', -5)), list(terms('12', -1)), list(terms('12', 12))
+([5], [-5], [1, -2], [12])`),
+        added(`>>> ok = lambda d, n: sum(terms(d, n)) == n and ''.join(str(abs(x)) for x in terms(d, n)) == d
+>>> all([ok('1234', n) for n in range(-60, 60) if can_equal('1234', n)])  # every possible total
+True`),
+      ],
+    },
+    {
+      id: 'sp25f-9a-tests', problem: 'sp25f-9a', verified: true,
+      verification: verification({ passing: 3, failing: 3 }, FINALS_DATE),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> letters = ['p', 'q', 'r', 's']
+>>> swap(letters, 0, 2)
+['r', 'q', 'p', 's']
+>>> letters
+['p', 'q', 'r', 's']`),
+        added(`>>> swap([1, 2], 0, 1), swap(list(range(5)), 4, 0), swap(['a', 'b', 'c'], 1, 1)
+([2, 1], [4, 1, 2, 3, 0], ['a', 'b', 'c'])`),
+      ],
+    },
+    {
+      id: 'sp25f-9b-tests', problem: 'sp25f-9b', verified: true,
+      verification: verification({ passing: 1, failing: 3 }, FINALS_DATE),
+      provenance: EXAM, setup: CAN_EQUAL, setupNote: 'These tests provide can_equal from 6(a) (the official solution).', setupFrom: ['sp25f-6a'],
+      cases: [
+        exam(`>>> equal('45332', 527)
+'-4+533-2'
+>>> equal('45332', 38)
+'4+5-3+32'`),
+        added(`>>> equal('5', 5), equal('5', -5)
+('5', '-5')
+>>> s = equal('1234', -8)
+>>> eval(s), s.replace('+', '').replace('-', '')
+(-8, '1234')`),
+      ],
+    },
+    {
+      id: 'fa24f-3-tests', problem: 'fa24f-3', verified: true,
+      verification: verification({ passing: 1, failing: 12 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> tens([3, 2, 2, 3, 6, 2, 2, 4, 1, 5, 2])  # sum(s[:4])==10, sum(s[:7])==20, sum(s[:10])==30
+True
+>>> tens([3, 2, 2, 3, 6, 2, 6, 1, 5, 2])  # sum(s[:4])==10, but no slice starting at 0 sums to 20
+False`),
+        added(`>>> [tens([]), tens([1]), tens([10]), tens([5, 5, 5]), tens([4, 6, 10])]
+[True, True, True, True, True]
+>>> [tens([11]), tens([9, 2]), tens([5, 5, 6, 6]), tens([5, 15])]  # 5 + 15 passes 10 and lands on 20
+[False, False, False, False]`),
+      ],
+    },
+    {
+      id: 'fa24f-4a-tests', problem: 'fa24f-4a', verified: true,
+      verification: verification({ passing: 1, failing: 24 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> total = Counter()
+>>> odd, even = total.spawn(), total.spawn()  # these are offspring of total
+>>> one, three = odd.spawn(), odd.spawn()     # these are offspring of odd and total
+>>> for c in [one, even, three, even, odd, even]:
+...     c.inc()
+>>> [c.count for c in [one, three, even, odd, total]]
+[1, 1, 3, 3, 6]`),
+        added(`>>> c = Counter()
+>>> c.count, c.parent
+(0, None)
+>>> c.inc()
+>>> c.count
+1
+>>> a = Counter()
+>>> b = a.spawn()
+>>> d = b.spawn()
+>>> d.parent is b, b.parent is a
+(True, True)
+>>> d.inc()
+>>> b.inc()
+>>> [a.count, b.count, d.count]
+[2, 2, 1]`),
+      ],
+    },
+    {
+      id: 'fa24f-5a-tests', problem: 'fa24f-5a', verified: true,
+      verification: verification({ passing: 2, failing: 9 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> promote([3, 6, 9, 12, 15, 18], 2, 4)
+[3, 6, 15, 9, 12, 18]
+>>> promote([3, 6, 9, 12, 15, 18], 0, 4)
+[15, 3, 6, 9, 12, 18]`),
+        added(`>>> promote([1, 2], 0, 1), promote([1, 2, 3, 4], 1, 3), promote([1, 2, 3, 4], 2, 3)
+([2, 1], [1, 4, 2, 3], [1, 2, 4, 3])
+>>> s = [1, 2, 3]
+>>> t = promote(s, 0, 2)
+>>> s, t  # s is not mutated
+([1, 2, 3], [3, 1, 2])`),
+      ],
+    },
+    {
+      id: 'fa24f-5b-tests', problem: 'fa24f-5b', verified: true,
+      verification: verification({ passing: 4, failing: 12 }, '2026-11-17'),
+      provenance: EXAM, setup: PROMOTE, setupNote: 'These tests provide promote from part (a) (the official solution).', setupFrom: ['fa24f-5a'],
+      cases: [
+        exam(`>>> promotions([2, 4, 6, 8, 10, 12],
+...            [2, 6, 8, 4, 12, 10])  # promote (1, 2) then (2, 3) then (4, 5)
+3
+>>> promotions([6, 1, 6, 1, 6, 1],
+...            [1, 1, 6, 6, 1, 6])    # promote (0, 1) then (1, 5)
+2`),
+        exam(`>>> promotions([1, 2, 3], [1, 2, 3])        # no promotions needed
+0
+>>> promotions([1, 2, 1, 2], [2, 1, 2, 1])  # promote (0, 3)
+1`),
+        added(`>>> promotions([], []), promotions([1, 2], [2, 1]), promotions([3, 2, 1], [1, 2, 3]), promotions([1, 2, 3], [3, 1, 2])
+(0, 1, 2, 1)`),
+      ],
+    },
+    {
+      id: 'fa24f-6a-tests', problem: 'fa24f-6a', verified: true,
+      verification: verification({ passing: 2, failing: 10 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(6)]), 6)
+True
+>>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(6)]), 12)
+False`),
+        exam(`>>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(5)]), 6)
+False
+>>> products(Tree(1, [Tree(5, [Tree(2)]), Tree(12)]), 12)
+False`),
+        added(`>>> [products(Tree(5), 5), products(Tree(5), 10), products(Tree(2, [Tree(3), Tree(3, [Tree(1)])]), 6)]
+[True, False, True]
+>>> products(Tree(2, [Tree(2, [Tree(2)]), Tree(4)]), 8), products(Tree(4, [Tree(2)]), 6)
+(True, False)`),
+      ],
+    },
+    {
+      id: 'fa24f-6b-tests', problem: 'fa24f-6b', verified: true,
+      verification: verification({ passing: 2, failing: 17 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE_STR, setupNote: 'These tests provide the course’s Tree class with its __str__ method, which prints one label per line, indented by depth (the exam uses it but does not print it).', setupFrom: [],
+      cases: [
+        exam(`>>> produce(12)
+Tree(1, [Tree(2, [Tree(6)]), Tree(3, [Tree(4)]), Tree(12)])`),
+        exam(`>>> print(produce(24))  # Paths are 1-2-3-4, 1-2-12, 1-3-8, 1-4-6, and 1-24
+1
+  2
+    3
+      4
+    12
+  3
+    8
+  4
+    6
+  24`),
+        added(`>>> produce(1), produce(2), produce(6)
+(Tree(1), Tree(1, [Tree(2)]), Tree(1, [Tree(2, [Tree(3)]), Tree(6)]))
+>>> produce(7)
+Tree(1, [Tree(7)])
+>>> str(produce(156)).count('\\n') + 1  # 18 nodes; using n instead of x in blank (e) adds extra paths
+18`),
+      ],
+    },
+    {
+      id: 'fa24f-9b-tests', problem: 'fa24f-9b', verified: true,
+      verification: verification({ passing: 1, failing: 3 }, '2026-11-17'),
+      provenance: EXAM, setup: TENS, setupNote: 'These tests provide tens from Q3 (the official solution).', setupFrom: ['fa24f-3'],
+      cases: [
+        exam(`>>> make_tens([4, 2, 2, 2, 4, 6, 1, 3, 3, 2, 5])  # promote (6, 7), (7, 9), and (8, 10)
+[4, 2, 2, 2, 4, 6, 3, 2, 5, 1, 3]`),
+        exam(`>>> make_tens([4, 2, 2, 2, 4, 5, 1, 4, 3, 4])  # promote (2, 4), (4, 7), (5, 9), and (8, 9)
+[4, 2, 4, 2, 4, 4, 2, 5, 3, 1]`),
+        added(`>>> make_tens([10]), make_tens([5, 5]), make_tens([3, 7]), make_tens([7, 2, 3])
+([10], [5, 5], [3, 7], [7, 3, 2])
+>>> make_tens([11]) is None
+True`),
+      ],
+    },
+    {
+      id: 'sp24f-2a-tests', problem: 'sp24f-2a', verified: true,
+      verification: verification({ passing: 1, failing: 14 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> up([3, 1, 2, 5, 4, 5, 7, 6, 12, 11])
+[3, 5, 7, 12]`),
+        added(`>>> up([]), up([4]), up([5, 4, 3]), up([1, 2, 3]), up([2, 2, 3])
+([], [4], [5], [1, 2, 3], [2, 3])
+>>> up([-5, -7, -1, 0])  # negative numbers
+[-5, -1, 0]`),
+      ],
+    },
+    {
+      id: 'sp24f-2b-tests', problem: 'sp24f-2b', verified: true,
+      verification: verification({ passing: 6, failing: 16 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> upiter(iter([3, 1, 2, 5, 4, 5, 7, 6, 12, 11]))
+[3, 5, 7, 12]`),
+        added(`>>> upiter(iter([])), upiter(iter([4])), upiter(iter([5, 4, 3])), upiter(iter([2, 2, 3]))
+([], [4], [5], [2, 3])
+>>> upiter(x * x for x in [-3, 1, 4, -5])  # any iterator
+[9, 16, 25]`),
+      ],
+    },
+    {
+      id: 'sp24f-3a-tests', problem: 'sp24f-3a', verified: true,
+      verification: verification({ passing: 7, failing: 23 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> d = Domino([3, 4])
+>>> original = d
+>>> d.align(3)
+3-4
+>>> d.align(4)
+4-3
+>>> d is original  # No new Domino instance was created
+True
+>>> d              # A Domino's order is changed by align
+4-3`),
+        added(`>>> d = Domino([0, 9])
+>>> d, d.align(0), d.align(9), d.align(9)
+(9-0, 9-0, 9-0, 9-0)
+>>> d.ns
+[9, 0]
+>>> e = Domino([5, 5])
+>>> e.align(5)
+5-5`),
+        added(`>>> try:
+...     Domino([1, 2]).align(3)
+... except AssertionError as e:
+...     print(e)
+first must be a number on the domino.`),
+      ],
+    },
+    {
+      id: 'sp24f-3b-tests', problem: 'sp24f-3b', verified: true,
+      verification: verification({ passing: 5, failing: 3 }, '2026-11-17'),
+      provenance: EXAM, setup: DOMINO, setupNote: 'These tests provide the Domino class from part (a) (the official solution).', setupFrom: ['sp24f-3a'],
+      cases: [
+        exam(`>>> ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [3, 4]]]
+>>> drop(ds[1], ds)
+[5-2, 5-5, 3-4]
+>>> drop(ds[3], ds)
+[5-2, 3-4, 5-5]
+>>> ds
+[5-2, 3-4, 5-5, 3-4]`),
+        added(`>>> d = Domino([1, 2])
+>>> drop(d, []), drop(d, [d]), drop(d, [d, d])
+([], [], [])
+>>> drop(Domino([1, 2]), [d])  # a different domino with the same numbers stays
+[1-2]`),
+      ],
+    },
+    {
+      id: 'sp24f-3c-tests', problem: 'sp24f-3c', verified: true,
+      verification: verification({ passing: 4, failing: 24 }, '2026-11-17'),
+      provenance: EXAM, setup: DOMINO + '\n' + DROP, setupNote: 'These tests provide Domino and drop from parts (a) and (b) (the official solutions).', setupFrom: ['sp24f-3a', 'sp24f-3b'],
+      cases: [
+        exam(`>>> ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [6, 1], [3, 2]]]
+>>> print(longest(ds))
+4-3 3-2 2-5 5-5`),
+        exam(`>>> ds = [Domino(ns) for ns in [[1, 2],[1, 2],[3, 2],[3, 2],[3, 2],[4, 3],[4, 3],[4, 3],[6,5]]]
+>>> print(longest(ds))
+2-1 1-2 2-3 3-2 2-3 3-4 4-3 3-4`),
+        added(`>>> len(longest([Domino([1, 2])]).split())
+1
+>>> len(longest([Domino([1, 2]), Domino([3, 4])]).split())  # no line longer than one domino
+1
+>>> len(longest([Domino([1, 2]), Domino([2, 3]), Domino([3, 1])]).split())  # a full circle uses all three
+3
+>>> len(longest([Domino([1, 2]), Domino([5, 5]), Domino([2, 5]), Domino([6, 1])]).split())
+4`),
+      ],
+    },
+    {
+      id: 'sp24f-5a-tests', problem: 'sp24f-5a', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> count_ones(Tree(1, [Tree(2), Tree(3, [Tree(4)])]))
+1
+>>> count_ones(Tree(1, [Tree(2), Tree(3), Tree(4)]))
+0
+>>> count_ones(Tree(1, [Tree(2, [Tree(3, [Tree(4)]), Tree(5, [Tree(6)])])]))
+3`),
+        added(`>>> count_ones(Tree(1)), count_ones(Tree(1, [Tree(2)])), count_ones(Tree(1, [Tree(2, [Tree(3, [Tree(4)])])]))
+(0, 1, 3)
+>>> count_ones(Tree(1, [Tree(2, [Tree(3)]), Tree(4, [Tree(5), Tree(6, [Tree(7)])])]))
+2`),
+      ],
+    },
+    {
+      id: 'fa23f-2-tests', problem: 'fa23f-2', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(3, [Tree(4), Tree(5, [Tree(1), Tree(2)]), Tree(7)])
+>>> bounds(t, 7, 10)  # 3+4=7, 3+5+1=9, 3+5+2=10, 3+7=10
+4
+>>> bounds(t, 9, 10)
+3
+>>> bounds(t, 9, 9)
+1`),
+        added(`>>> bounds(Tree(5), 5, 5), bounds(Tree(5), 6, 9), bounds(Tree(5), 1, 4)
+(1, 0, 0)
+>>> t = Tree(1, [Tree(2, [Tree(3)]), Tree(1)])  # paths sum to 6 and 2
+>>> bounds(t, 2, 6), bounds(t, 3, 5), bounds(t, 0, 2)
+(2, 0, 1)`),
+      ],
+    },
+    {
+      id: 'fa23f-3-tests', problem: 'fa23f-3', verified: true,
+      verification: verification({ passing: 1, failing: 18 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> str(Expression(['I', 'said', 'hi']))
+'ahoy says I'
+>>> e = Expression(['there', 'you', 'are'])
+>>> print(e)
+arrrr you there
+>>> e.dialect['you'] = 'ye'  # After adding to the dialect...
+>>> print(e)                 # ... the result of printing changes
+arrrr ye there`),
+        added(`>>> e = Expression(['yes'])
+>>> print(e), e.first.then, e.first.w, e.first.exp is e
+aye
+(None, None, 'yes', True)
+>>> e.first.say()
+'aye'
+>>> print(Expression(['a', 'b', 'c']))
+c b a`),
+      ],
+    },
+    {
+      id: 'fa23f-4a-tests', problem: 'fa23f-4a', verified: true,
+      verification: verification({ passing: 2, failing: 28 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> longest_pairing([1, 2, 3, 4, 5, 6, 7, 8])
+[(1, 2), (4, 5), (7, 8)]`),
+        added(`>>> longest_pairing([1, 2]), longest_pairing(['a', 'b', 'c', 'd', 'e'])
+([(1, 2)], [('a', 'b'), ('d', 'e')])
+>>> try:
+...     longest_pairing([1, 2, 3])
+... except AssertionError as e:
+...     print(e)
+s must have length 3*n-1 for a positive integer n`),
+      ],
+    },
+    {
+      id: 'fa23f-4b-tests', problem: 'fa23f-4b', verified: true,
+      verification: verification({ passing: 2, failing: 15 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> is_pair_sequence([(1, 2), (3, 4)])
+True
+>>> is_pair_sequence([(1, 2), (3, 4, 5)])
+False
+>>> is_pair_sequence([(1, 2), "not a tuple"])
+False`),
+        exam(`>>> is_pair_sequence([(1, 2), (3, (4, 5, 6))])  # (3, (4, 5, 6)) is a two-element tuple
+True
+>>> is_pair_sequence([])
+True`),
+        added(`>>> is_pair_sequence([(1, 2), [3, 4]]), is_pair_sequence(['ab']), is_pair_sequence([(1,)])  # a list, a string, a 1-tuple
+(False, False, False)`),
+      ],
+    },
+    {
+      id: 'fa23f-4c-tests', problem: 'fa23f-4c', verified: true,
+      verification: verification({ passing: 1, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: IS_PAIR_SEQUENCE, setupNote: 'These tests provide is_pair_sequence from part (b) (the official solution).', setupFrom: ['fa23f-4b'],
+      cases: [
+        exam(`>>> pairs = [(3, 4), (5, 6), (7, 7)]
+>>> is_pairing([3, 3, 4, 5, 4, 5, 6, 0, 7, 7, 7], pairs)
+True
+>>> is_pairing([3, 3, 4, 5, 6, 0, 7, 7, 7], pairs)  # Need an element between pairs
+False`),
+        exam(`>>> pairs = [(3, 4), (5, 6), (7, 7)]
+>>> is_pairing([3, 2, 4, 0, 5, 6, 0, 7, 7], pairs)  # Elements of a pair must be adjacent
+False
+>>> is_pairing([7, 7, 3, 3, 4, 5, 4, 5, 6], pairs)  # Pairing isn't in the same order as s
+False`),
+        added(`>>> is_pairing([], []), is_pairing([1, 2], [(1, 2)]), is_pairing([1, 2], [(2, 1)]), is_pairing([1], [(1, 1)])
+(True, True, False, False)
+>>> is_pairing([1, 2, 1, 2], [(1, 2), (1, 2)]), is_pairing([1, 2, 0, 1, 2], [(1, 2), (1, 2)])
+(False, True)`),
+      ],
+    },
+    {
+      id: 'fa23f-4d-tests', problem: 'fa23f-4d', verified: true,
+      verification: verification({ passing: 1, failing: 8 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> sorted(unequal_pairs([4, 2, 2, 4, 4, 1, 1]))  # Four different pairings!
+[[(2, 4)], [(4, 1)], [(4, 2)], [(4, 2), (4, 1)]]
+>>> max(unequal_pairs([4, 2, 2, 4, 5, 4, 4, 1, 5, 5, 6]), key=len)  # The longest pairing
+[(4, 2), (4, 5), (4, 1), (5, 6)]`),
+        added(`>>> list(unequal_pairs([])), list(unequal_pairs([1])), list(unequal_pairs([1, 1])), list(unequal_pairs([1, 2]))
+([], [], [], [[(1, 2)]])
+>>> sorted(unequal_pairs([1, 2, 3, 4, 5]))
+[[(1, 2)], [(1, 2), (4, 5)], [(2, 3)], [(3, 4)], [(4, 5)]]`),
+      ],
+    },
+    {
+      id: 'fa23f-4e-tests', problem: 'fa23f-4e', verified: true,
+      verification: verification({ passing: 1, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> L = Link                                                       # Abbreviate Link
+>>> max_pair_sum(L(3, L(4, L(5, L(3, L(4, L(5, L(6))))))))         # 4+5 + 5+6
+20
+>>> max_pair_sum(L(3, L(4, L(5, L(3, L(4, L(5, L(6, L(3)))))))))   # 3+4 + 3+4 + 6+3
+23`),
+        added(`>>> max_pair_sum(Link.empty), max_pair_sum(Link(5)), max_pair_sum(Link(5, Link(6))), max_pair_sum(Link(1, Link(9, Link(1))))
+(0, 0, 11, 10)
+>>> max_pair_sum(Link(1, Link(1, Link(9, Link(9)))))  # only one of (1, 1) and (9, 9) fits
+18`),
+      ],
+    },
+    {
+      id: 'sp23f-3a-tests', problem: 'sp23f-3a', verified: true,
+      verification: verification({ passing: 4, failing: 18 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(5, [Tree(4, [Tree(6), Tree(7)]), Tree(8), Tree(7, [Tree(5), Tree(3)])])
+>>> big_paths(t)  # 5-8 and 5-7-5
+2`),
+        added(`>>> big_paths(Tree(1)), big_paths(Tree(1, [Tree(0)])), big_paths(Tree(1, [Tree(1), Tree(2)]))
+(1, 0, 2)
+>>> big_paths(Tree(3, [Tree(5, [Tree(2, [Tree(9)]), Tree(4)])]))  # 3-5-4 only: 2 is below the root label
+1`),
+      ],
+    },
+    {
+      id: 'sp23f-3b-tests', problem: 'sp23f-3b', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(5, [Tree(4, [Tree(6), Tree(7)]), Tree(8), Tree(7, [Tree(5), Tree(3)])])
+>>> sorted(gen(t, 10))  # Does not yield [5, 5]; one 5 is the grandparent of the other.
+[[4, 6], [7, 3]]`),
+        added(`>>> list(gen(Tree(10), 10)), list(gen(Tree(4, [Tree(6), Tree(6)]), 10))
+([], [[4, 6], [4, 6]])
+>>> list(gen(Tree(1, [Tree(2, [Tree(1, [Tree(2)])])]), 3))  # parent first, at every level
+[[1, 2], [2, 1], [1, 2]]`),
+      ],
+    },
+    {
+      id: 'sp23f-4-tests', problem: 'sp23f-4', verified: true,
+      verification: verification({ passing: 4, failing: 10 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> cars(2, 5)  # '<><>.', '<>.<>', '.<><>'
+3
+>>> cars(3, 6)  # '<><><>'
+1
+>>> cars(1, 7)  # '<>.....', '.<>....', etc.
+6`),
+        added(`>>> [cars(0, 0), cars(0, 5), cars(1, 1), cars(1, 2), cars(2, 3), cars(2, 6)]
+[1, 1, 0, 1, 0, 6]`),
+      ],
+    },
+    {
+      id: 'sp23f-5a-tests', problem: 'sp23f-5a', verified: true,
+      verification: verification({ passing: 6, failing: 6 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> pair([3, 4, 5, 8, 7, 6])
+[[3, 4], [5, 8], [7, 6]]`),
+        added(`>>> pair([]), pair([1, 2]), pair(['a', 'b', 'c', 'd'])
+([], [[1, 2]], [['a', 'b'], ['c', 'd']])`),
+      ],
+    },
+    {
+      id: 'sp23f-5a-iii-tests', problem: 'sp23f-5a-iii', verified: true,
+      verification: verification({ passing: 1, failing: 3 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> t = gen_pairs(naturals(3))  # naturals(3) contains 3, 4, 5, 6, ...
+>>> next(t)
+[3, 4]
+>>> next(t)
+[5, 6]`),
+        added(`>>> t = gen_pairs(iter('abcdef'))
+>>> next(t), next(t), next(t)
+(['a', 'b'], ['c', 'd'], ['e', 'f'])`),
+      ],
+    },
+    {
+      id: 'sp23f-6a-tests', problem: 'sp23f-6a', verified: true,
+      verification: verification({ passing: 2, failing: 7 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> f = Log(lambda x: x * x)
+>>> f.call(f.call(3))
+81
+>>> f.args
+[3, 9]
+>>> g, h = Log(abs), Log(abs)
+>>> g.call(h.call(-3))
+3
+>>> g.args
+[-3, 3]`),
+        added(`>>> a = Log(len)
+>>> b = Log(len)
+>>> a.args is b.args, a.args
+(True, [])
+>>> b.call('hi'), a.args, Log(abs).args
+(2, ['hi'], [])
+>>> a.f is len
+True`),
+      ],
+    },
+    {
+      id: 'sp23f-6b-tests', problem: 'sp23f-6b', verified: true,
+      verification: verification({ passing: 5, failing: 7 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> c = Counter()
+>>> c.observe(map(abs, range(-3, 3)))  # observe 3, 2, 1, 0, 1, 2
+>>> c.observe(range(-3, 3))            # observe -3, -2, -1, 0, 1, 2
+>>> {i: c.count(i) for i in range(-3, 3)}
+{-3: 1, -2: 1, -1: 1, 0: 2, 1: 3, 2: 3}
+>>> c.forget()  # forget range(-3, 3)
+>>> {i: c.count(i) for i in range(-3, 3)}
+{-3: 0, -2: 0, -1: 0, 0: 1, 1: 2, 2: 2}
+>>> c.forget()  # forget map(abs, range(-3, 3))
+>>> c.count(1)
+0`),
+        added(`>>> c = Counter()
+>>> c.count('a')
+0
+>>> c.observe('banana')
+>>> c.observe(iter('ab'))
+>>> c.count('a'), c.count('b')
+(4, 2)
+>>> c.forget()
+>>> c.count('a'), c.count('b')
+(3, 1)`),
+      ],
+    },
+    {
+      id: 'sp23f-8a-tests', problem: 'sp23f-8a', verified: true,
+      verification: verification({ passing: 1, failing: 2 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> group(2, [3, 4, 5, 6, 7, 8])
+[[3, 4], [5, 6], [7, 8]]
+>>> group(3, [3, 4, 5, 6, 7, 8])
+[[3, 4, 5], [6, 7, 8]]
+>>> group(4, [3, 4, 5, 6, 7, 8])
+[[3, 4, 5, 6], [7, 8]]`),
+        added(`>>> group(1, [1, 2, 3]), group(5, [1, 2]), group(2, [1, 2, 3])
+([[1], [2], [3]], [[1, 2]], [[1, 2], [3]])`),
+      ],
+    },
+    {
+      id: 'fa22f-5-tests', problem: 'fa22f-5', verified: true,
+      verification: verification({ passing: 1, failing: 21 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> count_change_register(20, 10)  # Excludes 20 pennies and excludes 1 nickel + 15 pennies
+7
+>>> count_change_register(20, 2)   # 10-10, 10-5-5
+2`),
+        exam(`>>> count_change_register(100, 10)
+84
+>>> count_change_register(100, 100)
+292`),
+        added(`>>> count_change_register(25, 2), count_change_register(0, 3), count_change_register(3, 2), count_change_register(5, 0)
+(2, 1, 0, 0)
+>>> count_change_register(10, 1)  # 10, 5-1-1-1-1-1 needs 5 pennies, so only one way
+1`),
+      ],
+    },
+    {
+      id: 'fa22f-6-tests', problem: 'fa22f-6', verified: true,
+      verification: verification({ passing: 3, failing: 16 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree('E', [Tree('F', [Tree('A', [Tree('B'), Tree('C')]), Tree('D', [Tree('H')]), Tree('G')])])
+>>> sorted(tree_to_table(t))
+[('A', 'B'), ('A', 'C'), ('D', 'H'), ('E', 'F'), ('F', 'A'), ('F', 'D'), ('F', 'G')]`),
+        added(`>>> tree_to_table(Tree('A')), tree_to_table(Tree('A', [Tree('B')]))
+([], [('A', 'B')])
+>>> sorted(tree_to_table(Tree(1, [Tree(2, [Tree(3, [Tree(4)])])])))
+[(1, 2), (2, 3), (3, 4)]`),
+      ],
+    },
+    {
+      id: 'fa22f-7a-tests', problem: 'fa22f-7a', verified: true,
+      verification: verification({ passing: 2, failing: 8 }, '2026-11-17'),
+      provenance: 'Exam doctests from the problem’s docstring except its last one (since Python 3.7 a generator that lets StopIteration escape raises RuntimeError instead), plus added boundary cases written for this app (marked “Added”).', setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> a = three_flips(iter("HTTHHT"))
+>>> next(a)  # Coin flips 0, 1, and 2
+'HTT'
+>>> next(a)  # Coin flips 1, 2, and 3
+'TTH'
+>>> next(a)  # Coin flips 2, 3, and 4
+'THH'
+>>> next(a)  # Coin flips 3, 4, and 5
+'HHT'`),
+        added(`>>> a = three_flips(iter('HTHTH'))
+>>> [next(a) for _ in range(3)]
+['HTH', 'THT', 'HTH']
+>>> b = three_flips(iter('TTTT'))
+>>> next(b), next(b)
+('TTT', 'TTT')`),
+      ],
+    },
+    {
+      id: 'fa22f-7b-tests', problem: 'fa22f-7b', verified: true,
+      verification: verification({ passing: 4, failing: 6 }, '2026-11-17'),
+      provenance: EXAM, setup: THREE_FLIPS, setupNote: 'These tests provide three_flips from part (a) (the official solution).', setupFrom: ['fa22f-7a'],
+      cases: [
+        exam(`>>> penney(iter("HTTHTHTTHTHTHH"),"THH","HHH")
+1
+>>> penney(iter("HTTHTHTTHTHTHH"),"HHH","THH")
+2
+>>> penney(iter("HTTHTHTTHTHTHH"),"HTT","THH")  # HTT happens first
+1`),
+        added(`>>> penney(iter("TTH"), "HHH", "TTH"), penney(iter("TTH"), "TTH", "HHH"), penney(iter("HTHHHT"), "HHT", "HHH")
+(2, 1, 2)
+>>> penney(iter("THHTTT"), "TTT", "HHH")  # THH is in "TTTHHH" but is neither player's sequence
+1`),
+      ],
+    },
+    {
+      id: 'fa22f-10-tests', problem: 'fa22f-10', verified: true,
+      verification: verification({ passing: 2, failing: 2 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = table_to_tree([['A','B'],['A','C'],['D','H'],['F','A'],['F','D'],['F','G'],['E','F']],'E')
+>>> t.label, [b.label for b in t.branches], sorted([b.label for b in t.branches[0].branches])
+('E', ['F'], ['A', 'D', 'G'])
+>>> sorted(b.label for b in t.branches[0].branches[0].branches)
+['B', 'C']`),
+        added(`>>> table_to_tree([['x', 'y']], 'x')
+Tree('x', [Tree('y')])
+>>> table_to_tree([['b', 'c'], ['a', 'b']], 'a')
+Tree('a', [Tree('b', [Tree('c')])])`),
+      ],
+    },
+    {
+      id: 'fa21f-1b-tests', problem: 'fa21f-1b', verified: true,
+      verification: verification({ passing: 1, failing: 15 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> s = Link(3, Link(1, Link(4, Link(1, Link(5)))))
+>>> b = Blink(s)
+>>> b.link is s
+True
+>>> b.rest.rest.link is s.rest.rest
+True
+>>> b.rest.rest.rest.rest.rest.link is Link.empty
+True`),
+        exam(`>>> s = Link(3, Link(1, Link(4, Link(1, Link(5)))))
+>>> b = Blink(s)
+>>> b.sublists[4]
+Link(4, Link(1, Link(5)))
+>>> b.sublists[1]
+Link(1, Link(4, Link(1, Link(5))))
+>>> b.rest.rest.sublists[1]
+Link(1, Link(5))
+>>> b.sublists[3] is s
+True`),
+        added(`>>> e = Blink(Link.empty)
+>>> e.sublists, e.link is Link.empty, hasattr(e, 'rest')
+({}, True, False)
+>>> b = Blink(Link(2, Link(2)))
+>>> b.sublists[2] is b.link, len(b.sublists), b.rest.sublists[2] is b.link.rest
+(True, 1, True)`),
+      ],
+    },
+    {
+      id: 'fa21f-2a-tests', problem: 'fa21f-2a', verified: true,
+      verification: verification({ passing: 1, failing: 19 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> [is_worm(0), is_worm(4), is_worm(4345), is_worm(4334), is_worm(4354)]
+[True, True, True, False, False]
+>>> [n for n in range(200, 300) if is_worm(n)]
+[210, 212, 232, 234]`),
+        added(`>>> [is_worm(9), is_worm(10), is_worm(11), is_worm(98), is_worm(97), is_worm(1010101), is_worm(1010102)]
+[True, True, False, True, False, True, False]`),
+      ],
+    },
+    {
+      id: 'fa21f-2b-tests', problem: 'fa21f-2b', verified: true,
+      verification: verification({ passing: 1, failing: 16 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> sandworm(13531)            # 13[5]31
+5
+>>> sandworm(152)              # [1]5[2]
+12`),
+        exam(`>>> sandworm(31415926535)      # [3]1[4]1[5]92[6]53[5]
+34565
+>>> sandworm(314159265358973)  # [3]1[4]1[5]92[6]53589[7]3
+34567`),
+        added(`>>> sandworm(0), sandworm(7), sandworm(70), sandworm(21), sandworm(1357)
+(0, 7, 7, 21, 7)
+>>> sandworm(98765)
+98765`),
+      ],
+    },
+    {
+      id: 'fa21f-2c-tests', problem: 'fa21f-2c', verified: true,
+      verification: verification({ passing: 3, failing: 22 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> list(thumper(1, 7))  # Note: 0 has no digits, so it is not a 1-digit worm.
+[1, 2, 3, 4, 5, 6, 7]
+>>> list(thumper(2, 3))
+[10, 12, 21, 23, 32]
+>>> list(thumper(3, 3))
+[101, 121, 123, 210, 212, 232, 321, 323]`),
+        added(`>>> list(thumper(1, 1)), list(thumper(2, 1)), list(thumper(3, 1))
+([1], [10], [101])
+>>> len(list(thumper(4, 9))), list(thumper(2, 9))[-1]
+(61, 98)`),
+      ],
+    },
+    {
+      id: 'fa21f-2d-tests', problem: 'fa21f-2d', verified: true,
+      verification: verification({ passing: 2, failing: 20 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK_STR, setupNote: LINK_STR_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> print(segment(3233344, lambda a, b: a == b))
+<<3> <2> <3 3 3> <4 4>>
+>>> print(segment(314159, lambda a, b: a == 1))
+<<3> <1 4> <1 5> <9>>`),
+        added(`>>> print(segment(7, lambda a, b: True)), print(segment(1234, lambda a, b: True)), print(segment(1234, lambda a, b: False))
+<<7>>
+<<1 2 3 4>>
+<<1> <2> <3> <4>>
+(None, None, None)
+>>> print(segment(1203, lambda a, b: a < b))  # digits read right to left; a is the left digit
+<<1 2> <0 3>>`),
+      ],
+    },
+    {
+      id: 'fa21f-2e-tests', problem: 'fa21f-2e', verified: true,
+      verification: verification({ passing: 2, failing: 2 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK_STR + '\n' + SEGMENT, setupNote: 'These tests provide the course’s Link class with its __str__ method (the exam uses it but does not print it) and segment from part (d) (the official solution).', setupFrom: ['fa21f-2d'],
+      cases: [
+        exam(`>>> print(desert(43587))
+<<4 3> <5> <8 7>>
+>>> print(desert(11235813213455))
+<<1> <1 2 3> <5> <8> <1> <3 2 1> <3 4 5> <5>>`),
+        added(`>>> print(desert(5)), print(desert(12121)), print(desert(19))
+<<5>>
+<<1 2 1 2 1>>
+<<1> <9>>
+(None, None, None)`),
+      ],
+    },
+    {
+      id: 'fa21f-3a-tests', problem: 'fa21f-3a', verified: true,
+      verification: verification({ passing: 3, failing: 4 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> apple = Tree(5, [Tree(6, [Tree(7)]), Tree(8), Tree(9, [Tree(10)])])
+>>> sum_fruit_labels(apple)  # 7 + 10
+17
+>>> pineapple = Tree(3, [Tree(4), apple, apple, Tree(1, [Tree(2)])])
+>>> sum_fruit_labels(pineapple)  # 7 + 10 + 7 + 10 + 2
+36
+>>> sum_fruit_labels(Tree(3, [Tree(4), Tree(5)]))  # No fruits!
+0`),
+        added(`>>> sum_fruit_labels(Tree(1)), sum_fruit_labels(Tree(1, [Tree(2)])), sum_fruit_labels(Tree(1, [Tree(2, [Tree(3)])]))
+(0, 2, 3)`),
+      ],
+    },
+    {
+      id: 'fa21f-3b-tests', problem: 'fa21f-3b', verified: true,
+      verification: verification({ passing: 3, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(5, [Tree(6, [Tree(7)]), Tree(8), Tree(9, [Tree(10)])])
+>>> pruned(t)
+Tree(5, [Tree(6, [Tree(7)]), Tree(9, [Tree(10)])])
+>>> t  # t is not modified by calling pruned(t)
+Tree(5, [Tree(6, [Tree(7)]), Tree(8), Tree(9, [Tree(10)])])
+>>> pruned(Tree(2, [Tree(3), Tree(4)])) is None  # No fruit!
+True`),
+        added(`>>> pruned(Tree(1)) is None, pruned(Tree(1, [Tree(2)]))
+(True, Tree(1, [Tree(2)]))
+>>> pruned(Tree(1, [Tree(2, [Tree(3), Tree(4, [Tree(5)])]), Tree(6)]))
+Tree(1, [Tree(2, [Tree(4, [Tree(5)])])])`),
+      ],
+    },
+    {
+      id: 'fa20f-2a-tests', problem: 'fa20f-2a', verified: true,
+      verification: verification({ passing: 6, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> a = hailstone(10, print)
+10
+5
+16
+8
+4
+2
+1
+>>> a
+7`),
+        exam(`>>> s = []
+>>> hailstone(10, s.append)
+7
+>>> s
+[10, 5, 16, 8, 4, 2, 1]`),
+        added(`>>> hailstone(1, print)
+1
+1
+>>> s = []
+>>> hailstone(3, s.append), s
+(8, [3, 10, 5, 16, 8, 4, 2, 1])
+>>> hailstone(27, lambda x: None)
+112`),
+      ],
+    },
+    {
+      id: 'fa20f-3a-tests', problem: 'fa20f-3a', verified: true,
+      verification: verification({ passing: 1, failing: 22 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK_STR, setupNote: LINK_STR_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> print_all(wins(battleground, 50))
+<AZ PA NV GA WI MI>
+<AZ PA NV GA MI>
+<AZ PA GA WI MI>
+<PA NV GA WI MI>
+>>> print_all(wins(battleground, 75))
+<AZ PA NV GA WI MI>`),
+        added(`>>> list(wins([], 0)) == [Link.empty], list(wins([], 1))
+(True, [])
+>>> len(list(wins(battleground, 0))), len(list(wins(battleground, 79))), len(list(wins(battleground, 80)))
+(32, 1, 0)`),
+      ],
+    },
+    {
+      id: 'fa20f-3b-tests', problem: 'fa20f-3b', verified: true,
+      verification: verification({ passing: 2, failing: 9 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK + '\n' + WINS, setupNote: 'These tests provide the course’s Link class (the exam uses it but does not print it) and wins from part (a) (the official solution).', setupFrom: ['fa20f-3a'],
+      cases: [
+        exam(`>>> must_win(battleground, 50)
+['PA', 'GA', 'MI']
+>>> must_win(battleground, 75)
+['AZ', 'PA', 'NV', 'GA', 'WI', 'MI']`),
+        added(`>>> must_win(battleground, 0), must_win(battleground, 79)
+([], ['AZ', 'PA', 'NV', 'GA', 'WI', 'MI'])
+>>> must_win([State('XX', 3)], 3), must_win([State('XX', 3), State('YY', 1)], 2)
+(['XX'], ['XX'])`),
+      ],
+    },
+    {
+      id: 'fa20f-3c-tests', problem: 'fa20f-3c', verified: true,
+      verification: verification({ passing: 5, failing: 6 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> is_minimal(['AZ', 'NV', 'GA', 'WI'], 0)  # Every state is necessary
+True
+>>> is_minimal(['AZ', 'GA', 'WI'], 0)        # Not a win
+False
+>>> is_minimal(['AZ', 'NV', 'PA', 'WI'], 0)  # NV is not necessary
+False
+>>> is_minimal(['AZ', 'PA', 'WI'], 0)        # Every state is necessary
+True`),
+        added(`>>> is_minimal(['GA', 'MI', 'PA'], -30)  # two smallest states tie: dropping one GA or MI still wins
+False
+>>> is_minimal(['AZ', 'PA', 'NV', 'GA', 'WI', 'MI'], 79), is_minimal(['PA'], -39), is_minimal(['PA'], -38)
+(True, True, False)`),
+      ],
+    },
+    {
+      id: 'fa20f-4a-tests', problem: 'fa20f-4a', verified: true,
+      verification: verification({ passing: 3, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE + '\n' + LLAMAS, setupNote: LLAMA_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> related('Charlie', 'Max', originals)  # Grandparent
+True
+>>> related('Jules', 'Jackie', originals)  # Not related, even though they have child
+False`),
+        exam(`>>> related('Max', 'Jules', originals)     # Both descend from Charlie and Frankie
+True
+>>> related('Max', 'Jess', originals)      # Both descend from Charlie and Finley
+True`),
+        added(`>>> related('Lee', 'Max', originals), related('Sidney', 'Frankie', originals), related('Sidney', 'Alex', originals)
+(True, False, True)
+>>> related('Jackie', 'Jess', originals), related('Jaidyn', 'Jan', originals)
+(True, False)`),
       ],
     },
   ];

@@ -453,4 +453,482 @@ module.exports = {
       { 'A+': '(no + s for s in f(n, k) if not s or s[0] != no)' },
     ],
   },
+  // ───────────── Finals ─────────────
+  'fa25f-3a': {
+    wrong: [
+      { b: 'number and x in' },
+      { b: 'x in' },
+      { b: 'not number or x in' },
+      { c: 'equals == 1' },
+      { c: 'not number' },
+      { c: 'number and equals == 1' },
+      { c: 'not number and equals >= 1' },
+      { c: 'True' },
+    ],
+  },
+  'fa25f-3b': {
+    wrong: [
+      { e: 'x = next(eq)' },
+      { e: 'next(ans)' },
+      { e: 'x = ans[0]' },
+      { e: 'x = 0' },
+      { g: "{'+': -1, '-': 1}" },
+      { g: "{'+': 1, '-': 1}" },
+    ],
+  },
+  'fa25f-3c': {
+    wrong: [
+      { h: 'True' },
+      { h: 'False' },
+      { h: 'evaluate(eq, [0])' },
+      { j: 'feasible(eq[:n] + [x] + eq[n:], allowed)' },
+      { j: 'feasible(eq[:n] + [x] + eq[n+1:])' },
+      { j: 'evaluate(eq[:n] + [x] + eq[n+1:], [])' },
+      { j: 'feasible(eq[n+1:], allowed)' },
+      { j: 'feasible(eq[:n] + eq[n+1:], allowed)' },
+    ],
+    alternatives: [
+      { j: 'feasible(eq[:n] + [x] + eq[n + 1:], allowed)' },
+      { j: 'feasible(list(eq[:n]) + [x] + list(eq[n+1:]), allowed)' },
+    ],
+  },
+  'fa25f-3d': {
+    wrong: [
+      { n: 'lambda a: evaluate(a, equation)' },
+      { n: 'evaluate(equation, a)' },
+      { n: 'lambda a: feasible(equation, a)' },
+      { n: 'lambda a: True' },
+      { n: 'lambda a: is_equation(equation)' },
+    ],
+    alternatives: [
+      { n: 'lambda answers: evaluate(equation, list(answers))' },
+    ],
+  },
+  'fa25f-4a': {
+    wrong: [
+      { b: 't.label' },
+      { b: 'sum([result[b] for b in t.branches])' },
+      { b: 't.label + len(t.branches)' },
+      { b: 't.label + sum([b.label for b in t.branches])' },
+    ],
+    alternatives: [
+      { b: 't.label + sum([sums(b)[b] for b in t.branches])' },
+      { b: 'sum([result[b] for b in t.branches] + [t.label])' },
+    ],
+  },
+  'fa25f-4b': {
+    wrong: [
+      { c: 'abs(n - d[node])' },
+      { c: 'n - (total - d[node])' },
+      { c: 'abs(total - n)' },
+      { c: 'd[node]' },
+    ],
+  },
+  'fa25f-6a': {
+    wrong: [
+      { b: 't = s.rest' },
+      { c: 's == t' },
+      { c: 's.first == t.rest.first' },
+      { c: 's.first != t.first' },
+      { d: 't = t.rest' },
+      { d: 's, t = t, t.rest' },
+      { d: 's = s.rest' },
+    ],
+    alternatives: [
+      { d: 's = s.rest\nt = t.rest' },
+    ],
+  },
+  'fa25f-7': {
+    wrong: [
+      { b: 'self.groups' },
+      { b: 'DiscGroup.groups[1:]' },
+      { e: 'self.group.students = [self]' },
+      { e: 'self.group.students + [self]' },
+      { f: 'len(DiscGroup.groups) + 1' },
+      { f: '0' },
+      { g: 'DiscGroup.groups = [self]' },
+      { g: 'self.groups = self.groups + [self]' },
+    ],
+  },
+  'fa25f-9b': {
+    wrong: [
+      { 'A+': 'one_cut(one_cut(t, n), n)' },
+      { 'A+': 'one_cut(t, n)' },
+      { 'A+': 'min([one_cut(one_cut(t, k), n) for k in range(g(t))], key=g)' },
+      { 'A+': 'min([one_cut(t, k) for k in range(g(t))], key=lambda t: abs(n - g(t)))' },
+    ],
+  },
+  'sp25f-3': {
+    wrong: [
+      { b: 's[u]' },
+      { b: 's[t]' },
+      { b: 's[i]' },
+      { b: 's[t - u + i]' },
+    ],
+    alternatives: [
+      { b: 's[u] if i == t else s[t]' },
+    ],
+  },
+  'sp25f-4a': {
+    wrong: [
+      { c: 'append(offspring(b, x))' },
+      { c: 'extend(b.branches)' },
+      { c: 'extend([b.label for b in b.branches])' },
+    ],
+    alternatives: [
+      { c: 'extend(sorted(offspring(b, x)))' },
+    ],
+  },
+  'sp25f-5': {
+    wrong: [
+      { b: 'self.where[p] = len(self.where) + 1' },
+      { b: 'self.where[p] = len(folks)' },
+      { b: 'self.where[p] = 0' },
+      { c: 'self.boat.where[self.name]' },
+      { c: 'len(self.boat.where)' },
+      { f: 'self.name' },
+      { f: 'Captain.claimed[boat]' },
+    ],
+  },
+  'sp25f-6a': {
+    wrong: [
+      { d: 'digits[:k]' },
+      { d: 'digits[k+1:]' },
+      { e: 'int(digits[k:])' },
+      { e: 'int(digits[0])' },
+      { e: 'digits[:k]' },
+    ],
+  },
+  'sp25f-6b': {
+    wrong: [],
+  },
+  'sp25f-6c': {
+    wrong: [
+      { i: 'int(digits.first)' },
+      { i: 'first + int(digits.first)' },
+      { i: 'first * 10 + digits.first' },
+      { j: 'digits.rest' },
+      { j: 'join_link(digits)' },
+    ],
+  },
+  'sp25f-9a': {
+    wrong: [
+      { 'A+': 's[x]' },
+      { 'A+': 's[{t: u}.get(x, x)]' },
+      { 'A+': '{t: s[u], u: s[t]}.get(x)' },
+    ],
+    alternatives: [
+      { 'A+': '{t: s[u], u: s[t]}.get(x, s[x])' },
+      { 'A+': 's[{u: t, t: u}.get(x, x)]' },
+    ],
+  },
+  'sp25f-9b': {
+    wrong: [
+      { 'A+': 'next(f(digits))' },
+      { 'A+': 'filter(lambda x: eval(x) == n, f(digits))' },
+      { 'A+': 'next(filter(lambda x: eval(x) != n, f(digits)))' },
+    ],
+  },
+  'fa24f-3': {
+    wrong: [
+      { j: '10' },
+      { j: 't - 10 + x' },
+      { j: 'x' },
+    ],
+  },
+  'fa24f-4a': {
+    wrong: [
+      { a: 'self.count = 1' },
+      { a: 'count = 0' },
+    ],
+  },
+  'fa24f-5a': { wrong: [] },
+  'fa24f-5b': {
+    wrong: [
+      { e: 's[1:]' },
+      { e: 'promote(s, 0, j)' },
+      { e: 's[:j] + s[j:]' },
+      { e: 'promote(s, 0, j)[:-1]' },
+    ],
+  },
+  'fa24f-6a': {
+    wrong: [
+      { c: 'all([products(b, n / t.label) for b in t.branches])' },
+      { c: 'any([products(b, n // t.label) for b in t.branches])' },
+      { c: 'all([products(b, n) for b in t.branches])' },
+    ],
+  },
+  'fa24f-6b': {
+    wrong: [
+      { g: 'not branch.is_leaf()' },
+      { g: 'x == k' },
+      { g: 'True' },
+      { g: 'branch.is_leaf() or x == k' },
+    ],
+  },
+  'fa24f-9b': {
+    wrong: [
+      { 'A+': 'repromote(s[:j] + s[j+1:], k - 1)' },
+      { 'A+': 'repromote(s[1:], k - min(1, j))' },
+      { 'A+': 'repromote(s[:j] + s[j+1:], k)' },
+    ],
+  },
+  'sp24f-2a': { wrong: [] },
+  'sp24f-2b': {
+    wrong: [
+      { g: 'lambda y: y >= x' },
+      { g: 'lambda y: y < x' },
+      { g: 'lambda y: True' },
+    ],
+    alternatives: [
+      { g: 'lambda y: x < y' },
+    ],
+  },
+  'sp24f-3a': {
+    wrong: [
+      { c: 'self.ns = [self.ns[0], self.ns[1]]' },
+      { c: 'self = Domino([self.ns[1], self.ns[0]])' },
+    ],
+    alternatives: [
+      { c: 'self.ns[0], self.ns[1] = self.ns[1], self.ns[0]' },
+      { c: 'self.ns = [first, self.ns[0]]' },  // inside the if, first is the second number
+    ],
+  },
+  'sp24f-3b': {
+    wrong: [
+      { f: '[x for x in ds if x.ns != d.ns]' },
+      { f: 'ds.remove(d)' },
+      { f: 'ds[1:]' },
+    ],
+    alternatives: [
+      { f: '[x for x in ds if x != d]' },  // Domino has no __eq__, so != compares identity
+    ],
+  },
+  'sp24f-3c': {
+    wrong: [
+      { h: 'd' },
+      { h: 'd.align(first.ns[0])' },
+      { j: 'first.ns[0] in d.ns' },
+      { j: 'True' },
+    ],
+    alternatives: [
+      { j: 'd.ns[0] == first.ns[1] or d.ns[1] == first.ns[1]' },
+    ],
+  },
+  'sp24f-5a': { wrong: [] },
+  'fa23f-2': {
+    wrong: [
+      { c: 'bounds(b, low, high)' },
+      { c: 'bounds(b, low - b.label, high - b.label)' },
+      { c: 'bounds(b, low + t.label, high + t.label)' },
+    ],
+  },
+  'fa23f-3': {
+    wrong: [
+      { a: 'Word(w, self, None)' },
+      { a: 'Word(w, self.dialect, previous)' },
+      { b: 'current = previous' },
+      { e: 'self.exp.dialect[self.w]' },
+      { e: 'self.w' },
+    ],
+  },
+  'fa23f-4a': { wrong: [] },
+  'fa23f-4b': { wrong: [] },
+  'fa23f-4c': {
+    wrong: [
+      { i: 'pairs' },
+      { i: 'pairs[1]' },
+      { k: 'False' },
+      { k: 'is_pairing(s[2:], pairs)' },
+      { k: 'is_pairing(s[1:], pairs[1:])' },
+    ],
+  },
+  'fa23f-4d': {
+    wrong: [
+      { l: 'unequal_pairs(s[2:])' },
+      { l: 'unequal_pairs(s[3:])' },
+      { n: 'yield pair' },
+      { o: 'pair + rest' },
+      { o: '[pair, rest]' },
+    ],
+  },
+  'fa23f-4e': {
+    wrong: [
+      { q: 's.first' },
+      { q: 's.first + s.rest' },
+    ],
+  },
+  'sp23f-3a': {
+    wrong: [
+      { c: 'sum([f(b) for b in t.branches])' },
+      { c: 'max([f(b) for b in s.branches])' },
+      { c: '1 + sum([f(b) for b in s.branches])' },
+    ],
+  },
+  'sp23f-3b': {
+    wrong: [
+      { g: 'yield [b.label, t.label]' },
+      { g: 'yield t.label, b.label' },
+      { g: 'return [t.label, b.label]' },
+    ],
+  },
+  'sp23f-4': {
+    wrong: [
+      { c: 'cars(k, n-1) + cars(k-1, n-1)' },
+      { c: 'cars(k-1, n-2)' },
+      { c: 'cars(k, n-2) + cars(k-1, n-2)' },
+    ],
+  },
+  'sp23f-5a': {
+    wrong: [
+      { a: '[s[i], s[i + 1]]' },
+      { a: 's[i:i+2]' },
+      { a: '[s[2 * i]]' },
+    ],
+  },
+  'sp23f-5a-iii': {
+    wrong: [
+      { c: 'next(t)' },
+      { c: '[next(t)]' },
+      { c: '(next(t), next(t))' },
+    ],
+  },
+  'sp23f-6a': {
+    wrong: [
+      { a: 'self.args' },
+      { a: 'self.logged' },
+      { b: 'self.f' },
+      { b: 'Log(f)' },
+    ],
+  },
+  'sp23f-6b': {
+    wrong: [
+      { e: 'self.obs.append(vs)' },
+      { e: 'self.obs.extend(vs)' },
+      { f: 'self.obs.count(v)' },
+      { f: 'sum([v in s for s in self.obs])' },
+    ],
+  },
+  'sp23f-8a': {
+    wrong: [
+      { 'A+': '[s[:n]] + [s[n:]]' },
+      { 'A+': 's[:n] + group(n, s[n:])' },
+    ],
+  },
+  'fa22f-5': { wrong: [] },
+  'fa22f-6': {
+    wrong: [
+      { a: '[(i.label, t.label) for i in t.branches]' },
+      { a: '[]' },
+      { a: '[t.label]' },
+    ],
+  },
+  'fa22f-7a': {
+    wrong: [
+      { a: 'next(coin) + next(coin)' },
+      { a: 'next(coin)' },
+      { c: 'start[:2]' },
+      { c: 'start' },
+    ],
+  },
+  'fa22f-7b': {
+    wrong: [
+      { a: 'map' },
+      { b: 'x == p1' },
+      { b: 'x in p1 + p2' },
+    ],
+  },
+  'fa22f-10': {
+    wrong: [
+      { d: 'dogs[j].branches.append(dogs[i])' },
+      { e: 'return dogs' },
+    ],
+  },
+  'fa21f-1b': {
+    wrong: [
+      { a: 's.rest' },
+      { a: 'Blink(s)' },
+      { b: 'self.sublists[s] = s' },
+      { b: 'self.sublists[s.first] = self' },
+    ],
+  },
+  'fa21f-2a': { wrong: [{ b: 'return False' }, { b: 'return n' }] },
+  'fa21f-2b': {
+    wrong: [
+      { a: '0' },
+      { a: 'n' },
+      { b: 'tooth(n, d)' },
+      { b: 'tooth(n // 10, n % 10)' },
+    ],
+  },
+  'fa21f-2c': {
+    wrong: [
+      { a: 'yield from range(m + 1)' },
+      { a: 'yield from range(1, m)' },
+      { b: 'thumper(k, m)' },
+      { b: 'range(10 ** (k - 1), 10 ** k)' },
+    ],
+  },
+  'fa21f-2d': {
+    wrong: [
+      { a: 'grouped(part.first, n % 10)' },
+      { a: 'grouped(n, part.first)' },
+      { e: 'n = n % 10' },
+      { f: 'parts' },
+      { f: 'Link(parts, part)' },
+    ],
+  },
+  'fa21f-2e': {
+    wrong: [
+      { a: 'segment(n, lambda a, b: True)' },
+      { a: 'segment(n, is_worm)' },
+    ],
+  },
+  'fa21f-3a': {
+    wrong: [
+      { a: 't.label' },
+      { a: 't.branches[0]' },
+      { b: '0' },
+      { b: 'sum([b.label for b in t.branches])' },
+    ],
+  },
+  'fa21f-3b': {
+    wrong: [
+      { c: 'Tree(t.label, cut)' },
+      { c: 'Tree(t.label, [b for b in t.branches if b])' },
+      { c: 't' },
+    ],
+  },
+  'fa20f-2a': {
+    wrong: [
+      { a: 'lambda n, f: 0' },
+      { a: '1' },
+      { b: 'n % 2 == 0' },
+      { c: 'g' },
+      { e: 'g' },
+      { e: 'lambda n: hailstone(n, print)' },
+    ],
+  },
+  'fa20f-3a': { wrong: [{ c: 'states[0]' }, { c: 'first' }] },
+  'fa20f-3b': {
+    wrong: [
+      { b: 's.first == x' },
+      { b: 'contains(s.rest, x)' },
+      { d: 'any' },
+      { e: 'contains(w, s)' },
+    ],
+  },
+  'fa20f-3c': {
+    wrong: [
+      { a: '[s.electors for s in state_codes]' },
+      { b: 'State.electors.keys()' },
+    ],
+  },
+  'fa20f-4a': {
+    wrong: [
+      { c: 'b.label' },
+      { c: '[b.label]' },
+      { d: 'offspring_trees' },
+    ],
+  },
 };

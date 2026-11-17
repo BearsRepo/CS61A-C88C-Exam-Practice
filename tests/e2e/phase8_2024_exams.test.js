@@ -12,6 +12,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 global.window = {};
 require(path.join(__dirname, '..', '..', 'app', 'data', 'questions.js'));
+require(path.join(__dirname, '..', '..', 'app', 'data', 'final_questions.js'));
 require(path.join(__dirname, '..', '..', 'app', 'data', 'test_suites.js'));
 const B = window.CS61A_BANK;
 const SUITES = window.CS61A_TEST_SUITES.suites;
@@ -44,7 +45,7 @@ for (const [e, rows] of Object.entries(PDF)) {
 }
 ok(B.QUESTIONS.length === new Set(B.QUESTIONS.map((q) => q.id)).size, `all ${B.QUESTIONS.length} question ids are unique`);
 ok(['fa25', 'sp25'].every((e) => examIds(e).length === { fa25: 33, sp25: 29 }[e]), '2025 exams unchanged in size (33 and 29 subparts)');
-ok(B.QUESTIONS.filter((q) => /^(fa24|sp24)/.test(q.id)).every((q) => B.ANSWER_KEY[q.id]), 'every 2024 subpart has an official answer');
+ok(B.QUESTIONS.filter((q) => /^(fa24|sp24)-/.test(q.id)).every((q) => B.ANSWER_KEY[q.id]), 'every 2024 subpart has an official answer');
 ok(['fa24-1', 'fa24-2', 'sp24-1', 'sp24-2'].every((pid) => !SUITES.some((t) => t.problem === pid)), 'no test suites for 2024 What Would Python Display / environment diagram questions');
 
 (async () => {
@@ -85,8 +86,8 @@ ok(['fa24-1', 'fa24-2', 'sp24-1', 'sp24-2'].every((pid) => !SUITES.some((t) => t
   await seed({ prefs: { ...prefs, exams: ['fa24', 'sp24'], topics: ['trees'], examsKnown: Object.keys(B.EXAMS) } });
   await click('[data-action="enter"]'); await click('[data-action="start"]'); await page.waitForSelector('#pane-right .part');
   S = await st();
-  const trees24 = B.QUESTIONS.filter((q) => /^(fa24|sp24)/.test(q.id) && q.topics.includes('trees')).map((q) => q.id);
-  ok(S.session.ids.length > 0 && S.session.ids.every((id) => /^(fa24|sp24)/.test(id)) && trees24.every((id) => S.session.ids.includes(id)),
+  const trees24 = B.QUESTIONS.filter((q) => /^(fa24|sp24)-/.test(q.id) && q.topics.includes('trees')).map((q) => q.id);
+  ok(S.session.ids.length > 0 && S.session.ids.every((id) => /^(fa24|sp24)-/.test(id)) && trees24.every((id) => S.session.ids.includes(id)),
     `Trees practice from 2024 exams: ${S.session.ids.length} parts, all 2024, every Trees-tagged part included`);
 
   // ── Full Past Exam Mode for both semesters: start, answer officially, submit, review ──

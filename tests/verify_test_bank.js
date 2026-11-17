@@ -15,9 +15,11 @@ const { execFileSync } = require('child_process');
 const ROOT = path.join(__dirname, '..');
 global.window = {};
 require(path.join(ROOT, 'app', 'data', 'questions.js'));
+require(path.join(ROOT, 'app', 'data', 'final_questions.js'));
 require(path.join(ROOT, 'app', 'data', 'test_suites.js'));
 const B = window.CS61A_BANK;
-const SUITES = window.CS61A_TEST_SUITES.suites;
+// ONLY=<regex> checks just the matching suites (e.g. ONLY=fa25f); PROGRESS=1 prints each version's time to stderr.
+const SUITES = window.CS61A_TEST_SUITES.suites.filter((t) => !process.env.ONLY || new RegExp(process.env.ONLY).test(t.id));
 const VARIANTS = require('./test_bank/variants.js');
 const HARNESS = fs.readFileSync(path.join(ROOT, 'app', 'runner.js'), 'utf8').match(/const HARNESS = String\.raw`([\s\S]*?)`;/)[1];
 
@@ -27,17 +29,38 @@ const HARNESS = fs.readFileSync(path.join(ROOT, 'app', 'runner.js'), 'utf8').mat
 // is_strip(s) behaves exactly like the official is_strip(s) and is_strip(t)), and fa23-4a, whose select-all blank (a) has
 // three correct options, so no single answer fills it. fa23-5aplus and sp23-2b can't run without part (a)'s definitions, and Run Code
 // runs the student's code alone before any tests.
+// Finals: What Would Python Display, environment diagrams and orders of growth as above; Fall 2025 Q5 (async, nothing to
+// run) and the Scheme questions (not Python); Spring 2025 Q4(b) (graft: tree mutation, out of scope this semester).
+// SQL questions are checked by verify_sql_bank.js.
 const EXCLUDED = ['fa25-1', 'sp25-1', 'fa25-2', 'sp25-2', 'sp25-2c', 'sp25-3b', 'fa24-1', 'fa24-2', 'sp24-1', 'sp24-2', 'sp24-4b',
-  'fa23-1', 'fa23-2', 'fa23-4a', 'fa23-5aplus', 'sp23-1', 'sp23-2b', 'sp23-3a-iii'];
+  'fa23-1', 'fa23-2', 'fa23-4a', 'fa23-5aplus', 'sp23-1', 'sp23-2b', 'sp23-3a-iii',
+  'fa25f-1', 'fa25f-2', 'fa25f-2c', 'fa25f-5', 'fa25f-6b', 'fa25f-6c', 'fa25f-9a', 'fa25f-8a', 'fa25f-8b',
+  'sp25f-1', 'sp25f-2', 'sp25f-2c', 'sp25f-4b', 'sp25f-7a', 'sp25f-7b', 'sp25f-8a', 'sp25f-8b',
+  // fa24f-4b: MissDict's class body calls Counter() (part (a)), and Run Code runs the student's code alone first.
+  'fa24f-4b', 'fa24f-1', 'fa24f-2', 'fa24f-5c', 'fa24f-5c-v', 'fa24f-7a', 'fa24f-7b', 'fa24f-7b-iv', 'fa24f-7c', 'fa24f-8', 'fa24f-9a',
+  'sp24f-1', 'sp24f-3b-ii', 'sp24f-3d', 'sp24f-4a', 'sp24f-4b', 'sp24f-5b', 'sp24f-5b-iv', 'sp24f-6', 'sp24f-6d', 'sp24f-7',
+  'fa23f-1', 'fa23f-5', 'fa23f-6', 'fa23f-6d', 'fa23f-7', 'fa23f-7d', 'fa23f-8', 'fa23f-9a', 'fa23f-9b',
+  'sp23f-1', 'sp23f-2', 'sp23f-5b', 'sp23f-5b-iv', 'sp23f-7', 'sp23f-8b',
+  // fa22f-4a: the wrong choices s[:len(s)-1] for (a) and s[1:] for (b) always give the same result (the first number
+  // found is never last, and its partner is never first), so running code can't tell them from s.
+  'fa22f-4a', 'fa22f-1', 'fa22f-2', 'fa22f-3', 'fa22f-4b', 'fa22f-4c', 'fa22f-8', 'fa22f-9', 'fa22f-11', 'fa22f-12',
+  'fa21f-1a', 'fa21f-4a', 'fa21f-4b', 'fa21f-4c', 'fa21f-5a', 'fa21f-5b', 'fa21f-5c',
+  // fa20f-4b: the wrong choice filter(traverse, offspring_trees) for (e) behaves exactly like offspring_trees (filter
+  // calls traverse on every tree while filtering, and nothing is left to loop over).
+  'fa20f-4b', 'fa20f-1', 'fa20f-2b', 'fa20f-4c', 'fa20f-5a', 'fa20f-5b'];
 
 let problems = 0;
 const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };
 
 const partsOf = (pid) => B.QUESTIONS.filter((q) => q.problem === pid && q.blank);
+// Select-all blanks of the finals are checked one option at a time (each correct option
+// alone passes, each wrong one alone fails), the way Run Code tests each checked option of such a blank on its own.
+const perOption = (q) => B.PROBLEMS[q.problem].exam.endsWith('f');
 const officialAnswer = (q) => {
   const k = B.ANSWER_KEY[q.id];
   if (q.type === 'single_choice') return { choice: typeof k.correct === 'number' ? k.correct : k.correct[0] };
-  if (q.type === 'multi_select') return { choices: [...k.correct].sort((a, b) => a - b) };
+  // A final's select-all blank is filled with its first correct option; see `perOption` below.
+  if (q.type === 'multi_select') return perOption(q) ? { choice: k.correct[0] } : { choices: [...k.correct].sort((a, b) => a - b) };
   return { text: k.accepted[0] };
 };
 const textOf = (q, ans) => {
@@ -87,6 +110,8 @@ for (const t of SUITES) {
     if (q.type === 'single_choice') {
       const right = officialAnswer(q).choice;
       q.choices.forEach((c, i) => { if (i !== right) add(`(${q.blank}) wrong choice: ${c}`, { [q.blank]: c }, false); });
+    } else if (q.type === 'multi_select' && officialAnswer(q).choice !== undefined) {
+      q.choices.forEach((c, i) => { if (i !== k.correct[0]) add(`(${q.blank}) ${k.correct.includes(i) ? 'correct' : 'wrong'} option alone: ${c}`, { [q.blank]: c }, k.correct.includes(i)); });
     } else if (q.type === 'multi_select') {
       const right = officialAnswer(q).choices.join();
       for (let mask = 1; mask < 1 << q.choices.length; mask++) {
@@ -108,7 +133,7 @@ fs.writeFileSync(path.join(dir, 'harness.py'), HARNESS);
 fs.writeFileSync(path.join(dir, 'jobs.json'), JSON.stringify(jobs));
 let results;
 try {
-  results = JSON.parse(execFileSync('python3', ['-I', path.join(__dirname, 'verify_test_bank.py'), dir], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }));
+  results = JSON.parse(execFileSync('python3', ['-I', path.join(__dirname, 'verify_test_bank.py'), dir], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', process.env.PROGRESS ? 'inherit' : 'pipe'], env: { ...process.env } }));
 } catch (e) {
   console.log(e.stdout || '', e.stderr || '');
   process.exit(1);
