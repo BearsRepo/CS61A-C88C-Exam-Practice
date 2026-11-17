@@ -26,6 +26,12 @@ const CORE = sqlCore();
 
 // Plausible wrong answers for written blanks (the suite must catch each one).
 const WRONG = {
+  'sp23f-7': [
+    { b: 'finals, sizes' },
+    { b: 'finals, sizes WHERE hall=course' },
+    { b: 'finals JOIN sizes' },
+    { b: 'finals' },
+  ],
   // fa23f-8: a bare price * k (no MIN) isn't listed: SQLite picks the cheapest row here in every order tried, so no data set can catch it.
   'fa23f-8': [
     { a: 'MIN(price)' },

@@ -758,4 +758,61 @@ module.exports = {
       { q: 's.first + s.rest' },
     ],
   },
+  'sp23f-3a': {
+    wrong: [
+      { c: 'sum([f(b) for b in t.branches])' },
+      { c: 'max([f(b) for b in s.branches])' },
+      { c: '1 + sum([f(b) for b in s.branches])' },
+    ],
+  },
+  'sp23f-3b': {
+    wrong: [
+      { g: 'yield [b.label, t.label]' },
+      { g: 'yield t.label, b.label' },
+      { g: 'return [t.label, b.label]' },
+    ],
+  },
+  'sp23f-4': {
+    wrong: [
+      { c: 'cars(k, n-1) + cars(k-1, n-1)' },
+      { c: 'cars(k-1, n-2)' },
+      { c: 'cars(k, n-2) + cars(k-1, n-2)' },
+    ],
+  },
+  'sp23f-5a': {
+    wrong: [
+      { a: '[s[i], s[i + 1]]' },
+      { a: 's[i:i+2]' },
+      { a: '[s[2 * i]]' },
+    ],
+  },
+  'sp23f-5a-iii': {
+    wrong: [
+      { c: 'next(t)' },
+      { c: '[next(t)]' },
+      { c: '(next(t), next(t))' },
+    ],
+  },
+  'sp23f-6a': {
+    wrong: [
+      { a: 'self.args' },
+      { a: 'self.logged' },
+      { b: 'self.f' },
+      { b: 'Log(f)' },
+    ],
+  },
+  'sp23f-6b': {
+    wrong: [
+      { e: 'self.obs.append(vs)' },
+      { e: 'self.obs.extend(vs)' },
+      { f: 'self.obs.count(v)' },
+      { f: 'sum([v in s for s in self.obs])' },
+    ],
+  },
+  'sp23f-8a': {
+    wrong: [
+      { 'A+': '[s[:n]] + [s[n:]]' },
+      { 'A+': 's[:n] + group(n, s[n:])' },
+    ],
+  },
 };

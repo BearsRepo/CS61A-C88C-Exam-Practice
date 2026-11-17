@@ -285,6 +285,7 @@ def to_link(t):
     return all([type(x) == tuple for x in s]) and all(map(lambda x: len(x) == 2, s))
 `;
 
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -1973,6 +1974,143 @@ False`),
 (0, 0, 11, 10)
 >>> max_pair_sum(Link(1, Link(1, Link(9, Link(9)))))  # only one of (1, 1) and (9, 9) fits
 18`),
+      ],
+    },
+    {
+      id: 'sp23f-3a-tests', problem: 'sp23f-3a', verified: true,
+      verification: verification({ passing: 4, failing: 18 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(5, [Tree(4, [Tree(6), Tree(7)]), Tree(8), Tree(7, [Tree(5), Tree(3)])])
+>>> big_paths(t)  # 5-8 and 5-7-5
+2`),
+        added(`>>> big_paths(Tree(1)), big_paths(Tree(1, [Tree(0)])), big_paths(Tree(1, [Tree(1), Tree(2)]))
+(1, 0, 2)
+>>> big_paths(Tree(3, [Tree(5, [Tree(2, [Tree(9)]), Tree(4)])]))  # 3-5-4 only: 2 is below the root label
+1`),
+      ],
+    },
+    {
+      id: 'sp23f-3b-tests', problem: 'sp23f-3b', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(5, [Tree(4, [Tree(6), Tree(7)]), Tree(8), Tree(7, [Tree(5), Tree(3)])])
+>>> sorted(gen(t, 10))  # Does not yield [5, 5]; one 5 is the grandparent of the other.
+[[4, 6], [7, 3]]`),
+        added(`>>> list(gen(Tree(10), 10)), list(gen(Tree(4, [Tree(6), Tree(6)]), 10))
+([], [[4, 6], [4, 6]])
+>>> list(gen(Tree(1, [Tree(2, [Tree(1, [Tree(2)])])]), 3))  # parent first, at every level
+[[1, 2], [2, 1], [1, 2]]`),
+      ],
+    },
+    {
+      id: 'sp23f-4-tests', problem: 'sp23f-4', verified: true,
+      verification: verification({ passing: 4, failing: 10 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> cars(2, 5)  # '<><>.', '<>.<>', '.<><>'
+3
+>>> cars(3, 6)  # '<><><>'
+1
+>>> cars(1, 7)  # '<>.....', '.<>....', etc.
+6`),
+        added(`>>> [cars(0, 0), cars(0, 5), cars(1, 1), cars(1, 2), cars(2, 3), cars(2, 6)]
+[1, 1, 0, 1, 0, 6]`),
+      ],
+    },
+    {
+      id: 'sp23f-5a-tests', problem: 'sp23f-5a', verified: true,
+      verification: verification({ passing: 6, failing: 6 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> pair([3, 4, 5, 8, 7, 6])
+[[3, 4], [5, 8], [7, 6]]`),
+        added(`>>> pair([]), pair([1, 2]), pair(['a', 'b', 'c', 'd'])
+([], [[1, 2]], [['a', 'b'], ['c', 'd']])`),
+      ],
+    },
+    {
+      id: 'sp23f-5a-iii-tests', problem: 'sp23f-5a-iii', verified: true,
+      verification: verification({ passing: 1, failing: 3 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> t = gen_pairs(naturals(3))  # naturals(3) contains 3, 4, 5, 6, ...
+>>> next(t)
+[3, 4]
+>>> next(t)
+[5, 6]`),
+        added(`>>> t = gen_pairs(iter('abcdef'))
+>>> next(t), next(t), next(t)
+(['a', 'b'], ['c', 'd'], ['e', 'f'])`),
+      ],
+    },
+    {
+      id: 'sp23f-6a-tests', problem: 'sp23f-6a', verified: true,
+      verification: verification({ passing: 2, failing: 7 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> f = Log(lambda x: x * x)
+>>> f.call(f.call(3))
+81
+>>> f.args
+[3, 9]
+>>> g, h = Log(abs), Log(abs)
+>>> g.call(h.call(-3))
+3
+>>> g.args
+[-3, 3]`),
+        added(`>>> a = Log(len)
+>>> b = Log(len)
+>>> a.args is b.args, a.args
+(True, [])
+>>> b.call('hi'), a.args, Log(abs).args
+(2, ['hi'], [])
+>>> a.f is len
+True`),
+      ],
+    },
+    {
+      id: 'sp23f-6b-tests', problem: 'sp23f-6b', verified: true,
+      verification: verification({ passing: 5, failing: 7 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> c = Counter()
+>>> c.observe(map(abs, range(-3, 3)))  # observe 3, 2, 1, 0, 1, 2
+>>> c.observe(range(-3, 3))            # observe -3, -2, -1, 0, 1, 2
+>>> {i: c.count(i) for i in range(-3, 3)}
+{-3: 1, -2: 1, -1: 1, 0: 2, 1: 3, 2: 3}
+>>> c.forget()  # forget range(-3, 3)
+>>> {i: c.count(i) for i in range(-3, 3)}
+{-3: 0, -2: 0, -1: 0, 0: 1, 1: 2, 2: 2}
+>>> c.forget()  # forget map(abs, range(-3, 3))
+>>> c.count(1)
+0`),
+        added(`>>> c = Counter()
+>>> c.count('a')
+0
+>>> c.observe('banana')
+>>> c.observe(iter('ab'))
+>>> c.count('a'), c.count('b')
+(4, 2)
+>>> c.forget()
+>>> c.count('a'), c.count('b')
+(3, 1)`),
+      ],
+    },
+    {
+      id: 'sp23f-8a-tests', problem: 'sp23f-8a', verified: true,
+      verification: verification({ passing: 1, failing: 2 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> group(2, [3, 4, 5, 6, 7, 8])
+[[3, 4], [5, 6], [7, 8]]
+>>> group(3, [3, 4, 5, 6, 7, 8])
+[[3, 4, 5], [6, 7, 8]]
+>>> group(4, [3, 4, 5, 6, 7, 8])
+[[3, 4, 5, 6], [7, 8]]`),
+        added(`>>> group(1, [1, 2, 3]), group(5, [1, 2]), group(2, [1, 2, 3])
+([[1], [2], [3]], [[1, 2]], [[1, 2], [3]])`),
       ],
     },
   ];

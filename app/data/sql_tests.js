@@ -119,6 +119,18 @@ CREATE TABLE quantity(choice, k);
 INSERT INTO quantity VALUES ('glazed', 5), ('jelly', 2);` },
       ],
     },
+    'sp23f-7': {
+      cases: [
+        { name: 'The tables printed in the exam', origin: 'exam', input: '', columns: ['course', 'seats'], expect: [['61A', 1600]] },
+        { name: 'A course in three rooms, one in a single room, and an unused room', origin: 'added', input: '', columns: ['course', 'seats'],
+          expect: [['61C', 1640], ['16A', 1600]],
+          data: `CREATE TABLE finals(hall, course);
+INSERT INTO finals VALUES ('RSF', '61C'), ('Wheeler', '61C'), ('310 Soda', '61C'), ('Dwinelle', '70'),
+  ('RSF', '16A'), ('Wheeler', '16A');
+CREATE TABLE sizes(room, seats);
+INSERT INTO sizes VALUES ('RSF', 900), ('Wheeler', 700), ('310 Soda', 40), ('Dwinelle', 300), ('Cory', 100);` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

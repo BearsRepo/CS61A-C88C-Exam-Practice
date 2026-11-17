@@ -2791,4 +2791,417 @@ def match(s, pairs):
       'fa23f-9b': { accepted: ['(len(pairs) == 1 and pairs[0] == first) or not pairs'] },
     },
   });
+
+  // ───────────────────────────── Spring 2023 Final ─────────────────────────────
+  const SP23_TABLES = code(`
+finals:
+| hall    | course |
+|---------|--------|
+| RSF     | 61A    |
+| Wheeler | 61A    |
+| RSF     | 61B    |
+
+sizes:
+| room     | seats |
+|----------|-------|
+| RSF      | 900   |
+| Wheeler  | 700   |
+| 310 Soda | 40    |
+
+result:
+| course | seats |
+|--------|-------|
+| 61A    | 1600  |
+`);
+  const SP23_SETUP = code(`
+CREATE TABLE finals(hall, course);
+INSERT INTO finals VALUES ('RSF', '61A'), ('Wheeler', '61A'), ('RSF', '61B');
+CREATE TABLE sizes(room, seats);
+INSERT INTO sizes VALUES ('RSF', 900), ('Wheeler', 700), ('310 Soda', 40);
+`);
+  add({
+    exam: { id: 'sp23f', label: 'Spring 2023 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
+    problems: {
+      'sp23f-1': {
+        exam: 'sp23f', number: '1', title: 'What Would Python Display?', points: 10,
+        intro: 'Assume the following code has been executed. The `Link` class appears on the midterm 2 study guide.',
+        code: code(`
+class Chain(Link):
+    def add(self, v):
+        self.rest = Chain(v, self.rest)
+        return self
+
+gold = Chain(3, Chain(5, Chain(7)))
+silver = [1, [2], 3]
+bronze = silver[1:]
+silver.append(4)
+silver[1].append(5)
+`),
+        outro: 'For each expression below, choose the output displayed when the expression is evaluated. Assume the expressions are evaluated in order in the same interactive session, and so evaluating an earlier expression may affect the result of a later one.',
+      },
+      'sp23f-2': {
+        exam: 'sp23f', number: '2', title: 'Framed', points: 5,
+        intro: 'Complete the environment diagram that results from running all of the code below and then answer the questions that follow. Blanks with no labels have no questions associated with them and are not scored.',
+        figure: { src: 'assets/sp23-final-q2.png', width: 516, height: 503, alt: 'From the exam: a partly filled environment diagram and the code with line numbers 1 to 10. The Global frame binds rounded, k (blank (a)), up, and s (blank (b)). Frame f1: rounded [parent=Global] binds f, k (blank (c)), g and h, with Return Value blank (d). Frame f2: h has details omitted. Frame f3: λ(x) <line 2> has x = 7 and Return Value blank (e). Frame f4: λ(x) <line 7> has x = 7 and Return Value blank (f). Some parent boxes are blank.', slots: [[217, 46, 39], [217, 94, 39], [217, 188, 39], [217, 266, 39], [217, 394, 39], [217, 490, 39], [471, 71, 30], [471, 216, 30], [445, 241, 30], [202, 336, 30], [202, 431, 30]] },
+        code: code(`
+def rounded(f, k):
+    g = lambda x: (f(x)//k)*k
+    def h(update):
+        k = update
+    return [h, g]
+k = 2
+up = lambda x: x * k + 1
+s = rounded(up, 4)
+s[0](5)
+s[1](7)
+`),
+        lineNumbers: true,
+      },
+      'sp23f-3a': {
+        exam: 'sp23f', number: '3(a)', title: 'Trees Get Degrees — big_paths', points: 10,
+        intro: 'Implement `big_paths`, which takes a `Tree` instance `t` with number labels. It returns the number of paths from the root of `t` to a leaf in which all labels are greater than or equal to the root label. The `Tree` class appears on the midterm 2 study guide.',
+        code: code(`
+def big_paths(t):
+    """Return the number of paths from the root to a leaf in which all labels are
+    greater than or equal to the root label of t.
+
+    >>> t = Tree(5, [Tree(4, [Tree(6), Tree(7)]), Tree(8), Tree(7, [Tree(5), Tree(3)])])
+    >>> big_paths(t)  # 5-8 and 5-7-5
+    2
+    """
+    def f(s):
+        if ⟦a⟧:
+            return 0
+        elif ⟦b⟧:
+            return 1
+        else:
+            return ⟦c⟧
+    return ⟦d⟧
+`),
+      },
+      'sp23f-3b': {
+        exam: 'sp23f', number: '3(b)', title: 'Trees Get Degrees — gen', points: 6,
+        intro: 'Implement `gen`, a generator function that takes a `Tree` instance `t` with number labels and a number `n`. It yields a two-element list for every pair of a parent label and child label that sum to `n`.',
+        code: code(`
+def gen(t, n):
+    """Yield all pairs of a parent label and child label that sum to n in tree t.
+
+    >>> t = Tree(5, [Tree(4, [Tree(6), Tree(7)]), Tree(8), Tree(7, [Tree(5), Tree(3)])])
+    >>> sorted(gen(t, 10))  # Does not yield [5, 5]; one 5 is the grandparent of the other.
+    [[4, 6], [7, 3]]
+    """
+    for b in ⟦e⟧:
+        if ⟦f⟧ == n:
+            ⟦g⟧
+        yield from ⟦h⟧
+`),
+      },
+      'sp23f-4': {
+        exam: 'sp23f', number: '4', title: 'Repark the Car', points: 6,
+        intro: '**Definition.** A car takes up 2 adjacent parking spots. A string of length `n` can represent `n` adjacent parking spots using `<>` for a car and `.` for an empty spot. For example `\'.<>.<><>\'` represents an empty spot, then two spots containing a car, then another empty spot, then four spots containing two cars.\n\nImplement `cars`, which takes non-negative integers `k` and `n`. It returns the number of ways to park `k` cars in `n` adjacent parking spots. Treat all cars the same; it does not matter which car is parked in which spot.',
+        code: code(`
+def cars(k, n):
+    """Return the number of ways to park k cars in n adjacent parking spaces where
+    each car takes up two spaces.
+
+    >>> cars(2, 5)  # '<><>.', '<>.<>', '.<><>'
+    3
+    >>> cars(3, 6)  # '<><><>'
+    1
+    >>> cars(1, 7)  # '<>.....', '.<>....', etc.
+    6
+    """
+    if k == 0:
+        return ⟦a⟧
+    if ⟦b⟧:
+        return 0
+    return ⟦c⟧
+`),
+      },
+      'sp23f-5a': {
+        exam: 'sp23f', number: '5(a)', title: 'Pairings — pair', points: 4,
+        intro: '**Definition.** The *pairing* of a sequence `s` is a sequence of pairs containing all of the elements of `s` in order. A pair is a two-element list. E.g., the pairing of `[1, 3, 5, 6, 4, 2]` is `[[1, 3], [5, 6], [4, 2]]`.\n\nImplement `pair`, a function that takes a list `s` with an even length. It returns the pairing of `s`.',
+        code: code(`
+def pair(s):
+    """Return the pairing of an even-length list s as a list of two-element lists.
+
+    >>> pair([3, 4, 5, 8, 7, 6])
+    [[3, 4], [5, 8], [7, 6]]
+    """
+    assert len(s) % 2 == 0
+    return [⟦a⟧ for i in ⟦b⟧]
+`),
+      },
+      'sp23f-5a-iii': {
+        exam: 'sp23f', number: '5(a) iii', title: 'Pairings — gen_pairs', points: 2,
+        intro: 'Fill in blank (c) in the implementation of `gen_pairs`, a generator function that takes an infinite iterator `t`. It yields the elements of the pairing of the sequence represented by `t`.',
+        code: code(`
+def naturals(k):
+    yield k
+    yield from naturals(k + 1)
+
+def gen_pairs(t):
+    """Yield elements of the pairing of an infinite iterable s.
+
+    >>> t = gen_pairs(naturals(3))  # naturals(3) contains 3, 4, 5, 6, ...
+    >>> next(t)
+    [3, 4]
+    >>> next(t)
+    [5, 6]
+    """
+    while True:
+        yield ⟦c⟧
+`),
+      },
+      'sp23f-5b': {
+        exam: 'sp23f', number: '5(b)', title: 'Pairings — pairs (Scheme)', points: 5,
+        intro: 'Implement `pairs`, a Scheme procedure that takes a list `s` with an even length. It returns the pairing of `s`. For example, `(pairs \'(3 4 5 8 7 6))` evaluates to `((3 4) (5 8) (7 6))`.',
+        code: code(`
+(define (pairs s) (if (null? s) nil ( ⟦d⟧ ( list (car s) ⟦e⟧ ) ⟦f⟧ )))
+`),
+      },
+      'sp23f-5b-iv': {
+        exam: 'sp23f', number: '5(b) iv–v', title: 'Pairings — Scheme expressions', points: 5,
+        intro: 'Assume `pairs` is implemented correctly. The built-in `map` procedure appears on the final study guide.',
+        code: code(`
+(map pairs (pairs '(3 4 5 6)))
+((lambda (x) 1) 2)
+`),
+      },
+      'sp23f-6a': {
+        exam: 'sp23f', number: '6(a)', title: 'Log and Count — Log', points: 6,
+        intro: 'The `Log` class is constructed with a one-argument function `f` and has a method `call` that takes `n` and returns `f(n)`. The `args` attribute of a `Log` instance for function `f` is a list containing all `n` passed to the `call` method of any `Log` instance with the same `f`.\n\nOne expression fills both blanks (a) and (c), so both are shown as (a) below.',
+        code: code(`
+class Log:
+    """Store the arguments passed to a one-argument function in a list called args.
+    If two logs are created for the same function f, they share a list of args.
+
+    >>> f = Log(lambda x: x * x)
+    >>> f.call(f.call(3))
+    81
+    >>> f.args
+    [3, 9]
+    >>> g, h = Log(abs), Log(abs)
+    >>> g.call(h.call(-3))
+    3
+    >>> g.args
+    [-3, 3]
+    """
+    logged = {}
+    def __init__(self, f):
+        if f not in self.logged:
+            ⟦a⟧ = []
+        self.f = ⟦b⟧
+        self.args = ⟦a⟧
+
+    def call(self, n):
+        self.args.append(n)
+        return ⟦d⟧
+`),
+      },
+      'sp23f-6b': {
+        exam: 'sp23f', number: '6(b)', title: 'Log and Count — Counter', points: 8,
+        intro: 'The `Counter` class has a method `observe` that takes an iterable and a method `count` that takes a value `v` and returns the number of times `v` appears among the elements of all the iterables ever passed to `observe`. Finally, the `forget` method takes no arguments and omits the values of the most recent (not yet forgotten) call to `observe` from subsequent calls to `count`. Assume `forget` is never called more times than `observe`.\n\n**Hint:** The built-in `count` method of a list returns the count of a value: `[3, 4, 3].count(3)` is 2.',
+        code: code(`
+class Counter:
+    """Counts the number of times a value was observed.
+
+    >>> c = Counter()
+    >>> c.observe(map(abs, range(-3, 3)))  # observe 3, 2, 1, 0, 1, 2
+    >>> c.observe(range(-3, 3))            # observe -3, -2, -1, 0, 1, 2
+    >>> {i: c.count(i) for i in range(-3, 3)}
+    {-3: 1, -2: 1, -1: 1, 0: 2, 1: 3, 2: 3}
+    >>> c.forget()  # forget range(-3, 3)
+    >>> {i: c.count(i) for i in range(-3, 3)}
+    {-3: 0, -2: 0, -1: 0, 0: 1, 1: 2, 2: 2}
+    >>> c.forget()  # forget map(abs, range(-3, 3))
+    >>> c.count(1)
+    0
+    """
+    def __init__(self):
+        self.obs = []
+
+    def observe(self, vs):
+        ⟦e⟧
+
+    def count(self, v):
+        return ⟦f⟧
+
+    def forget(self):
+        ⟦g⟧
+`),
+      },
+      'sp23f-7': {
+        exam: 'sp23f', number: '7', title: 'Room Service', points: 8, lang: 'sql',
+        intro: 'The `finals` table has columns `hall` (strings) and `course` (strings), and has rows for each lecture hall in which a course is holding its final exam. Each `course` and each `hall` value may appear multiple times because a course may use multiple lecture halls at the same time, and a lecture hall may hold finals for multiple courses at different times.\n\nThe `sizes` table has columns `room` (strings) and `seats` (numbers), and has one row per unique room on campus containing the number of seats in that room. Each room appears once. All lecture halls are rooms.\n\nCreate a table with two columns, `course` (string) and `seats` (number), and with one row containing the name of the course and the total number of seats in final rooms for that course. Only include a row for each course that uses at least two rooms for its final.\n\n```\n' + SP23_TABLES + '\n```',
+        sqlSetup: SP23_SETUP,
+        code: code(`
+SELECT course, SUM(⟦a⟧) AS seats FROM ⟦b⟧ GROUP BY ⟦c⟧;
+`),
+      },
+      'sp23f-8a': {
+        exam: 'sp23f', number: '8(a)', title: 'Group Work — group (A+)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\n**Definition.** The *n-grouping* of a list `s` for positive integer `n` is a list of `n`-length lists containing all of the elements of `s` in order. The last list may contain fewer than `n` elements. E.g., the 3-grouping of `[4, 3, 2, 1, 5, 6, 7, 8]` is `[[4, 3, 2], [1, 5, 6], [7, 8]]`.\n\nFill in the blank to implement `group`, which takes positive integer `n` and list `s`. It returns the n-grouping of `s`.',
+        code: code(`
+def group(n, s):
+    """Return the n-grouping of a list s as a list of n-element lists.
+
+    >>> group(2, [3, 4, 5, 6, 7, 8])
+    [[3, 4], [5, 6], [7, 8]]
+    >>> group(3, [3, 4, 5, 6, 7, 8])
+    [[3, 4, 5], [6, 7, 8]]
+    >>> group(4, [3, 4, 5, 6, 7, 8])
+    [[3, 4, 5, 6], [7, 8]]
+    """
+    if len(s) <= n:
+        return [s]
+    else:
+        return ⟦A+⟧
+`),
+      },
+      'sp23f-8b': {
+        exam: 'sp23f', number: '8(b)', title: 'Group Work — group (A+, Scheme)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nFill in the blank to implement `group` in Scheme, which takes positive integer `n` and list `s`. It returns the n-grouping of `s`.',
+        code: code(`
+; (group 3 '(3 4 5 6 7 8)) evaluates to ((3 4 5) (6 7 8))
+; (group 4 '(3 4 5 6 7 8)) evaluates to ((3 4 5 6) (7 8))
+(define (group n s)
+  (define (first n s f)
+    (cond ((null? s) nil)
+          ((= n 0) (cons nil (f s)))
+          ((null? (cdr s)) (list (list (car s))))
+          (else (let ((t (first (- n 1) (cdr s) f)))
+                  (cons (cons (car s) (car t)) (cdr t))))))
+  ⟦A+⟧ )
+`),
+      },
+    },
+    questions: [
+      { id: 'sp23f-1a', problem: 'sp23f-1', label: '(a)', points: 3, topics: ['links', 'oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: '`print(gold.rest.add(1))`',
+        choices: ['<3 1 5 7>', '<3 <1> 5 7>', '<3 5 1 7>', '<3 5 <1> 7>', '<5 1 7>', '<5 <1> 7>', 'None of these'] },
+      { id: 'sp23f-1b', problem: 'sp23f-1', label: '(b)', points: 3, topics: ['links', 'oop'], difficulty: 'hard',
+        type: 'short_answer', prompt: '`print(Chain(2, gold).add(4))`' },
+      { id: 'sp23f-1c', problem: 'sp23f-1', label: '(c)', points: 2, topics: ['lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: '`print(bronze)`' },
+      { id: 'sp23f-1d', problem: 'sp23f-1', label: '(d)', points: 2, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'What is the order of growth of the time to run the `Chain.add` method with respect to the length of `self`?',
+        choices: ['Constant', 'Logarithmic', 'Linear', 'Quadratic', 'Exponential'] },
+      { id: 'sp23f-2a', problem: 'sp23f-2', label: '(a)', points: 1, topics: ['env'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['2', '4', '5', 'None of these'] },
+      { id: 'sp23f-2b', problem: 'sp23f-2', label: '(b)', points: 1, topics: ['env', 'lists'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'Blanks (b) and (d) have the same value; what is it?',
+        choices: ['Two functions', 'A list containing two functions', 'A list containing a list of two functions', 'A list containing two lists that each contain one function'] },
+      { id: 'sp23f-2c', problem: 'sp23f-2', label: '(c)', points: 3, topics: ['env', 'hof'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What three numbers fill in blanks (c), (e), and (f) respectively?',
+        choices: ['4, 12, 15', '4, 14, 15', '4, 15, 15', '4, 25, 29', '4, 28, 29', '4, 36, 36', '5, 12, 15', '5, 15, 15', '5, 25, 29', '5, 28, 29', '5, 36, 36'] },
+      { id: 'sp23f-3a', problem: 'sp23f-3a', label: 'i.', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).',
+        choices: ['s.is_leaf()', 't.is_leaf()', 't.label >= s.label', 's.label >= t.label', 't.label > s.label', 's.label > t.label'] },
+      { id: 'sp23f-3b', problem: 'sp23f-3a', label: 'ii.', points: 2, topics: ['trees'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['s.is_leaf()', 't.is_leaf()', 't.label >= s.label', 's.label >= t.label', 't.label > s.label', 's.label > t.label'] },
+      { id: 'sp23f-3c', problem: 'sp23f-3a', label: 'iii.', points: 4, topics: ['trees', 'recursion'], difficulty: 'hard', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'sp23f-3d', problem: 'sp23f-3a', label: 'iv.', points: 2, topics: ['trees', 'hof'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['f(s)', 'f(t)', 'f(s, 0)', 'f(t, 0)', '1 + f(s, 0)', '1 + f(t, 0)'] },
+      { id: 'sp23f-3e', problem: 'sp23f-3b', label: 'i.', points: 1, topics: ['trees', 'generators'], difficulty: 'easy', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).', choices: ['t.branches', 'gen(t.branches, n)', 'map(lambda x: gen(x, n), t.branches)'] },
+      { id: 'sp23f-3f', problem: 'sp23f-3b', label: 'ii.', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).', choices: ['b.label', 't.label', 't.label + b.label', 'sum([b.label for b in t.branches])'] },
+      { id: 'sp23f-3g', problem: 'sp23f-3b', label: 'iii.', points: 2, topics: ['generators'], difficulty: 'medium', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank (g).' },
+      { id: 'sp23f-3h', problem: 'sp23f-3b', label: 'iv.', points: 2, topics: ['generators', 'recursion'], difficulty: 'medium', blank: 'h',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (h).',
+        choices: ['t.branches', 'b.branches', '[[t, b] for b in t.branches]', '[[t.label, b.label] for b in t.branches]', 'gen(t, n)', 'gen(b, n)'] },
+      { id: 'sp23f-4a', problem: 'sp23f-4', label: '(a)', points: 1, topics: ['recursion'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['0', '1', 'n', 'n+1'] },
+      { id: 'sp23f-4b', problem: 'sp23f-4', label: '(b)', points: 2, topics: ['recursion'], difficulty: 'medium', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['k > 0', 'k < 0', 'n == 0', 'n < 1', 'n < 2'] },
+      { id: 'sp23f-4c', problem: 'sp23f-4', label: '(c)', points: 3, topics: ['recursion'], difficulty: 'hard', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'sp23f-5a', problem: 'sp23f-5a', label: 'i.', points: 3, topics: ['lists'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'sp23f-5b', problem: 'sp23f-5a', label: 'ii.', points: 1, topics: ['lists', 'hof'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b). The built-in `map` function appears on the midterm 2 study guide.',
+        choices: ['map(lambda x: x // 2, s)', 'map(lambda x: s // 2, s)', 'range(len(s // 2))', 'range(len(s) // 2)'] },
+      { id: 'sp23f-5c', problem: 'sp23f-5a-iii', label: 'iii.', points: 2, topics: ['generators', 'iterators'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'sp23f-5d', problem: 'sp23f-5b', label: 'i.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['append', 'car', 'cdr', 'cons', 'if', 'list'] },
+      { id: 'sp23f-5e', problem: 'sp23f-5b', label: 'ii.', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'sp23f-5f', problem: 'sp23f-5b', label: 'iii.', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'sp23f-5g', problem: 'sp23f-5b-iv', label: 'iv.', points: 2, topics: ['scheme'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: "What is the value of the expression `(map pairs (pairs '(3 4 5 6)))`?",
+        choices: ['(3 4 5 6)', '((3 4) (5 6))', '(((3 4) (5 6)))', '((3 (4)) (5 (6)))', '(((3 4)) ((5 6)))'] },
+      { id: 'sp23f-5h', problem: 'sp23f-5b-iv', label: 'v.', points: 3, topics: ['scheme'], difficulty: 'medium',
+        type: 'multi_select', mono: true, prompt: 'Which expressions are passed to `scheme_eval` when evaluating `((lambda (x) 1) 2)`? **Check all that apply.**',
+        choices: ['((lambda (x) 1) 2)', '(lambda (x) 1)', 'lambda', '(x)', 'x', '1', '2'] },
+      { id: 'sp23f-6a', problem: 'sp23f-6a', label: 'i.', points: 3, topics: ['oop'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'One expression can fill both blanks (a) and (c); what is it?' },
+      { id: 'sp23f-6b', problem: 'sp23f-6a', label: 'ii.', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'sp23f-6d', problem: 'sp23f-6a', label: 'iii.', points: 2, topics: ['oop', 'hof'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['Log.call(self, n)', 'self.call(n)', 'self.f(n)', 'self.f.call(n)'] },
+      { id: 'sp23f-6e', problem: 'sp23f-6b', label: 'i.', points: 3, topics: ['oop', 'iterators', 'lists'], difficulty: 'hard', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'sp23f-6f', problem: 'sp23f-6b', label: 'ii.', points: 3, topics: ['oop', 'lists'], difficulty: 'hard', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'sp23f-6g', problem: 'sp23f-6b', label: 'iii.', points: 2, topics: ['oop', 'lists'], difficulty: 'easy', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (g).',
+        choices: ['obs.pop()', 'self.obs.pop()', '[obs.pop() for i in range(len(vs))]', '[self.obs.pop() for i in range(len(vs))]'] },
+      { id: 'sp23f-7a', problem: 'sp23f-7', label: '(a)', points: 1, topics: ['sql-agg'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['course', 'room', 'seats', 'sizes'] },
+      { id: 'sp23f-7b', problem: 'sp23f-7', label: '(b)', points: 4, topics: ['sql-joins'], difficulty: 'hard', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b). You may include a `WHERE` or `HAVING` clause.' },
+      { id: 'sp23f-7c', problem: 'sp23f-7', label: '(c)', points: 3, topics: ['sql-agg'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['hall WHERE seats > 1', 'hall HAVING seats > 1', 'hall WHERE sizes > 1', 'hall HAVING sizes > 1', 'hall WHERE COUNT(*) > 1', 'hall HAVING COUNT(*) > 1', 'course WHERE seats > 1', 'course HAVING seats > 1', 'course WHERE sizes > 1', 'course HAVING sizes > 1', 'course WHERE COUNT(*) > 1', 'course HAVING COUNT(*) > 1'] },
+      { id: 'sp23f-8a', problem: 'sp23f-8a', label: '(a)', points: 0, topics: ['recursion', 'lists'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in the blank.' },
+      { id: 'sp23f-8b', problem: 'sp23f-8b', label: '(b)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in the blank.' },
+    ],
+    answers: {
+      'sp23f-1a': { correct: 4, explanation: '`gold.rest` is the Chain starting at 5. `add(1)` puts a new Chain holding 1 right after it, and returns that same Chain: `<5 1 7>`.' },
+      'sp23f-1b': { accepted: ['<2 4 3 5 1 7>'], explanation: '`add(4)` inserts 4 after the first element, 2; `gold` already contains the 1 added in (a).' },
+      'sp23f-1c': { accepted: ['[[2, 5], 3]'], explanation: 'The slice `silver[1:]` copies the outer list but shares the inner list `[2]`, which later had 5 appended. Appending 4 to `silver` doesn’t affect `bronze`.' },
+      'sp23f-1d': { correct: 0, explanation: '`add` always does the same few steps, however long the list is.' },
+      'sp23f-2a': { correct: 0, explanation: 'Calling `h` assigns `k` in `h`’s own frame, so the global `k` stays 2.' },
+      'sp23f-2b': { correct: 1, explanation: '`rounded` returns `[h, g]`, a list of two functions.' },
+      'sp23f-2c': { correct: 0, explanation: '`k` in `rounded`’s frame is 4 (h’s assignment is local to h). `s[1](7)` computes `up(7)` = 7 × 2 + 1 = 15 using the global `k`, then `(15 // 4) * 4` = 12.' },
+      'sp23f-3a': { correct: 4, explanation: 'A label smaller than the root ends the path: it doesn’t count.' },
+      'sp23f-3b': { correct: 0, explanation: 'Reaching a leaf (with no smaller label on the way) is one path.' },
+      'sp23f-3c': { accepted: ['sum([f(b) for b in s.branches])', 'sum(f(b) for b in s.branches)', 'sum(map(f, s.branches))', 'sum(list(map(f, s.branches)))'], explanation: 'Add up the paths through each branch. `f` compares every node with the original root `t`.' },
+      'sp23f-3d': { correct: 1, explanation: 'Start at the root.' },
+      'sp23f-3e': { correct: 0, explanation: 'Look at each child of `t`.' },
+      'sp23f-3f': { correct: 2, explanation: 'A parent label plus a child label.' },
+      'sp23f-3g': { accepted: ['yield [t.label, b.label]'], explanation: 'Yield the pair as a two-element list, parent first.' },
+      'sp23f-3h': { correct: 5, explanation: 'Then look for pairs further down, inside each branch.' },
+      'sp23f-4a': { correct: 1, explanation: 'There is exactly one way to park no cars: leave every spot empty.' },
+      'sp23f-4b': { correct: 4, explanation: 'At least one car to park but fewer than 2 spots: no way.' },
+      'sp23f-4c': { accepted: ['cars(k, n-1) + cars(k-1, n-2)', 'cars(k - 1, n - 2) + cars(k, n - 1)', 'cars(k-1, n-2) + cars(k, n-1)', 'cars(k, n - 1) + cars(k - 1, n - 2)'], explanation: 'Either the first spot is empty (park all `k` cars in the other `n - 1` spots), or a car takes the first two spots (park `k - 1` cars in `n - 2` spots).' },
+      'sp23f-5a': { accepted: ['[s[2 * i], s[2 * i + 1]]', 's[2*i:2*i+2]', '[s[2*i], s[2*i+1]]', 's[2 * i:2 * i + 2]', 's[i*2:i*2+2]', '[s[i*2], s[i*2+1]]'], explanation: 'The `i`th pair is made of elements `2i` and `2i + 1`.' },
+      'sp23f-5b': { correct: 3, explanation: 'There are `len(s) // 2` pairs.' },
+      'sp23f-5c': { accepted: ['[next(t), next(t)]'], explanation: 'Each pair takes the next two values from the iterator.' },
+      'sp23f-5d': { correct: 3, explanation: 'Put the first pair in front of the pairing of the rest.' },
+      'sp23f-5e': { accepted: ['(car (cdr s))', '(cadr s)'], explanation: 'The second element.' },
+      'sp23f-5f': { accepted: ['(pairs (cdr (cdr s)))', '(pairs (cddr s))'], explanation: 'The rest of the list after the first two elements.' },
+      'sp23f-5g': { correct: 4, explanation: '`(pairs \'(3 4 5 6))` is `((3 4) (5 6))`; pairing each two-element list gives `((3 4))` and `((5 6))`.' },
+      'sp23f-5h': { correct: [0, 1, 5, 6], explanation: 'The whole call, its operator `(lambda (x) 1)` and its operand `2` are evaluated, then the body `1`. Parts of the lambda expression itself are not evaluated.' },
+      'sp23f-6a': { accepted: ['self.logged[f]', 'Log.logged[f]'], explanation: '`logged` is a class-level dictionary from functions to their shared list of arguments.' },
+      'sp23f-6b': { accepted: ['f'], explanation: 'Store the function.' },
+      'sp23f-6d': { correct: 2, explanation: 'Call the stored function on `n`.' },
+      'sp23f-6e': { accepted: ['self.obs.append(list(vs))', 'self.obs += [list(vs)]', 'self.obs.append([v for v in vs])'], explanation: 'Store this observation as its own list (an iterator can only be read once), so `forget` can remove it later.' },
+      'sp23f-6f': { accepted: ['sum([s.count(v) for s in self.obs])', 'sum(s.count(v) for s in self.obs)', 'sum([x.count(v) for x in self.obs])'], explanation: 'Count `v` in each stored observation and add them up.' },
+      'sp23f-6g': { correct: 1, explanation: 'Remove the most recent observation.' },
+      'sp23f-7a': { correct: 2, explanation: 'Add up the seats of the course’s rooms.' },
+      'sp23f-7b': { accepted: ['finals, sizes WHERE hall=room', 'finals, sizes WHERE room=hall', 'sizes, finals WHERE hall=room', 'sizes, finals WHERE room=hall', 'finals JOIN sizes ON hall=room', 'finals JOIN sizes ON room=hall'], explanation: 'Join each final’s hall to its row in `sizes`.' },
+      'sp23f-7c': { correct: 11, explanation: 'One row per course, keeping only courses with at least two rows (rooms). An aggregate condition goes in `HAVING`.' },
+      'sp23f-8a': { accepted: ['[s[:n]] + group(n, s[n:])'] },
+      'sp23f-8b': { accepted: ['(first n s (lambda (s) (group n s)))'] },
+    },
+  });
 })();

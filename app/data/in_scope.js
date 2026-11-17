@@ -104,6 +104,12 @@ window.CS61A_SCOPE = {
     'fa23f-9a': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
     'fa23f-3': { status: 'note', source: 'inferred',
       note: 'The `Expression` and `Word` classes define `__str__` methods, which are no longer taught. All you need to know: `print(e)` and `str(e)` use the string `__str__` returns, and `str(self.then)` calls the next word’s `__str__`.' },
+    // Spring 2023 Final
+    'sp23f-5b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'sp23f-5b-iv': { status: 'out', reason: 'Scheme and the Scheme interpreter (scheme_eval)', source: 'inferred' },
+    'sp23f-8b': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'sp23f-1': { status: 'note', source: 'inferred',
+      note: 'Parts (a) and (b) use `Chain.add`, which mutates a linked list (out of scope), so they were removed, along with part (d) (orders of growth). The remaining part (c) only uses `silver` and `bronze` and is in scope.' },
   },
 
   questions: {
@@ -133,5 +139,9 @@ window.CS61A_SCOPE = {
     'fa22-5b-ii': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
     // Fall 2021
     'fa21-4b-iii': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    // Spring 2023 Final
+    'sp23f-1a': { status: 'out', reason: 'Mutates a linked list (Chain.add)', source: 'inferred' },
+    'sp23f-1b': { status: 'out', reason: 'Mutates a linked list (Chain.add)', source: 'inferred' },
+    'sp23f-1d': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
   },
 };
