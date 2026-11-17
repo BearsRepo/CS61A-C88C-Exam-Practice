@@ -281,6 +281,10 @@ def to_link(t):
     return [x for x in ds if x is not d]
 `;
 
+  const IS_PAIR_SEQUENCE = `def is_pair_sequence(s):
+    return all([type(x) == tuple for x in s]) and all(map(lambda x: len(x) == 2, s))
+`;
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -1840,6 +1844,135 @@ first must be a number on the domino.`),
 (0, 1, 3)
 >>> count_ones(Tree(1, [Tree(2, [Tree(3)]), Tree(4, [Tree(5), Tree(6, [Tree(7)])])]))
 2`),
+      ],
+    },
+    {
+      id: 'fa23f-2-tests', problem: 'fa23f-2', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(3, [Tree(4), Tree(5, [Tree(1), Tree(2)]), Tree(7)])
+>>> bounds(t, 7, 10)  # 3+4=7, 3+5+1=9, 3+5+2=10, 3+7=10
+4
+>>> bounds(t, 9, 10)
+3
+>>> bounds(t, 9, 9)
+1`),
+        added(`>>> bounds(Tree(5), 5, 5), bounds(Tree(5), 6, 9), bounds(Tree(5), 1, 4)
+(1, 0, 0)
+>>> t = Tree(1, [Tree(2, [Tree(3)]), Tree(1)])  # paths sum to 6 and 2
+>>> bounds(t, 2, 6), bounds(t, 3, 5), bounds(t, 0, 2)
+(2, 0, 1)`),
+      ],
+    },
+    {
+      id: 'fa23f-3-tests', problem: 'fa23f-3', verified: true,
+      verification: verification({ passing: 1, failing: 18 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> str(Expression(['I', 'said', 'hi']))
+'ahoy says I'
+>>> e = Expression(['there', 'you', 'are'])
+>>> print(e)
+arrrr you there
+>>> e.dialect['you'] = 'ye'  # After adding to the dialect...
+>>> print(e)                 # ... the result of printing changes
+arrrr ye there`),
+        added(`>>> e = Expression(['yes'])
+>>> print(e), e.first.then, e.first.w, e.first.exp is e
+aye
+(None, None, 'yes', True)
+>>> e.first.say()
+'aye'
+>>> print(Expression(['a', 'b', 'c']))
+c b a`),
+      ],
+    },
+    {
+      id: 'fa23f-4a-tests', problem: 'fa23f-4a', verified: true,
+      verification: verification({ passing: 2, failing: 28 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> longest_pairing([1, 2, 3, 4, 5, 6, 7, 8])
+[(1, 2), (4, 5), (7, 8)]`),
+        added(`>>> longest_pairing([1, 2]), longest_pairing(['a', 'b', 'c', 'd', 'e'])
+([(1, 2)], [('a', 'b'), ('d', 'e')])
+>>> try:
+...     longest_pairing([1, 2, 3])
+... except AssertionError as e:
+...     print(e)
+s must have length 3*n-1 for a positive integer n`),
+      ],
+    },
+    {
+      id: 'fa23f-4b-tests', problem: 'fa23f-4b', verified: true,
+      verification: verification({ passing: 2, failing: 15 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> is_pair_sequence([(1, 2), (3, 4)])
+True
+>>> is_pair_sequence([(1, 2), (3, 4, 5)])
+False
+>>> is_pair_sequence([(1, 2), "not a tuple"])
+False`),
+        exam(`>>> is_pair_sequence([(1, 2), (3, (4, 5, 6))])  # (3, (4, 5, 6)) is a two-element tuple
+True
+>>> is_pair_sequence([])
+True`),
+        added(`>>> is_pair_sequence([(1, 2), [3, 4]]), is_pair_sequence(['ab']), is_pair_sequence([(1,)])  # a list, a string, a 1-tuple
+(False, False, False)`),
+      ],
+    },
+    {
+      id: 'fa23f-4c-tests', problem: 'fa23f-4c', verified: true,
+      verification: verification({ passing: 1, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: IS_PAIR_SEQUENCE, setupNote: 'These tests provide is_pair_sequence from part (b) (the official solution).', setupFrom: ['fa23f-4b'],
+      cases: [
+        exam(`>>> pairs = [(3, 4), (5, 6), (7, 7)]
+>>> is_pairing([3, 3, 4, 5, 4, 5, 6, 0, 7, 7, 7], pairs)
+True
+>>> is_pairing([3, 3, 4, 5, 6, 0, 7, 7, 7], pairs)  # Need an element between pairs
+False`),
+        exam(`>>> pairs = [(3, 4), (5, 6), (7, 7)]
+>>> is_pairing([3, 2, 4, 0, 5, 6, 0, 7, 7], pairs)  # Elements of a pair must be adjacent
+False
+>>> is_pairing([7, 7, 3, 3, 4, 5, 4, 5, 6], pairs)  # Pairing isn't in the same order as s
+False`),
+        added(`>>> is_pairing([], []), is_pairing([1, 2], [(1, 2)]), is_pairing([1, 2], [(2, 1)]), is_pairing([1], [(1, 1)])
+(True, True, False, False)
+>>> is_pairing([1, 2, 1, 2], [(1, 2), (1, 2)]), is_pairing([1, 2, 0, 1, 2], [(1, 2), (1, 2)])
+(False, True)`),
+      ],
+    },
+    {
+      id: 'fa23f-4d-tests', problem: 'fa23f-4d', verified: true,
+      verification: verification({ passing: 1, failing: 8 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> sorted(unequal_pairs([4, 2, 2, 4, 4, 1, 1]))  # Four different pairings!
+[[(2, 4)], [(4, 1)], [(4, 2)], [(4, 2), (4, 1)]]
+>>> max(unequal_pairs([4, 2, 2, 4, 5, 4, 4, 1, 5, 5, 6]), key=len)  # The longest pairing
+[(4, 2), (4, 5), (4, 1), (5, 6)]`),
+        added(`>>> list(unequal_pairs([])), list(unequal_pairs([1])), list(unequal_pairs([1, 1])), list(unequal_pairs([1, 2]))
+([], [], [], [[(1, 2)]])
+>>> sorted(unequal_pairs([1, 2, 3, 4, 5]))
+[[(1, 2)], [(1, 2), (4, 5)], [(2, 3)], [(3, 4)], [(4, 5)]]`),
+      ],
+    },
+    {
+      id: 'fa23f-4e-tests', problem: 'fa23f-4e', verified: true,
+      verification: verification({ passing: 1, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> L = Link                                                       # Abbreviate Link
+>>> max_pair_sum(L(3, L(4, L(5, L(3, L(4, L(5, L(6))))))))         # 4+5 + 5+6
+20
+>>> max_pair_sum(L(3, L(4, L(5, L(3, L(4, L(5, L(6, L(3)))))))))   # 3+4 + 3+4 + 6+3
+23`),
+        added(`>>> max_pair_sum(Link.empty), max_pair_sum(Link(5)), max_pair_sum(Link(5, Link(6))), max_pair_sum(Link(1, Link(9, Link(1))))
+(0, 0, 11, 10)
+>>> max_pair_sum(Link(1, Link(1, Link(9, Link(9)))))  # only one of (1, 1) and (9, 9) fits
+18`),
       ],
     },
   ];

@@ -95,6 +95,15 @@ window.CS61A_SCOPE = {
       note: 'Dominos are shown as `5-2`, `4-3` and so on because of the `Domino` class’s `__repr__` method, which is no longer taught.' },
     'sp24f-3c': { status: 'note', source: 'inferred',
       note: '`repr(d)` calls the `Domino` class’s `__repr__` method (no longer taught): it gives a string like `\'3-4\'`. That is all you need for blanks (g) and (k).' },
+    // Fall 2023 Final
+    'fa23f-5': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa23f-6': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa23f-6d': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa23f-7': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa23f-7d': { status: 'out', reason: 'Scheme interpreter (scheme_eval)', source: 'inferred' },
+    'fa23f-9a': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa23f-3': { status: 'note', source: 'inferred',
+      note: 'The `Expression` and `Word` classes define `__str__` methods, which are no longer taught. All you need to know: `print(e)` and `str(e)` use the string `__str__` returns, and `str(self.then)` calls the next word’s `__str__`.' },
   },
 
   questions: {

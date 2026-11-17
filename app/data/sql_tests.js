@@ -105,6 +105,20 @@ INSERT INTO gov VALUES ('noxus', 'triumvirate'), ('zaun', 'council'), ('piltover
   SELECT 3      , 7     , 5;` },
       ],
     },
+    'fa23f-8': {
+      cases: [
+        { name: 'The tables printed in the exam', origin: 'exam', input: '', columns: ['flavor', 'total'],
+          expect: [['chocolate', 12], ['cinnamon', 9], ['vanilla', 6]] },
+        { name: 'The cheaper dough listed last, and a flavor with one dough', origin: 'added', input: '', columns: ['flavor', 'total'],
+          expect: [['glazed', 5], ['jelly', 8]],
+          data: `CREATE TABLE donuts(kind, flavor);
+INSERT INTO donuts VALUES ('raised', 'glazed'), ('old', 'glazed'), ('cake', 'glazed'), ('raised', 'jelly');
+CREATE TABLE prices(dough, price);
+INSERT INTO prices VALUES ('raised', 4), ('old', 3), ('cake', 1);
+CREATE TABLE quantity(choice, k);
+INSERT INTO quantity VALUES ('glazed', 5), ('jelly', 2);` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

@@ -2258,4 +2258,537 @@ def swap(t, x, y):
       'sp24f-7': { accepted: ["'t', lambda i: '.branches[' + str(i) + ']'"] },
     },
   });
+
+  // ───────────────────────────── Fall 2023 Final ─────────────────────────────
+  const FA23_TABLES = code(`
+donuts:
+| kind   | flavor    |
+|--------|-----------|
+| cake   | chocolate |
+| cake   | lemon     |
+| cake   | vanilla   |
+| raised | cinnamon  |
+| raised | chocolate |
+
+prices:
+| dough  | price |
+|--------|-------|
+| cake   | 2     |
+| raised | 3     |
+
+quantity:
+| choice    | k |
+|-----------|---|
+| chocolate | 6 |
+| cinnamon  | 3 |
+| vanilla   | 3 |
+
+result:
+| flavor    | total |
+|-----------|-------|
+| chocolate | 12    |
+| cinnamon  | 9     |
+| vanilla   | 6     |
+`);
+  const FA23_SETUP = code(`
+CREATE TABLE donuts(kind, flavor);
+INSERT INTO donuts VALUES ('cake', 'chocolate'), ('cake', 'lemon'), ('cake', 'vanilla'), ('raised', 'cinnamon'), ('raised', 'chocolate');
+CREATE TABLE prices(dough, price);
+INSERT INTO prices VALUES ('cake', 2), ('raised', 3);
+CREATE TABLE quantity(choice, k);
+INSERT INTO quantity VALUES ('chocolate', 6), ('cinnamon', 3), ('vanilla', 3);
+`);
+  add({
+    exam: { id: 'fa23f', label: 'Fall 2023 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
+    problems: {
+      'fa23f-1': {
+        exam: 'fa23f', number: '1', title: 'Copying Copies', points: 5,
+        intro: 'Draw the environment diagram that results from running all of the code below until it is fully executed, an error occurs, or you run out of frames. Then, answer the questions that follow. Blanks and frames with no labels have no questions associated with them and are not scored. You may not need all the spaces or frames.',
+        figure: { src: 'assets/fa23-final-q1.png', width: 658, height: 358, alt: 'From the exam: the code, and a partly filled environment diagram. The Global frame binds chain and add_copy to functions and result to a blank labeled (a). Frame f1: chain [parent=Global] has g and a Return value of None. Frame f2: add_copy [parent=Global] has p bound to True, then, copy bound to a blank labeled (b), and a Return value of None. Frame f3 is blank.', slots: [[360, 62, 39], [360, 106, 39], [360, 195, 39], [360, 217, 39], [274, 283, 76], [360, 283, 39], [274, 304, 76], [360, 304, 39], [274, 326, 76], [360, 326, 38], [274, 350, 76], [360, 350, 39]] },
+        code: code(`
+def chain(g):
+    g(True, g)
+
+def add_copy(p, then):
+    copy = result
+    if p:
+        copy.append(1)
+        result.append(list(copy))
+        return then(not p, add_copy)
+    else:
+        copy.append(2)
+
+result = [5]
+chain(add_copy)
+print(result)
+`),
+      },
+      'fa23f-2': {
+        exam: 'fa23f', number: '2', title: 'Path Math', points: 6,
+        intro: 'Implement `bounds`, which takes a `Tree` instance `t` and numbers `low` and `high`. It returns the number of paths through `t` from the root to a leaf for which the sum of the labels along the path is at least `low` and at most `high`.',
+        code: code(`
+def bounds(t, low, high):
+    """Return the number of root-to-leaf paths in t whose sum is between low and high (inclusive).
+
+    >>> t = Tree(3, [Tree(4), Tree(5, [Tree(1), Tree(2)]), Tree(7)])
+    >>> bounds(t, 7, 10)  # 3+4=7, 3+5+1=9, 3+5+2=10, 3+7=10
+    4
+    >>> bounds(t, 9, 10)
+    3
+    >>> bounds(t, 9, 9)
+    1
+    """
+    count = 0
+    if ⟦a⟧:
+        count = 1
+    return count + ⟦b⟧([⟦c⟧ for b in t.branches])
+`),
+      },
+      'fa23f-3': {
+        exam: 'fa23f', number: '3', title: 'Talk Like a Pirate Day', points: 10,
+        intro: 'Pirate expressions are reversed and substitute some words (such as `"aye"` for `"yes"`) according to a pirate dialect.\n\n- An `Expression` instance is constructed from a list of strings and has a dictionary attribute `dialect` and a `Word` instance attribute `first` that represents the first word of the reversed sequence.\n- A `Word` instance is constructed from its attributes: a string `w`, an `Expression` instance `exp`, and a `Word` instance `then` representing the next word in the reversed sequence. If there is no next word, `then` is `None`. A `Word` instance’s `say` method returns either `w` or its substitute if `w` is a key of the expression’s `dialect`.\n\nPrinting a `Word` prints how a pirate would say that word and the following words in the reversed sequence. Printing an `Expression` prints all of the words in the reversed sequence using the `Expression`’s dialect.\n\n**Reminder:** The `get` method of a dictionary takes two arguments: `key` and `default`. If the key is in the dictionary, its value is returned. If not, `default` is returned. E.g., `{1:2}.get(1, 3)` evaluates to 2, but `{1:2}.get(5, 3)` is 3.',
+        code: code(`
+class Expression:
+    """A pirate expression is reversed and substitutes some words using a dialect.
+
+    >>> str(Expression(['I', 'said', 'hi']))
+    'ahoy says I'
+    >>> e = Expression(['there', 'you', 'are'])
+    >>> print(e)
+    arrrr you there
+    >>> e.dialect['you'] = 'ye'  # After adding to the dialect...
+    >>> print(e)                 # ... the result of printing changes
+    arrrr ye there
+    """
+    def __init__(self, original):
+        assert len(original) > 0
+        self.dialect = {'yes': 'aye', 'hi': 'ahoy', 'said': 'says', 'are': 'arrrr'}
+        previous = None
+        for w in original:
+            current = ⟦a⟧
+            ⟦b⟧
+        self.first = ⟦c⟧
+
+    def __str__(self):
+        return ⟦d⟧
+
+class Word:
+    def __init__(self, w, exp, then):
+        self.w = w
+        self.exp = exp
+        self.then = then
+
+    def say(self):
+        return ⟦e⟧
+
+    def __str__(self):
+        first = ⟦f⟧
+        if self.then:
+            return first + ' ' + str(self.then)
+        else:
+            return first
+`),
+      },
+      'fa23f-4a': {
+        exam: 'fa23f', number: '4(a)', title: 'Six Pages of Pairings — longest_pairing', points: 6,
+        intro: '**Definition:** A *pairing* of a sequence `s` is a list of two-element tuples (called *pairs*) that contain adjacent elements of `s`. There must be at least one element of `s` between any two pairs in the pairing. The pairs in the pairing must be in the same order as they are in `s`.\n\nThe sequence `[4, 5, 6, 1, 2, 3, 7, 8]` has pairings `[(6, 1), (3, 7)]` and `[(4, 5), (1, 2), (7, 8)]` and `[]` and many others, but the following are not pairings of that sequence:\n\n- `[(5, 1), (3, 7)]` contains a pair `(5, 1)`, but 5 and 1 are not adjacent in the sequence.\n- `[(5, 6), (1, 2)]` contains two pairs with no element between them, since 6 is adjacent to 1 in the sequence.\n- `[(1, 2), (4, 5)]` contains valid pairs, but those pairs are not in the same order as the sequence.\n\nImplement `longest_pairing`, which takes a list `s` with `3*n-1` elements for some positive integer `n`. It returns the longest pairing of `s`.\n\n(The exam’s code says `results._______` on the line with blank (e); the variable is `result`, so that is corrected here.)',
+        code: code(`
+def longest_pairing(s):
+    """Return the longest pairing for list s that has length 3*n-1 for some positive integer n.
+
+    >>> longest_pairing([1, 2, 3, 4, 5, 6, 7, 8])
+    [(1, 2), (4, 5), (7, 8)]
+    """
+    assert len(s) > 0 and ⟦a⟧, 's must have length 3*n-1 for a positive integer n'
+    result, pair, skip = [], [], False
+    for x in s:
+        if ⟦b⟧:
+            pair.append(x)
+        else:
+            ⟦c⟧
+        if ⟦d⟧:
+            result.⟦e⟧
+            pair, skip = [], True
+    return result
+`),
+      },
+      'fa23f-4b': {
+        exam: 'fa23f', number: '4(b)', title: 'Six Pages of Pairings — is_pair_sequence', points: 4,
+        intro: 'Implement `is_pair_sequence`, which takes a list `s` and returns whether it contains only two-element tuples.',
+        code: code(`
+def is_pair_sequence(s):
+    """Return whether list s contains only pairs (which are tuples with two elements).
+
+    >>> is_pair_sequence([(1, 2), (3, 4)])
+    True
+    >>> is_pair_sequence([(1, 2), (3, 4, 5)])
+    False
+    >>> is_pair_sequence([(1, 2), "not a tuple"])
+    False
+    >>> is_pair_sequence([(1, 2), (3, (4, 5, 6))])  # (3, (4, 5, 6)) is a two-element tuple
+    True
+    >>> is_pair_sequence([])
+    True
+    """
+    return all([⟦f⟧ for x in s]) and all(map(⟦g⟧, s))
+`),
+      },
+      'fa23f-4c': {
+        exam: 'fa23f', number: '4(c)', title: 'Six Pages of Pairings — is_pairing', points: 6,
+        intro: 'Implement `is_pairing`, which takes a list `s` and a list of `pairs`. It returns whether `pairs` is a pairing of `s`.',
+        code: code(`
+def is_pairing(s, pairs):
+    """Return whether the list of pairs is a pairing for the list s.
+
+    >>> pairs = [(3, 4), (5, 6), (7, 7)]
+    >>> is_pairing([3, 3, 4, 5, 4, 5, 6, 0, 7, 7, 7], pairs)
+    True
+    >>> is_pairing([3, 3, 4, 5, 6, 0, 7, 7, 7], pairs)  # Need an element between pairs
+    False
+    >>> is_pairing([3, 2, 4, 0, 5, 6, 0, 7, 7], pairs)  # Elements of a pair must be adjacent
+    False
+    >>> is_pairing([7, 7, 3, 3, 4, 5, 4, 5, 6], pairs)  # Pairing isn't in the same order as s
+    False
+    """
+    assert is_pair_sequence(pairs)
+    if not pairs:
+        return True
+    if ⟦h⟧:
+        return False
+    if ⟦i⟧ == tuple(s[:2]):
+        return is_pairing(s[3:], ⟦j⟧)  # Note: [0, 1][3:] evaluates to []
+    return ⟦k⟧
+`),
+      },
+      'fa23f-4d': {
+        exam: 'fa23f', number: '4(d)', title: 'Six Pages of Pairings — unequal_pairs', points: 7,
+        intro: 'Implement `unequal_pairs`, a generator function that yields all **non-empty** pairings of a list `s` in which no pair contains two equal elements.',
+        code: code(`
+def unequal_pairs(s):
+    """Yield all non-empty pairings for a list s in which each pair's values are unequal.
+
+    >>> sorted(unequal_pairs([4, 2, 2, 4, 4, 1, 1]))  # Four different pairings!
+    [[(2, 4)], [(4, 1)], [(4, 2)], [(4, 2), (4, 1)]]
+    >>> max(unequal_pairs([4, 2, 2, 4, 5, 4, 4, 1, 5, 5, 6]), key=len)  # The longest pairing
+    [(4, 2), (4, 5), (4, 1), (5, 6)]
+    """
+    if len(s) >= 2:
+        yield from ⟦l⟧
+        if ⟦m⟧:
+            pair = (s[0], s[1])
+            ⟦n⟧
+            for rest in unequal_pairs(s[3:]):  # Note: [0, 1][3:] evaluates to []
+                yield ⟦o⟧
+`),
+      },
+      'fa23f-4e': {
+        exam: 'fa23f', number: '4(e)', title: 'Six Pages of Pairings — max_pair_sum', points: 6,
+        intro: 'Implement `max_pair_sum`, which takes a linked list `s` (either a `Link` instance or `Link.empty`). It returns the largest possible sum of the values in a pairing of `s`. The `Link` class appears on the Midterm 2 Study Guide (p. 2).',
+        code: code(`
+def max_pair_sum(s):
+    """Return the largest sum of values in a pairing for a linked list of positive numbers s.
+
+    >>> L = Link                                                       # Abbreviate Link
+    >>> max_pair_sum(L(3, L(4, L(5, L(3, L(4, L(5, L(6))))))))         # 4+5 + 5+6
+    20
+    >>> max_pair_sum(L(3, L(4, L(5, L(3, L(4, L(5, L(6, L(3)))))))))   # 3+4 + 3+4 + 6+3
+    23
+    """
+    if ⟦p⟧:
+        return 0
+    n = ⟦q⟧
+    if s.rest.rest is Link.empty:
+        return n
+    else:
+        return max(n + max_pair_sum(⟦r⟧), max_pair_sum(⟦s⟧))
+`),
+      },
+      'fa23f-5': {
+        exam: 'fa23f', number: '5', title: 'What Would Scheme Do?', points: 6,
+        intro: 'Assume the following code has been evaluated.',
+        code: code(`
+(define (shrink k t)
+  (lambda (s)
+    (if (null? s) t
+        ( (if (= (car s) k)   (shrink (+ k 1) t)   (shrink k (cons (car s) t)))
+          (cdr s)) )))
+(define-macro (wait expr) \`(lambda () ,expr))
+(define (double wait-list)
+  (if (null? wait-list) nil
+      (cons (* 2 (car wait-list)) (wait (double ((cdr wait-list)))))))
+(define twos (cons 2 (wait (double twos))))
+`),
+      },
+      'fa23f-6': {
+        exam: 'fa23f', number: '6', title: 'How to Get Promoted', points: 5,
+        intro: 'Implement `promote`, which takes a one-argument procedure `f` and a list `s`. It returns a list that begins with all of the elements of `s` for which calling `f` on the element returns `#t`, followed by all of the elements of `s` for which calling `f` on the element returns `#f`. Assume that when `f` is called on any element of `s`, it returns either `#t` or `#f`.',
+        code: code(`
+;;; Return a list containing all the elements of s, with the elements for which
+;;; f returns #t at the front of the list, but otherwise keeping the order the same.
+;;;
+;;; scm> (promote even? '(1 2 3 4 5 6 7))
+;;; (2 4 6 1 3 5 7)
+;;; scm> (promote odd? '(1 2 3 4 5 6 7))
+;;; (1 3 5 7 2 4 6)
+(define (promote f s)
+    (⟦a⟧ ⟦b⟧ (filter ⟦c⟧ s)))
+`),
+      },
+      'fa23f-6d': {
+        exam: 'fa23f', number: '6(d)', title: 'How to Get Promoted — bigger-first (A+)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nImplement `bigger-first` without writing `lambda` or `define`. You may use `promote`, `curry`, and `curry-call`.',
+        code: code(`
+(define (curry f) (lambda (x) (lambda (y) (f x y))))
+(define (curry-call f) (lambda (x g) (lambda (y) (f (x (g y)) y))))
+;;; (bigger-first s) returns a list with all of the elements of s larger than (car s)
+;;; at the front, followed by all of the elements of s smaller or equal to (car s).
+;;;
+;;; scm> (bigger-first '(3 1 4 1 5 9 2 6))
+;;; (4 5 9 6 3 1 1 2)
+(define bigger-first ⟦A+⟧)
+`),
+      },
+      'fa23f-7': {
+        exam: 'fa23f', number: '7', title: 'Don’t Skip This', points: 5,
+        intro: '**Definition.** A *skip-partition* of a positive integer `n` is a list of positive integers in increasing order that sums to `n` and does not contain any duplicates or consecutive numbers.\n\nImplement `part`, which takes positive integers `n` and `m`. It returns a list of all skip-partitions of `n` that contain elements greater than or equal to `m`. The provided `cons-me` procedure is used in the implementation.',
+        code: code(`
+(define (cons-me first) (lambda (rest) (cons first rest)))
+;;; Return a list of all skip-partitions of n with elements greater than or equal to m.
+;;;
+;;; scm> (part 12 2)
+;;; ((2 4 6) (2 10) (3 9) (4 8) (5 7) (12))
+(define (part n m)
+    (cond ((= m n) ⟦a⟧)
+          ((> m n) nil)
+          (else (append
+                  (⟦b⟧ (cons-me m) ⟦c⟧)
+                  (part n (+ m 1))))))
+`),
+      },
+      'fa23f-7d': {
+        exam: 'fa23f', number: '7(d)', title: 'Don’t Skip This — scheme_eval', points: 3,
+        intro: 'Which expressions are passed to `scheme_eval` when evaluating `(if (> 1 2) (+ 1 2) 2)`? **Check all that apply.**',
+        code: code(`
+(if (> 1 2) (+ 1 2) 2)
+`),
+      },
+      'fa23f-8': {
+        exam: 'fa23f', number: '8', title: 'Cheap Donuts', points: 6, lang: 'sql',
+        intro: 'There are three tables in a database:\n\n- The `donuts` table has a row for each menu option at a donut shop. There are columns for the `kind` (string) of dough and `flavor` (string). For example, there is one row for chocolate cake donuts (although the store may have many such donuts, they only have one menu option for this kind & flavor combination).\n- The price of a donut depends only on the dough. The `prices` table has a row for each kind of dough. The `dough` (string) column contains the kind; the `price` (number) column is for one donut made from that kind of dough.\n- Your friends only care about the flavor, not the kind of dough. The `quantity` table contains one row for every flavor your friends want. The `choice` (string) column is the flavor they want and the `k` (number) column is the number of donuts of that flavor they want.\n\nCreate a table with two columns, `flavor` (string) and `total` (number) with one row for each flavor your friends want. The `total` column contains the least expensive total cost of buying `k` donuts of that flavor, where `k` is the number your friends want.\n\nThe rows of the result can appear in any order. Here is an example, but complete the query so that it would work even if the contents or number of rows were different.\n\n```\n' + FA23_TABLES + '\n```',
+        sqlSetup: FA23_SETUP,
+        code: code(`
+SELECT flavor, ⟦a⟧ AS total FROM ⟦b⟧ WHERE ⟦c⟧ GROUP BY ⟦d⟧;
+`),
+      },
+      'fa23f-9a': {
+        exam: 'fa23f', number: '9(a)', title: 'A+ — fib stream (Scheme)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nComplete the definition of `fib` so that `(prefix fib 10)` is a list of the first 10 Fibonacci numbers: `(0 1 1 2 3 5 8 13 21 34)`. A Fibonacci number is the sum of the previous two. You may not write `lambda` or `let` or `define`.',
+        code: code(`
+(define-macro (wait expr) \`(lambda () ,expr))
+(define (prefix s k) (if (zero? k) nil (cons (car s) (prefix ((cdr s)) (- k 1)))))
+(define (add s t) (cons (+ (car s) (car t)) (wait (add ((cdr s)) ((cdr t))))))
+(define fib (cons 0 (wait (cons 1 ⟦A+⟧))))
+`),
+      },
+      'fa23f-9b': {
+        exam: 'fa23f', number: '9(b)', title: 'A+ — match', points: 0,
+        intro: 'This A+ question is not worth any points. It uses the definitions and functions from Six Pages of Pairings.\n\nFill in blank (a) of `match`, a generator function that takes a list `s` and a pairing `pairs`. It yields all non-empty pairings of `s` that contain the pairs in `pairs` in order, but which may also contain other pairs as well. Just fill in blank (a); the remaining blanks (shown as `_______`) are not scored.',
+        code: code(`
+def match(s, pairs):
+    """Yield all non-empty pairings of s that contain pairs in order.
+
+    >>> for p in sorted(match(range(14), [(3, 4), (8, 9)])):
+    ...     print(p)
+    [(0, 1), (3, 4), (8, 9)]
+    [(0, 1), (3, 4), (8, 9), (11, 12)]
+    [(0, 1), (3, 4), (8, 9), (12, 13)]
+    [(3, 4), (8, 9)]
+    [(3, 4), (8, 9), (11, 12)]
+    [(3, 4), (8, 9), (12, 13)]
+    """
+    assert is_pair_sequence(pairs)
+    if len(s) >= 2:
+        first = tuple(s[:2])
+        if ⟦A+⟧:  # Just fill in this blank as your answer
+            yield [first]
+        if _______:
+            rest = pairs[1:]
+        else:
+            rest = pairs
+        for p in match(_______, rest):
+            yield _______ + p
+        yield from match(_______, pairs)
+`),
+      },
+    },
+    questions: [
+      { id: 'fa23f-1a', problem: 'fa23f-1', label: '(a)', points: 1, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Which of the following is true about the blanks labeled (a) and (b)?',
+        choices: ['They contain arrows to the same list', 'They contain arrows to different lists with the same contents', 'They contain arrows to different lists with different contents'] },
+      { id: 'fa23f-1b', problem: 'fa23f-1', label: '(b)', points: 1, topics: ['env', 'hof'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'What error occurs during execution, if any?',
+        choices: ['NameError because a name is referenced before assignment', 'TypeError because a function was called with the wrong number of arguments', 'TypeError because a built-in function is called on the wrong argument type(s)', 'RecursionError because of too many recursive calls', 'No error occurs'] },
+      { id: 'fa23f-1c', problem: 'fa23f-1', label: '(c)', points: 3, topics: ['env', 'lists'], difficulty: 'hard',
+        type: 'short_answer', prompt: 'What would be displayed by evaluating `print(result)` in the global frame? If an error occurred or you ran out of frames, still evaluate `print(result)` according to the environment diagram you drew.' },
+      { id: 'fa23f-2a', problem: 'fa23f-2', label: '(a)', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).',
+        choices: ['low <= t and t <= high', 't and low <= t and t <= high', 't.branches and low <= t and t <= high', 't.is_leaf() and low <= t and t <= high', 'low <= t.label and t.label <= high', 't and low <= t.label and t.label <= high', 't.branches and low <= t.label and t.label <= high', 't.is_leaf() and low <= t.label and t.label <= high'] },
+      { id: 'fa23f-2b', problem: 'fa23f-2', label: '(b)', points: 1, topics: ['trees', 'hof'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['bounds', 'max', 'sum', 'lambda t:'] },
+      { id: 'fa23f-2c', problem: 'fa23f-2', label: '(c)', points: 3, topics: ['trees', 'recursion'], difficulty: 'hard', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa23f-3a', problem: 'fa23f-3', label: '(a)', points: 3, topics: ['oop', 'links'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa23f-3b', problem: 'fa23f-3', label: '(b)', points: 1, topics: ['oop'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa23f-3c', problem: 'fa23f-3', label: '(c)', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['current', 'self.current', 'current.then', 'self.current.then'] },
+      { id: 'fa23f-3d', problem: 'fa23f-3', label: '(d)', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).',
+        choices: ['self', 'self.first', 'str(self)', 'str(self.first)', 'print(self)', 'print(self.first)'] },
+      { id: 'fa23f-3e', problem: 'fa23f-3', label: '(e)', points: 3, topics: ['oop', 'fundamentals'], difficulty: 'hard', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'fa23f-3f', problem: 'fa23f-3', label: '(f)', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).',
+        choices: ['self.w', 'self.exp[w]', 'self.say', 'self.say()', 'self.say(self)', 'self.say(self.w)'] },
+      { id: 'fa23f-4a', problem: 'fa23f-4a', label: 'i.', points: 1, topics: ['lists', 'fundamentals'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).',
+        choices: ['len(s) == 3 * n - 1', '(len(s) - 1) / 3', '(len(s) - 1) % 3 == 0', 'len(s) % 3 == 2'] },
+      { id: 'fa23f-4b', problem: 'fa23f-4a', label: 'ii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['skip', 'not skip', 'result', 'not result', 'pair', 'not pair', 'len(pair) < 2', 'len(pair) == 2'] },
+      { id: 'fa23f-4c', problem: 'fa23f-4a', label: 'iii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['skip = False', 'skip = True', 'pair = []', 'pair.remove(x)', 'result.append(x)', 'result.append(pair)'] },
+      { id: 'fa23f-4d', problem: 'fa23f-4a', label: 'iv.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).',
+        choices: ['skip', 'not skip', 'result', 'not result', 'pair', 'not pair', 'len(pair) < 2', 'len(pair) == 2'] },
+      { id: 'fa23f-4e', problem: 'fa23f-4a', label: 'v.', points: 2, topics: ['lists'], difficulty: 'medium', blank: 'e',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (e). **Select all that apply.**',
+        choices: ['append(pair)', 'extend(pair)', 'append((pair[0], pair[1]))', 'extend((pair[0], pair[1]))', 'append(tuple(pair))', 'extend(tuple(pair))', 'append(tuple(pair[0], pair[1]))', 'extend(tuple(pair[0], pair[1]))'] },
+      { id: 'fa23f-4f', problem: 'fa23f-4b', label: 'i.', points: 2, topics: ['fundamentals'], difficulty: 'medium', blank: 'f',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (f). **Select all that apply.** Assume `tuple` has no subclasses.',
+        choices: ['tuple(x)', 'x == tuple', 'x is tuple', 'type(x) == tuple', 'x == type(tuple)', 'isinstance(x, tuple)', 'isinstance(x, type(tuple))', 'isinstance(type(x), tuple)'] },
+      { id: 'fa23f-4g', problem: 'fa23f-4b', label: 'ii.', points: 2, topics: ['hof'], difficulty: 'medium', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (g).',
+        choices: ['len(s) == 2', 'len(x) == 2', 'lambda x: len(s) == 2', 'lambda x: len(x) == 2', 'lambda s: lambda x: len(s) == 2', 'lambda s: lambda x: len(x) == 2', 'lambda x: len(s[i]) == 2', 'lambda x: len(x[i]) == 2', 'lambda i: lambda x: len(s[i]) == 2', 'lambda i: lambda x: len(x[i]) == 2'] },
+      { id: 'fa23f-4h', problem: 'fa23f-4c', label: 'i.', points: 1, topics: ['recursion', 'lists'], difficulty: 'easy', blank: 'h',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (h).', choices: ['pairs not in s', 'pairs[0] not in s', 'len(s) < 2', 'not is_pairing(s, pairs)'] },
+      { id: 'fa23f-4i', problem: 'fa23f-4c', label: 'ii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'i',
+        type: 'short_answer', prompt: 'Fill in blank (i).' },
+      { id: 'fa23f-4j', problem: 'fa23f-4c', label: 'iii.', points: 1, topics: ['recursion', 'lists'], difficulty: 'easy', blank: 'j',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (j).', choices: ['pairs', 'pairs[1]', 'pairs[1:]', 'pairs[:1]'] },
+      { id: 'fa23f-4k', problem: 'fa23f-4c', label: 'iv.', points: 3, topics: ['recursion', 'lists'], difficulty: 'hard', blank: 'k',
+        type: 'short_answer', prompt: 'Fill in blank (k).' },
+      { id: 'fa23f-4l', problem: 'fa23f-4d', label: 'i.', points: 2, topics: ['generators', 'recursion'], difficulty: 'medium', blank: 'l',
+        type: 'short_answer', prompt: 'Fill in blank (l).' },
+      { id: 'fa23f-4m', problem: 'fa23f-4d', label: 'ii.', points: 1, topics: ['generators'], difficulty: 'easy', blank: 'm',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (m).', choices: ['s[0] == s[1]', 's[0] != s[1]', 'pair[0] == pair[1]', 'pair[0] != pair[1]'] },
+      { id: 'fa23f-4n', problem: 'fa23f-4d', label: 'iii.', points: 2, topics: ['generators'], difficulty: 'medium', blank: 'n',
+        type: 'short_answer', prompt: 'Fill in blank (n).' },
+      { id: 'fa23f-4o', problem: 'fa23f-4d', label: 'iv.', points: 2, topics: ['generators', 'lists'], difficulty: 'medium', blank: 'o',
+        type: 'short_answer', prompt: 'Fill in blank (o).' },
+      { id: 'fa23f-4p', problem: 'fa23f-4e', label: 'i.', points: 2, topics: ['links'], difficulty: 'easy', blank: 'p',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (p). **Select all that apply.**',
+        choices: ['s is Link.empty', 's.rest is Link.empty', 's is Link.empty or s.rest is Link.empty', 's.rest is Link.empty or s is Link.empty'] },
+      { id: 'fa23f-4q', problem: 'fa23f-4e', label: 'ii.', points: 2, topics: ['links'], difficulty: 'easy', blank: 'q',
+        type: 'short_answer', prompt: 'Fill in blank (q).' },
+      { id: 'fa23f-4r', problem: 'fa23f-4e', label: 'iii.', points: 1, topics: ['links', 'recursion'], difficulty: 'medium', blank: 'r',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (r).', choices: ['s', 's.rest', 's.rest.rest', 's.rest.rest.rest'] },
+      { id: 'fa23f-4s', problem: 'fa23f-4e', label: 'iv.', points: 1, topics: ['links', 'recursion'], difficulty: 'medium', blank: 's',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (s).', choices: ['s', 's.rest', 's.rest.rest', 's.rest.rest.rest'] },
+      { id: 'fa23f-5a', problem: 'fa23f-5', label: '(a)', points: 2, topics: ['scheme'], difficulty: 'hard',
+        type: 'short_answer', prompt: "What does this expression evaluate to? `((shrink 3 nil) '(3 1 4 1 5 9 2 6))`" },
+      { id: 'fa23f-5b', problem: 'fa23f-5', label: '(b)', points: 1, topics: ['scheme', 'efficiency'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'What is the order of growth of the run time of `((shrink 1 nil) s)` in terms of the length of list `s`?',
+        choices: ['constant', 'linear', 'quadratic', 'exponential'] },
+      { id: 'fa23f-5c', problem: 'fa23f-5', label: '(c)', points: 1, topics: ['scheme'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Which of the following evaluates to 4?',
+        choices: ['(cdr twos)', '((cdr twos))', '(car (cdr twos))', '((car (cdr twos)))', '(car ((cdr twos)))', '((car ((cdr twos))))'] },
+      { id: 'fa23f-5d', problem: 'fa23f-5', label: '(d)', points: 2, topics: ['scheme'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'Which of the following evaluates to 8?',
+        choices: ['(cdr (cdr twos))', '((cdr (cdr twos)))', '(cdr ((cdr twos)))', '(car (cdr (cdr twos)))', '((car (cdr (cdr twos))))', '(car (cdr ((cdr twos))))', '(car ((cdr (cdr twos))))', '(car ((cdr ((cdr twos)))))'] },
+      { id: 'fa23f-6a', problem: 'fa23f-6', label: '(a)', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['append', 'cons', 'list', 'promote', 'map', 'filter'] },
+      { id: 'fa23f-6b', problem: 'fa23f-6', label: '(b)', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa23f-6c', problem: 'fa23f-6', label: '(c)', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa23f-6d', problem: 'fa23f-6d', label: '(d)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in the blank.' },
+      { id: 'fa23f-7a', problem: 'fa23f-7', label: '(a)', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa23f-7b', problem: 'fa23f-7', label: '(b)', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['cons', 'list', 'append', 'map'] },
+      { id: 'fa23f-7c', problem: 'fa23f-7', label: '(c)', points: 2, topics: ['scheme'], difficulty: 'hard', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa23f-7d', problem: 'fa23f-7d', label: '(d)', points: 3, topics: ['scheme'], difficulty: 'medium',
+        type: 'multi_select', mono: true, prompt: 'Which expressions are passed to `scheme_eval` when evaluating `(if (> 1 2) (+ 1 2) 2)`? **Check all that apply.**',
+        choices: ['if', '(> 1 2)', '>', '1', '2', '(+ 1 2)', '+'] },
+      { id: 'fa23f-8a', problem: 'fa23f-8', label: '(a)', points: 2, topics: ['sql-agg'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa23f-8b', problem: 'fa23f-8', label: '(b)', points: 1, topics: ['sql-joins'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['quantity, prices', 'quantity, donuts, prices', 'donuts, prices AS a, prices AS b', 'quantity, prices AS a, prices AS b'] },
+      { id: 'fa23f-8c', problem: 'fa23f-8', label: '(c)', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa23f-8d', problem: 'fa23f-8', label: '(d)', points: 1, topics: ['sql-agg'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['quantity', 'dough', 'kind', 'flavor'] },
+      { id: 'fa23f-9a', problem: 'fa23f-9a', label: '(a)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in the blank.' },
+      { id: 'fa23f-9b', problem: 'fa23f-9b', label: '(b)', points: 0, topics: ['generators', 'lists'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in blank (a), the one marked “Just fill in this blank”.' },
+    ],
+    answers: {
+      'fa23f-1a': { correct: 0, explanation: '`copy = result` makes `copy` another name for the same list; no copy is made.' },
+      'fa23f-1b': { correct: 4, explanation: '`chain` calls `add_copy(True, add_copy)`, which calls `add_copy(False, add_copy)`. Each call has the right number of arguments and every name is defined.' },
+      'fa23f-1c': { accepted: ['[5, 1, [5, 1], 2]'], explanation: 'The first call appends 1 to `result` (through `copy`), then appends a copy of it, `[5, 1]`. The second call appends 2.' },
+      'fa23f-2a': { correct: 7, explanation: 'A path ends at a leaf, so only a leaf counts as one path; the bounds have already been shifted by the labels above it.' },
+      'fa23f-2b': { correct: 2, explanation: 'Add up the counts from all branches.' },
+      'fa23f-2c': { accepted: ['bounds(b, low - t.label, high - t.label)'], explanation: 'Below `t`, a path must make up the rest of the sum, so subtract `t.label` from both bounds.' },
+      'fa23f-3a': { accepted: ['Word(w, self, previous)'], explanation: 'Each new word points to the previous one, which reverses the order.' },
+      'fa23f-3b': { accepted: ['previous = current'], explanation: 'The next word will point to this one.' },
+      'fa23f-3c': { correct: 0, explanation: 'After the loop, `current` is the word made last, which is the first of the reversed sequence.' },
+      'fa23f-3d': { correct: 3, explanation: '`__str__` must return a string: the string of the first word, which includes the rest.' },
+      'fa23f-3e': { accepted: ['self.exp.dialect.get(self.w, self.w)'], explanation: 'Look up the word in its expression’s dialect, defaulting to the word itself.' },
+      'fa23f-3f': { correct: 3, explanation: 'Call `say` to get how a pirate says this word.' },
+      'fa23f-4a': { correct: 3, explanation: 'A length of `3*n - 1` leaves remainder 2 when divided by 3.' },
+      'fa23f-4b': { correct: 1, explanation: 'Add `x` to the current pair unless this element is skipped (just after a pair).' },
+      'fa23f-4c': { correct: 0, explanation: 'Skip exactly one element after each pair.' },
+      'fa23f-4d': { correct: 7, explanation: 'A pair is complete when it has two elements.' },
+      'fa23f-4e': { correct: [2, 4], explanation: 'Each pair is added as a tuple. `extend` would add the two numbers separately, and `tuple(pair[0], pair[1])` is an error.' },
+      'fa23f-4f': { correct: [3, 5], explanation: 'Check the type: `type(x) == tuple` or `isinstance(x, tuple)`.' },
+      'fa23f-4g': { correct: 3, explanation: '`map` needs a one-argument function that checks one element’s length.' },
+      'fa23f-4h': { correct: 2, explanation: 'With pairs left to match but fewer than two elements, it can’t be a pairing.' },
+      'fa23f-4i': { accepted: ['pairs[0]'], explanation: 'Compare the first pair with the first two elements.' },
+      'fa23f-4j': { correct: 2, explanation: 'That pair is matched; skip it and one more element, and match the remaining pairs.' },
+      'fa23f-4k': { accepted: ['is_pairing(s[1:], pairs)'], explanation: 'Otherwise the first pair starts later: try again from the next element.' },
+      'fa23f-4l': { accepted: ['unequal_pairs(s[1:])'], explanation: 'Pairings that don’t use `s[0]`.' },
+      'fa23f-4m': { correct: 1, explanation: 'A pair of the first two elements is allowed only if they differ.' },
+      'fa23f-4n': { accepted: ['yield [pair]'], explanation: 'The pair on its own is a non-empty pairing.' },
+      'fa23f-4o': { accepted: ['[pair] + rest'], explanation: 'Put this pair before each pairing of the rest (which starts after a skipped element).' },
+      'fa23f-4p': { correct: [2], explanation: 'With fewer than two elements there is no pair. Order matters: `s.rest` doesn’t exist when `s` is empty, so check `s is Link.empty` first.' },
+      'fa23f-4q': { accepted: ['s.first + s.rest.first'], explanation: 'The sum of the first pair.' },
+      'fa23f-4r': { correct: 3, explanation: 'Using the first pair means skipping it and the element after it.' },
+      'fa23f-4s': { correct: 1, explanation: 'Not using the first element: start from the second.' },
+      'fa23f-5a': { accepted: ['(2 9 1 1)'], explanation: 'Each element equal to `k` is dropped and `k` increases; the others are consed onto `t`, which reverses them.' },
+      'fa23f-5b': { correct: 1, explanation: 'One step per element.' },
+      'fa23f-5c': { correct: 4, explanation: 'The `cdr` is a procedure that computes the rest; calling it gives the list starting with 4.' },
+      'fa23f-5d': { correct: 7, explanation: 'Call the rest procedure twice to reach the third element.' },
+      'fa23f-6a': { correct: 0, explanation: 'Join two lists.' },
+      'fa23f-6b': { accepted: ['(filter f s)'], explanation: 'The elements for which `f` is true come first.' },
+      'fa23f-6c': { accepted: ['(lambda (x) (not (f x)))'], explanation: 'Then the others.' },
+      'fa23f-6d': { accepted: ['((curry-call promote) (curry <) car)'] },
+      'fa23f-7a': { accepted: ['(list (list m))'], explanation: 'One skip-partition: just `m`.' },
+      'fa23f-7b': { correct: 3, explanation: 'Put `m` in front of every partition of the rest.' },
+      'fa23f-7c': { accepted: ['(part (- n m) (+ m 2))'], explanation: 'The rest sums to `n - m` and starts at least 2 above `m` (no duplicates or consecutive numbers).' },
+      'fa23f-7d': { correct: [1, 2, 3, 4], explanation: 'The condition `(> 1 2)` and its parts are evaluated; it is false, so only `2` is evaluated next. `if` is a special form, and `(+ 1 2)` is never evaluated.' },
+      'fa23f-8a': { accepted: ['MIN(price) * k', 'MIN(price * k)', 'k * MIN(price)', 'MIN(k * price)'], explanation: 'The cheapest dough for that flavor, times how many donuts.' },
+      'fa23f-8b': { correct: 1, explanation: 'Join what is wanted, what is on the menu, and what dough costs.' },
+      'fa23f-8c': { accepted: ['kind=dough AND choice=flavor', 'choice=flavor AND kind=dough', 'dough=kind AND flavor=choice', 'flavor=choice AND dough=kind', 'kind=dough AND flavor=choice', 'dough=kind AND choice=flavor'], explanation: 'Match each wanted flavor to its menu options, and each option to its price.' },
+      'fa23f-8d': { correct: 3, explanation: 'One row per flavor.' },
+      'fa23f-9a': { accepted: ['(wait (add fib ((cdr fib))))'] },
+      'fa23f-9b': { accepted: ['(len(pairs) == 1 and pairs[0] == first) or not pairs'] },
+    },
+  });
 })();

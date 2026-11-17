@@ -26,6 +26,15 @@ const CORE = sqlCore();
 
 // Plausible wrong answers for written blanks (the suite must catch each one).
 const WRONG = {
+  // fa23f-8: a bare price * k (no MIN) isn't listed: SQLite picks the cheapest row here in every order tried, so no data set can catch it.
+  'fa23f-8': [
+    { a: 'MIN(price)' },
+    { a: 'SUM(price) * k' },
+    { a: 'MAX(price) * k' },
+    { c: 'kind=dough' },
+    { c: 'choice=flavor' },
+    { c: 'kind=dough OR choice=flavor' },
+  ],
   'fa24f-8': [
     { c: 'GROUP BY job' },
     { c: 'GROUP BY job HAVING COUNT(*) > 1' },

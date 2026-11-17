@@ -716,4 +716,46 @@ module.exports = {
     ],
   },
   'sp24f-5a': { wrong: [] },
+  'fa23f-2': {
+    wrong: [
+      { c: 'bounds(b, low, high)' },
+      { c: 'bounds(b, low - b.label, high - b.label)' },
+      { c: 'bounds(b, low + t.label, high + t.label)' },
+    ],
+  },
+  'fa23f-3': {
+    wrong: [
+      { a: 'Word(w, self, None)' },
+      { a: 'Word(w, self.dialect, previous)' },
+      { b: 'current = previous' },
+      { e: 'self.exp.dialect[self.w]' },
+      { e: 'self.w' },
+    ],
+  },
+  'fa23f-4a': { wrong: [] },
+  'fa23f-4b': { wrong: [] },
+  'fa23f-4c': {
+    wrong: [
+      { i: 'pairs' },
+      { i: 'pairs[1]' },
+      { k: 'False' },
+      { k: 'is_pairing(s[2:], pairs)' },
+      { k: 'is_pairing(s[1:], pairs[1:])' },
+    ],
+  },
+  'fa23f-4d': {
+    wrong: [
+      { l: 'unequal_pairs(s[2:])' },
+      { l: 'unequal_pairs(s[3:])' },
+      { n: 'yield pair' },
+      { o: 'pair + rest' },
+      { o: '[pair, rest]' },
+    ],
+  },
+  'fa23f-4e': {
+    wrong: [
+      { q: 's.first' },
+      { q: 's.first + s.rest' },
+    ],
+  },
 };
