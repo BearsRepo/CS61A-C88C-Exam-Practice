@@ -131,6 +131,26 @@ CREATE TABLE sizes(room, seats);
 INSERT INTO sizes VALUES ('RSF', 900), ('Wheeler', 700), ('310 Soda', 40), ('Dwinelle', 300), ('Cory', 100);` },
       ],
     },
+    'fa22f-4c': {
+      cases: [
+        { name: 'The table printed in the exam', origin: 'exam', input: '', columns: ['num', 'num'], expect: [[299, 1721]] },
+        { name: 'Other numbers, with the pair at the ends', origin: 'added', input: '', columns: ['num', 'num'], expect: [[20, 2000]],
+          data: `CREATE TABLE s AS
+  SELECT 2000 as num UNION SELECT 500 UNION SELECT 1000 UNION SELECT 7 UNION SELECT 20;` },
+      ],
+    },
+    'fa22f-9': {
+      cases: [
+        { name: 'The tables printed in the exam (rows in order of total attack)', origin: 'exam', input: 'SELECT * FROM Attack;', ordered: true, columns: ['Name', 'TotalAttack'],
+          expect: [['Maushold', 160], ['Farigiraf', 170], ['Cyclizard', 180], ['Meoscadera', 220], ['Rattata', 290]] },
+        { name: 'Two Pokemon that share a move, listed in a different order', origin: 'added', input: 'SELECT * FROM Attack;', ordered: true, columns: ['Name', 'TotalAttack'],
+          expect: [['Pichu', 15], ['Eevee', 105]],
+          data: `CREATE TABLE Pokemon(Name, Type1, Type2, Move1, Move2, BaseAttack, BaseDefense);
+INSERT INTO Pokemon VALUES ('Eevee', 'Normal', 'None', 'Bite', 'Tackle', 50, 50), ('Pichu', 'Electric', 'None', 'Tackle', 'Charm', 5, 5);
+CREATE TABLE Moves(Name, MoveAttack, MoveDefense);
+INSERT INTO Moves VALUES ('Tackle', 10, 0), ('Charm', 0, 10), ('Bite', 45, 5);` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

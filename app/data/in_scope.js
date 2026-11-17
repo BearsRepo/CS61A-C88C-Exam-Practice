@@ -110,6 +110,13 @@ window.CS61A_SCOPE = {
     'sp23f-8b': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
     'sp23f-1': { status: 'note', source: 'inferred',
       note: 'Parts (a) and (b) use `Chain.add`, which mutates a linked list (out of scope), so they were removed, along with part (d) (orders of growth). The remaining part (c) only uses `silver` and `bronze` and is in scope.' },
+    // Fall 2022 Final
+    'fa22f-2': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa22f-4b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa22f-8': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa22f-11': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa22f-1': { status: 'note', source: 'inferred',
+      note: 'The `Sub` class defines a `__repr__` method, which is no longer taught, so parts (j) and (n), which show how the interpreter displays a `Sub` or `Pub` instance, were removed. The other parts are in scope.' },
   },
 
   questions: {
@@ -143,5 +150,8 @@ window.CS61A_SCOPE = {
     'sp23f-1a': { status: 'out', reason: 'Mutates a linked list (Chain.add)', source: 'inferred' },
     'sp23f-1b': { status: 'out', reason: 'Mutates a linked list (Chain.add)', source: 'inferred' },
     'sp23f-1d': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    // Fall 2022 Final
+    'fa22f-1j': { status: 'out', reason: 'Uses __repr__', source: 'inferred' },
+    'fa22f-1n': { status: 'out', reason: 'Uses __repr__', source: 'inferred' },
   },
 };

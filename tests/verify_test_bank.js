@@ -40,7 +40,10 @@ const EXCLUDED = ['fa25-1', 'sp25-1', 'fa25-2', 'sp25-2', 'sp25-2c', 'sp25-3b', 
   'fa24f-4b', 'fa24f-1', 'fa24f-2', 'fa24f-5c', 'fa24f-5c-v', 'fa24f-7a', 'fa24f-7b', 'fa24f-7b-iv', 'fa24f-7c', 'fa24f-8', 'fa24f-9a',
   'sp24f-1', 'sp24f-3b-ii', 'sp24f-3d', 'sp24f-4a', 'sp24f-4b', 'sp24f-5b', 'sp24f-5b-iv', 'sp24f-6', 'sp24f-6d', 'sp24f-7',
   'fa23f-1', 'fa23f-5', 'fa23f-6', 'fa23f-6d', 'fa23f-7', 'fa23f-7d', 'fa23f-8', 'fa23f-9a', 'fa23f-9b',
-  'sp23f-1', 'sp23f-2', 'sp23f-5b', 'sp23f-5b-iv', 'sp23f-7', 'sp23f-8b'];
+  'sp23f-1', 'sp23f-2', 'sp23f-5b', 'sp23f-5b-iv', 'sp23f-7', 'sp23f-8b',
+  // fa22f-4a: the wrong choices s[:len(s)-1] for (a) and s[1:] for (b) always give the same result (the first number
+  // found is never last, and its partner is never first), so running code can't tell them from s.
+  'fa22f-4a', 'fa22f-1', 'fa22f-2', 'fa22f-3', 'fa22f-4b', 'fa22f-4c', 'fa22f-8', 'fa22f-9', 'fa22f-11', 'fa22f-12'];
 
 let problems = 0;
 const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };

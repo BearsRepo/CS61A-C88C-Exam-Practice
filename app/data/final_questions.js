@@ -3204,4 +3204,519 @@ def group(n, s):
       'sp23f-8b': { accepted: ['(first n s (lambda (s) (group n s)))'] },
     },
   });
+
+  // ───────────────────────────── Fall 2022 Final ─────────────────────────────
+  const FA22_NUMS = code(`
+CREATE TABLE s AS
+  SELECT 979 as num UNION SELECT 1721 UNION SELECT 366 UNION
+  SELECT 299        UNION SELECT 675 UNION SELECT 1456;
+`);
+  const FA22_POKEMON_TABLE = code(`
+Pokemon:
+| Name       | Type1  | Type2   | Move1           | Move2        | BaseAttack | BaseDefense |
+|------------|--------|---------|-----------------|--------------|------------|-------------|
+| Rattata    | Normal | None    | Endeavor        | Quick Attack | 0          | 0           |
+| Maushold   | Normal | None    | Population Bomb | Tidy Up      | 30         | 30          |
+| Cyclizard  | Dragon | Normal  | Shed Tail       | Dragon Rush  | 100        | 40          |
+| Meoscadera | Grass  | Dark    | Flower Trick    | Agility      | 80         | 40          |
+| Farigiraf  | Normal | Psychic | Agility         | Twin Beam    | 40         | 50          |
+`);
+  const FA22_POKEMON = FA22_POKEMON_TABLE + '\n\n' + code(`
+Moves:
+| Name            | MoveAttack | MoveDefense |
+|-----------------|------------|-------------|
+| Endeavor        | 250        | 0           |
+| Quick Attack    | 40         | 45          |
+| Shed Tail       | 0          | 150         |
+| Dragon Rush     | 80         | 0           |
+| Flower Trick    | 90         | 55          |
+| Agility         | 50         | 20          |
+| Twin Beam       | 80         | 30          |
+| Population Bomb | 100        | 50          |
+| Tidy Up         | 30         | 150         |
+`);
+  const FA22_POKEMON_SETUP = code(`
+CREATE TABLE Pokemon(Name, Type1, Type2, Move1, Move2, BaseAttack, BaseDefense);
+INSERT INTO Pokemon VALUES ('Rattata', 'Normal', 'None', 'Endeavor', 'Quick Attack', 0, 0),
+  ('Maushold', 'Normal', 'None', 'Population Bomb', 'Tidy Up', 30, 30),
+  ('Cyclizard', 'Dragon', 'Normal', 'Shed Tail', 'Dragon Rush', 100, 40),
+  ('Meoscadera', 'Grass', 'Dark', 'Flower Trick', 'Agility', 80, 40),
+  ('Farigiraf', 'Normal', 'Psychic', 'Agility', 'Twin Beam', 40, 50);
+CREATE TABLE Moves(Name, MoveAttack, MoveDefense);
+INSERT INTO Moves VALUES ('Endeavor', 250, 0), ('Quick Attack', 40, 45), ('Shed Tail', 0, 150), ('Dragon Rush', 80, 0),
+  ('Flower Trick', 90, 55), ('Agility', 50, 20), ('Twin Beam', 80, 30), ('Population Bomb', 100, 50), ('Tidy Up', 30, 150);
+`);
+  const FA22_Q1_EXPRS = '```\n>>> print(20, (lambda x: print)(20)(22))\n>>> (print(4) or 3+2) or 1/0\n>>> alt(triple, dec)(8)(8)\n>>> Sub(triple, dec).h(8).h(8)\n>>> [f(8) for f in Pub(dec, triple).fns]\n>>> Pub(dec, triple).h(8).h(8)\n```';
+  add({
+    exam: { id: 'fa22f', label: 'Fall 2022 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
+    problems: {
+      'fa22f-1': {
+        exam: 'fa22f', number: '1', title: 'What Would Python Display?', points: 15,
+        intro: 'Assume the following code has been executed.',
+        code: code(`
+triple = lambda z: 3 * z
+dec = lambda z: z - 1
+
+def alt(f, g):
+    def h(x):
+        print(fns[0](fns[1](x)))
+        fns[0] = fns[1]
+        fns[1] = fns[0]
+        return h
+    fns = [f, g]
+    return h
+
+class Sub:
+    fns = [lambda z: str(z) + str(z),
+           lambda z: 2 * z]
+    def __init__(self, f, g):
+        self.fns = [f, g]
+    def h(self, x):
+        print(Sub.fns[0](Sub.fns[1](x)))
+        Sub.fns = self.fns
+        return self
+    def __repr__(self):
+        return str(self.fns[0]('ha'))
+
+class Pub(Sub):
+    fns = [lambda z: [z],
+           lambda z: z]
+    def __init__(self, f, g):
+        fns = [f, g]  # Careful!
+`),
+        outro: 'What is the output displayed by the interactive Python interpreter after evaluating each of the following expressions. Expressions are evaluated in order, and earlier expressions may affect later ones.\n\n' + FA22_Q1_EXPRS,
+      },
+      'fa22f-2': {
+        exam: 'fa22f', number: '2', title: 'What About Scheme?', points: 4,
+        intro: 'Choose the output displayed by the interactive Scheme interpreter when each expression below is evaluated. The first character of (c) is a backtick; all other ticks are apostrophes.',
+        code: code(`
+(+ (* 3 2) (+ 3 2))
+'(+ (* 3 2) (+ 3 2))
+\` (+ ,(* 3 '2) (+ 3 2))
+'(+ (* '3 2) '(+ 3 2))
+`),
+      },
+      'fa22f-3': {
+        exam: 'fa22f', number: '3', title: 'Sum Total', points: 6,
+        intro: 'Executing the code below produced this environment diagram. Complete the diagram, then answer questions about it. The diagram itself will not be scored; only the questions. Blanks that do not have a letter label will not be scored.',
+        figure: { src: 'assets/fa22-final-q3.png', width: 713, height: 338, alt: 'From the exam: the code, and a partly filled environment diagram. The Global frame binds sums to a function, result to blank (a) and totals to blank (b). Frame f1: sums [parent=Global] binds result to a blank box, t to 0.1, pair to a function, and returns a lambda. Frame f2: λ <line 5> [parent=f1] binds s to blank (c), t to 0.2, and has Return value blank (d). Frame f3: pair [parent=f1] has a blank vals and a blank Return value.', slots: [[433, 41, 34], [433, 64, 34], [433, 111, 34], [433, 218, 34], [433, 260, 34], [433, 301, 34], [433, 326, 34]] },
+        code: code(`
+def sums(result, t):
+    def pair(vals):
+        result.append(vals.pop() + vals.pop())
+        return t
+    return lambda s, t: pair(s) + sum(result)
+
+result, totals = [], []
+result.append(sums(totals, 0.1)([1, 2, 4], 0.2))
+`),
+        lineNumbers: true,
+      },
+      'fa22f-4a': {
+        exam: 'fa22f', number: '4(a)', title: 'Advent of Code — Python', points: 5,
+        intro: 'The choice of programming language can affect the difficulty of implementation. This problem was adapted from Day 1 of the 2020 Advent of Code. Given a list of numbers, find the two numbers in the list that sum to 2020. You are guaranteed that there is exactly one pair of numbers that sum to 2020 and that the list does not contain 1010.\n\nFor example, given `[979, 1721, 366, 299, 675, 1456]`, output `[1721, 299]`, since 1721+299 = 2020.',
+        code: code(`
+def find_pair(s):
+    '''Return the two elements of s that sum to 2020, in the order that they appear in s.
+
+    >>> find_pair([979, 1721, 366, 299, 675, 1456])
+    [1721, 299]
+    '''
+    for i in ⟦a⟧:
+        for j in ⟦b⟧:
+            ⟦c⟧:
+                return ⟦d⟧
+`),
+      },
+      'fa22f-4b': {
+        exam: 'fa22f', number: '4(b)', title: 'Advent of Code — Scheme', points: 6,
+        intro: 'Implement `find-pair` in Scheme. You may call `contains?`, which takes a Scheme list of numbers `s` and a number `n`. It returns whether `s` contains `n`.',
+        code: code(`
+;;; > (contains? '(1 2 3) 3)
+;;; #t
+;;; > (contains? '(1 2 3) 4)
+;;; #f
+(define (contains? s n) ...)  ; Assume contains? has been implemented correctly for you.
+
+;;; > (find-pair '(979 1721 366 299 675 1456))
+;;; (1721 299)
+(define (find-pair s)
+  (if ⟦a⟧ ( ⟦b⟧ (car s) (- 2020 (car s))) ⟦c⟧ ))
+`),
+      },
+      'fa22f-4c': {
+        exam: 'fa22f', number: '4(c)', title: 'Advent of Code — SQL', points: 5, lang: 'sql',
+        intro: 'Implement a SQL query that creates a one-row, two-column table of numbers where the single row contains the two numbers in table `s` that sum to 2020. The order that the numbers appear will not be graded.\n\n```\n' + FA22_NUMS + '\n```',
+        sqlSetup: FA22_NUMS,
+        code: code(`
+SELECT ⟦a⟧ FROM ⟦b⟧ WHERE ⟦c⟧;
+`),
+      },
+      'fa22f-5': {
+        exam: 'fa22f', number: '5', title: 'Two Cents', points: 5,
+        intro: 'One of the most useful aspects of programming is that code can often be reused to solve similar problems. The `count_change` function takes an integer amount of cents and returns the number of ways to make change for that amount in US currency.\n\nModify this code to solve the following new problem: Your cash register only has `k` of each type of coin. Implement `count_change_register`, which counts the number of ways to make change for `amount` using at most `k` coins of each type.',
+        code: code(`
+coins = (1, 5, 10, 25, 50)
+
+def count_change(amount):
+    '''Return the number of ways to make change for amount.
+
+    >>> count_change(10)  # 10, 5-5, 5-1-1-1-1-1, 1-1-1-1-1-1-1-1-1-1
+    4
+    >>> count_change(20)  # 10-10, 10-5-5, 10-5-1-1-1-1-1, 10-1-1-1-1-1-1-1-1-1-1, 5-5-5-5, ...
+    9
+    >>> count_change(100)
+    292
+    '''
+    def helper(remaining, coin_index):
+        if coin_index == len(coins) or remaining < 0:
+            return 0
+        if remaining == 0:
+            return 1
+        return (helper(remaining - coins[coin_index], coin_index    ) +
+                helper(remaining                    , coin_index + 1))
+    return helper(amount, 0)
+
+def count_change_register(amount, k):
+    '''Return the number of ways to make change for amount using at most k of each coin type.
+
+    >>> count_change_register(20, 10)  # Excludes 20 pennies and excludes 1 nickel + 15 pennies
+    7
+    >>> count_change_register(20, 2)   # 10-10, 10-5-5
+    2
+    >>> count_change_register(100, 10)
+    84
+    >>> count_change_register(100, 100)
+    292
+    '''
+    def helper(remaining, coin_index, n):
+        if coin_index == len(coins) or remaining < 0 or ⟦a⟧:
+            return 0
+        if remaining == 0:
+            return 1
+        return (helper(remaining - coins[coin_index], coin_index    , ⟦b⟧ ) +
+                helper(remaining                    , coin_index + 1, ⟦c⟧ ))
+    return helper(amount, 0, 0)
+`),
+      },
+      'fa22f-6': {
+        exam: 'fa22f', number: '6', title: 'Barking up the Wrong Tree', points: 6,
+        intro: 'After years of using SQL, John the Dog Breeder decides to switch to a Python `Tree` to track his dogs’ heredity.\n\nImplement `tree_to_table`, which takes a `Tree` instance `t` representing dogs. Each node in the tree has a label that is the name of a dog and children corresponding to the children of that dog. The `tree_to_table` function returns a list of the parent-child relationships in `t` in any order. Each parent-child relationship is represented as a two-element tuple, where the first element is the name of the parent, and the second is the name of the child.\n\nThe `Tree` class is defined on page 2 of the Midterm 2 Study Guide with instance attributes `label` and `branches`. You may not use any functions from the study guide defined outside of the `Tree` class.\n\nFor `Tree(\'E\', [Tree(\'F\', [Tree(\'A\', [Tree(\'B\'), Tree(\'C\')]), Tree(\'D\', [Tree(\'H\')]), Tree(\'G\')])])` one valid output is: `[(\'A\', \'B\'), (\'A\', \'C\'), (\'D\', \'H\'), (\'F\', \'A\'), (\'F\', \'D\'), (\'F\', \'G\'), (\'E\', \'F\')]`',
+        code: code(`
+def tree_to_table(t):
+    relationships = ⟦a⟧
+    for i in ⟦b⟧:
+        relationships.⟦c⟧(⟦d⟧)
+    return relationships
+`),
+      },
+      'fa22f-7a': {
+        exam: 'fa22f', number: '7(a)', title: 'One Cent — three_flips', points: 6,
+        intro: 'In Penney’s Game, two players each choose a different sequence of three coin flips (Heads or Tails). A coin is flipped repeatedly until one of those two sequences occurs; the winner is the player whose sequence is flipped. For example, if Player 1 selects “HHH” and Player 2 selects “THH”, and the flips are HTTHTHTTHTHTHH, then “THH” was flipped first (the last three flips), so Player 2 wins.\n\nFirst, implement the generator function `three_flips`. It takes as input a (potentially infinite) iterator `coin`, each element of which is either `\'H\'` or `\'T\'`. It yields a sequence of triples of coin flip outcomes from `coin`.\n\nNote: the last example in the docstring is from the exam. Since Python 3.7, a generator whose code lets a `StopIteration` escape raises `RuntimeError` instead (PEP 479), so that example doesn’t print exactly `StopIteration`.',
+        code: code(`
+def three_flips(coin):
+    '''
+    >>> a = three_flips(iter("HTTHHT"))
+    >>> next(a)  # Coin flips 0, 1, and 2
+    'HTT'
+    >>> next(a)  # Coin flips 1, 2, and 3
+    'TTH'
+    >>> next(a)  # Coin flips 2, 3, and 4
+    'THH'
+    >>> next(a)  # Coin flips 3, 4, and 5
+    'HHT'
+    >>> next(a)  # A StopIteration exception is raised
+    StopIteration
+    '''
+    start = ⟦a⟧
+    ⟦b⟧:
+        yield start
+        start = ⟦c⟧ + ⟦d⟧
+`),
+      },
+      'fa22f-7b': {
+        exam: 'fa22f', number: '7(b)', title: 'One Cent — penney', points: 4,
+        intro: 'Implement the function `penney`. It receives as input an iterator `coin` over `\'H\'` and `\'T\'` and two sequences `p1` and `p2`. It returns 1 if Player 1 wins Penney’s Game and 2 if Player 2 wins. Assume that one player wins before the coin runs out of elements, and that `p1` and `p2` are distinct three-element sequences of `\'H\'` and `\'T\'`.',
+        code: code(`
+def penney(coin, p1, p2):
+    '''Return the winner of Penney's game, where Player 1 chooses p1 and Player 2 chooses p2.
+
+    >>> penney(iter("HTTHTHTTHTHTHH"),"THH","HHH")
+    1
+    >>> penney(iter("HTTHTHTTHTHTHH"),"HHH","THH")
+    2
+    >>> penney(iter("HTTHTHTTHTHTHH"),"HTT","THH")  # HTT happens first
+    1
+    '''
+    it = ⟦a⟧(lambda x: ⟦b⟧, ⟦c⟧)
+    if next(it) == p1:
+        return 1
+    return 2
+`),
+      },
+      'fa22f-8': {
+        exam: 'fa22f', number: '8', title: 'A Parentheses Scheme', points: 6,
+        intro: 'In a fit of Scheme-induced rage, you’ve decided that all internal parentheses must be eliminated! Implement the procedure `remove-parens` that takes as input a Scheme list and returns that list with all internal parentheses removed.',
+        code: code(`
+;;; > (remove-parens '(((1) 2 3) 4 5 (6 (7)) (8 10)))
+;;; (1 2 3 4 5 6 7 8 10)
+;;; > (remove-parens '(((a) b (c) ()) (d) e (f (((g)))) (h i)))
+;;; (a b c d e f g h i)
+(define (remove-parens s)
+  (cond
+    ( (null? s) nil  )
+    ( ⟦a⟧   ⟦b⟧ )
+    ( else  ⟦c⟧ )))
+`),
+      },
+      'fa22f-9': {
+        exam: 'fa22f', number: '9', title: 'Pokemon SQarLet', points: 7, lang: 'sql',
+        intro: 'You’ve been hired as the newest Gym Leader of the Paldea region! Now you need to decide what team to make. All your available Pokemon (for this question, Pokemon stats have been simplified) are listed in a SQL table `Pokemon`. You also have a table `Moves` listing all Pokemon moves.\n\n```\n' + FA22_POKEMON + '\n```\n\nCreate a table `Attack`, which lists the `Name` and `TotalAttack` of each Pokemon. The total attack of a Pokemon is equal to the sum of a Pokemon’s `BaseAttack` and the `MoveAttack` of both moves it knows. Order rows by total attack.\n\nFor example, Maushold has a base Attack of 30, and has two moves with `MoveAttack` values 100 and 30, respectively. Its total attack is 30+100+30 = 160. With the above tables, you should have the following result (the exam spells two names differently here than in its table; this is the table’s spelling):\n\n```\n| Name       | TotalAttack |\n|------------|-------------|\n| Maushold   | 160         |\n| Farigiraf  | 170         |\n| Cyclizard  | 180         |\n| Meoscadera | 220         |\n| Rattata    | 290         |\n```',
+        sqlSetup: FA22_POKEMON_SETUP,
+        code: code(`
+CREATE TABLE Attack AS
+  SELECT ⟦a⟧ AS Name, ⟦b⟧ AS TotalAttack FROM ⟦c⟧ WHERE ⟦d⟧ ORDER BY TotalAttack;
+`),
+      },
+      'fa22f-10': {
+        exam: 'fa22f', number: '10', title: 'A+: Treeing up the Wrong Bark', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nWrite a function `table_to_tree` that takes a list `parents` of parent-child relationships between dogs. Each element of this list is a two-element list of strings containing the name of the parent and the name of the child, as well as `ancestor`, the name of the very first dog. It returns a `Tree` instance with root label `ancestor` that has each dog’s name as a label and represents all parent-child pairs in `parents` as parent-child relations between nodes. Assume that:\n\n- All dogs have unique names and are descendents of `ancestor` (or `ancestor` itself).\n- All dogs have exactly one parent (John has some weird dogs) except for `ancestor`, which has none.\n- Any order of branches is acceptable.\n\nFor example: `table_to_tree([[\'A\',\'B\'],[\'A\',\'C\'],[\'D\',\'H\'],[\'F\',\'A\'],[\'F\',\'D\'],[\'F\',\'G\'],[\'E\',\'F\']],\'E\')` could return: `Tree(\'E\', [Tree(\'F\', [Tree(\'A\', [Tree(\'B\'), Tree(\'C\')]), Tree(\'D\', [Tree(\'H\')]), Tree(\'G\')])])`',
+        code: code(`
+def table_to_tree(parents, ancestor):
+    dogs = {}
+    def add_if_new(dog):
+        if ⟦a⟧:
+            dogs[dog] = ⟦b⟧
+    for i, j in ⟦c⟧:
+        add_if_new(i)
+        add_if_new(j)
+        ⟦d⟧
+    ⟦e⟧
+`),
+      },
+      'fa22f-11': {
+        exam: 'fa22f', number: '11', title: 'A+: Another Parentheses Scheme', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nWrite a Scheme macro `eval-noparens`. This macro receives as input a list representing a line of Scheme code with all the parentheses removed (except the parentheses surrounding the entire list), and returns the result that would have been obtained by evaluating the original line of Scheme code. All elements of the list are either numbers or symbols bound to two-input procedures; all original call expressions had exactly two operands; and the list corresponds to exactly one valid line of Scheme code. For credit, your solution must run in linear time in the length of its input. **Hint:** Treat the `car` and `cdr` of the return value of `helper` as two independent outputs.',
+        code: code(`
+;;; > (eval-noparens (+ 1 * 2 3))
+;;; 7
+;;; > (eval-noparens (+ * 1 2 + 3 * 4 + + + 5 6 7 8))
+;;; 109
+;;; > (eval-noparens (cons 1 list 2 3))
+;;; (1 2 3)
+;;; > (let ((times *)) (eval-noparens (+ 1 times 2 3)))
+;;; 7
+(define-macro (eval-noparens expr)
+  (define (helper expr)
+    (if (number? (car expr)) expr
+      (let ((x ⟦a⟧ ))
+        (let ((y ⟦b⟧ ))
+          ⟦c⟧ ))))
+  (car (helper expr)))
+`),
+      },
+      'fa22f-12': {
+        exam: 'fa22f', number: '12', title: 'A+: Pokemon Ancient SQarLet', points: 0, lang: 'sql',
+        intro: 'This A+ question is not worth any points.\n\nAs a gym leader, your team must be composed of Pokemon of a single type. Generate a table with two columns: All unique types in your collection and the number of Pokemon you have of each type, sorted in descending order by number of Pokemon. Each Pokemon can have either one or two types, listed under columns `Type1` and `Type2`. If a Pokemon has one type, `Type2` stores the string `"None"`. A Pokemon with two types counts as both of its types.\n\n```\n' + FA22_POKEMON_TABLE + '\n\nExpected (the last four rows in any order):\n| Type    | Count |\n|---------|-------|\n| Normal  | 4     |\n| Dragon  | 1     |\n| Grass   | 1     |\n| Dark    | 1     |\n| Psychic | 1     |\n```\n\nNote: as printed, the official answer for (a) doesn’t run in SQLite (its `WHERE Type != "None"` belongs to the second `SELECT`, where there is no column `Type`), so this question has no Run Code tests.',
+        sqlSetup: FA22_POKEMON_SETUP,
+        code: code(`
+CREATE TABLE helper AS SELECT ⟦a⟧;
+SELECT Type, COUNT(*) AS Count FROM helper ⟦b⟧;
+`),
+      },
+    },
+    questions: [
+      { id: 'fa22f-1a', problem: 'fa22f-1', label: '(a)', points: 1, topics: ['hof', 'fundamentals'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the first line displayed for the first expression: `print(20, (lambda x: print)(20)(22))`', choices: ['20', '22', '20 None', '22 None', 'A function value'] },
+      { id: 'fa22f-1b', problem: 'fa22f-1', label: '(b)', points: 1, topics: ['hof', 'fundamentals'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the second line displayed for the first expression: `print(20, (lambda x: print)(20)(22))`', choices: ['20', '22', '20 None', '22 None', 'A function value'] },
+      { id: 'fa22f-1c', problem: 'fa22f-1', label: '(c)', points: 1, topics: ['fundamentals'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the first line displayed for the second expression: `(print(4) or 3+2) or 1/0`', choices: ['4', '5', '45', 'None 5', 'There is no first line because an error occurs'] },
+      { id: 'fa22f-1d', problem: 'fa22f-1', label: '(d)', points: 1, topics: ['fundamentals'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the second line displayed for the second expression: `(print(4) or 3+2) or 1/0`', choices: ['4', '5', '45', 'None 5', 'There is no second line because an error occurs'] },
+      { id: 'fa22f-1e', problem: 'fa22f-1', label: '(e)', points: 1, topics: ['hof', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the first line displayed for the third expression: `alt(triple, dec)(8)(8)`', choices: ['6', '21', '23', '72'] },
+      { id: 'fa22f-1f', problem: 'fa22f-1', label: '(f)', points: 1, topics: ['hof', 'lists'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the second line displayed for the third expression: `alt(triple, dec)(8)(8)`', choices: ['6', '21', '23', '72'] },
+      { id: 'fa22f-1g', problem: 'fa22f-1', label: '(g)', points: 1, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the third line displayed for the third expression: `alt(triple, dec)(8)(8)`', choices: ['A function', 'None', "'h'", 'h', 'There is no third line'] },
+      { id: 'fa22f-1h', problem: 'fa22f-1', label: '(h)', points: 1, topics: ['oop'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the first line displayed for the fourth expression: `Sub(triple, dec).h(8).h(8)`', choices: ['8', '12', '16', '21', '1616', "'8888'", 'There is no first line because an error occurs'] },
+      { id: 'fa22f-1i', problem: 'fa22f-1', label: '(i)', points: 1, topics: ['oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the second line displayed for the fourth expression: `Sub(triple, dec).h(8).h(8)`', choices: ['8', '12', '16', '21', '1616', 'There is no second line because an error occurs'] },
+      { id: 'fa22f-1j', problem: 'fa22f-1', label: '(j)', points: 1, topics: ['oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the third line displayed for the fourth expression: `Sub(triple, dec).h(8).h(8)`', choices: ['A function', 'ha', 'haha', 'hahaha', "['ha']", "['haha']", "['hahaha']", 'There is no third line (for any reason, including an error)'] },
+      { id: 'fa22f-1k', problem: 'fa22f-1', label: '(k)', points: 2, topics: ['oop', 'lists'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is displayed for the fifth expression: `[f(8) for f in Pub(dec, triple).fns]`', choices: ['[7, 21]', '[7, [21]]', "['88', 16]", "['88', [16]]", '[[8], 8]', '[[8], [8]]', 'None of these'] },
+      { id: 'fa22f-1l', problem: 'fa22f-1', label: '(l)', points: 1, topics: ['oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the first line displayed for the sixth expression: `Pub(dec, triple).h(8).h(8)`', choices: ['8', '[8]', '21', '23', '1616', "'8888'"] },
+      { id: 'fa22f-1m', problem: 'fa22f-1', label: '(m)', points: 1, topics: ['oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the second line displayed for the sixth expression: `Pub(dec, triple).h(8).h(8)`', choices: ['8', '[8]', '21', '23', '1616', "'8888'"] },
+      { id: 'fa22f-1n', problem: 'fa22f-1', label: '(n)', points: 1, topics: ['oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the third line displayed for the sixth expression: `Pub(dec, triple).h(8).h(8)`', choices: ['A function', 'ha', 'haha', 'hahaha', "['ha']", "['haha']", "['hahaha']", 'There is no third line (for any reason, including an error)'] },
+      { id: 'fa22f-2a', problem: 'fa22f-2', label: '(a)', points: 1, topics: ['scheme'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: '`(+ (* 3 2) (+ 3 2))`', choices: ['11', '(+ (* 3 2) (+ 3 2))', '(+ 6 (+ 3 2))', '(+ (* 3 2) 5)', '(+ 6 5)'] },
+      { id: 'fa22f-2b', problem: 'fa22f-2', label: '(b)', points: 1, topics: ['scheme'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: "`'(+ (* 3 2) (+ 3 2))`", choices: ['11', '(+ (* 3 2) (+ 3 2))', '(+ 6 (+ 3 2))', '(+ (* 3 2) 5)', '(+ 6 5)'] },
+      { id: 'fa22f-2c', problem: 'fa22f-2', label: '(c)', points: 1, topics: ['scheme'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: "`` ` (+ ,(* 3 '2) (+ 3 2)) ``", choices: ['11', '(+ (* 3 2) (+ 3 2))', '(+ 6 (+ 3 2))', '(+ (* 3 2) 5)', '(+ 6 5)', 'Error'] },
+      { id: 'fa22f-2d', problem: 'fa22f-2', label: '(d)', points: 1, topics: ['scheme'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: "`'(+ (* '3 2) '(+ 3 2))`",
+        choices: ['11', '(+ (* 3 2) (+ 3 2))', '(+ (* 3 2) (quote (+ 3 2)))', '(+ (* (quote 3) 2) (+ 3 2))', '(+ (* (quote 3) 2) (quote (+ 3 2)))', '(+ (* 3 2) (quasiquote (+ 3 2)))', '(+ (* (quasiquote 3) 2) (+ 3 2))', '(+ (* (quasiquote 3) 2) (quasiquote (+ 3 2)))', 'Error'] },
+      { id: 'fa22f-3a', problem: 'fa22f-3', label: '(a)', points: 1, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Blank (a): How many elements are in the list bound to `result` in the Global frame?', choices: ['0', '1', '2'] },
+      { id: 'fa22f-3b', problem: 'fa22f-3', label: '(b)', points: 2, topics: ['env', 'lists'], difficulty: 'hard',
+        type: 'single_choice', prompt: 'Blank (b): What value is bound to `totals` in the Global frame?', choices: ['An empty list', 'A list [3]', 'A list [6]', 'None of the above'] },
+      { id: 'fa22f-3c', problem: 'fa22f-3', label: '(c)', points: 1, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Blank (c): What value is bound to `s` in frame f2?', choices: ['An empty list', 'A list [1]', 'A list [4]', 'A list [1, 2, 4]'] },
+      { id: 'fa22f-3d', problem: 'fa22f-3', label: '(d)', points: 2, topics: ['env', 'hof'], difficulty: 'hard',
+        type: 'short_answer', prompt: 'Blank (d): What is the return value of frame f2?' },
+      { id: 'fa22f-4a', problem: 'fa22f-4a', label: 'i.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['s', '[s]', 's[:len(s)-1]', 'zip(s, s)', 'range(s)'] },
+      { id: 'fa22f-4b', problem: 'fa22f-4a', label: 'ii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['i', '[i]', 's', 's[1:]', 'range(s)'] },
+      { id: 'fa22f-4c', problem: 'fa22f-4a', label: 'iii.', points: 2, topics: ['fundamentals'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa22f-4d', problem: 'fa22f-4a', label: 'iv.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'd',
+        type: 'multi_select', mono: true, prompt: 'Select all expressions that could fill in blank (d).', choices: ['[i, j]', 'list(i, j)', '[list(i, j)]', '[next(i), next(j)]'] },
+      { id: 'fa22f-4e', problem: 'fa22f-4b', label: 'i.', points: 3, topics: ['scheme'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-4f', problem: 'fa22f-4b', label: 'ii.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['append', 'car', 'cdr', 'cons', 'list'] },
+      { id: 'fa22f-4g', problem: 'fa22f-4b', label: 'iii.', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['nil', '(cdr s)', '(map (lambda (x) (- 2020 x)) (cdr s))', '(filter (lambda (x) (= 2020 (+ (car s) x))) (cdr s))', '(find-pair (cdr s))', '(find-pair (map (lambda (x) (- 2020 x)) (cdr s)))', '(find-pair (filter (lambda (x) (= 2020 (+ (car s) x))) (cdr s)))'] },
+      { id: 'fa22f-4h', problem: 'fa22f-4c', label: 'i.', points: 1, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['s, 2020 - s', 'num, 2020 - num', 'a, b', 's.a, s.b', 'a.num, b.num'] },
+      { id: 'fa22f-4i', problem: 'fa22f-4c', label: 'ii.', points: 2, topics: ['sql-joins'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['s', 'a, b', 's, s', 's AS a, s AS b', 'a AS s, b AS s'] },
+      { id: 'fa22f-4j', problem: 'fa22f-4c', label: 'iii.', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['a + b = 2020', 'a.num + b.num = 2020', 'a < b AND a + b = 2020', 'a.num < b.num AND a.num + b.num = 2020', 'a = b AND a + b = 2020', 'a.num = b.num AND a.num + b.num = 2020', '(2020 - num) IN s', 'CONTAINS(2020 - num, s)'] },
+      { id: 'fa22f-5a', problem: 'fa22f-5', label: '(a)', points: 2, topics: ['recursion'], difficulty: 'medium', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['True', 'False', 'n > 0', 'k > 0', 'n > k', 'n == k', 'n > 10', 'n == 10'] },
+      { id: 'fa22f-5b', problem: 'fa22f-5', label: '(b)', points: 1, topics: ['recursion'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['k', 'k-1', 'k+1', 'n', 'n + 1', 'n-1', '0', '10'] },
+      { id: 'fa22f-5c', problem: 'fa22f-5', label: '(c)', points: 1, topics: ['recursion'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['k', 'k-1', 'k+1', 'n', 'n+1', 'n-1', '0', '10'] },
+      { id: 'fa22f-5d', problem: 'fa22f-5', label: '(d)', points: 1, topics: ['recursion'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What does `count_change_register(25, 2)` return?', choices: ['0', '1', '2', '3', '4', 'None of these'] },
+      { id: 'fa22f-6a', problem: 'fa22f-6', label: '(a)', points: 3, topics: ['trees', 'lists'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-6b', problem: 'fa22f-6', label: '(b)', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['branches', 't.branches', 'Tree.branches', 'tree_to_table(branches)', 'tree_to_table(t.branches)', 'tree_to_table(Tree.branches)', 'relationships', '[p for p, c in relationships]'] },
+      { id: 'fa22f-6c', problem: 'fa22f-6', label: '(c)', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['append', 'extend'] },
+      { id: 'fa22f-6d', problem: 'fa22f-6', label: '(d)', points: 1, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).',
+        choices: ['i', 'i.branches', 't.branches', 'tree_to_table(i)', 'tree_to_table(i.branches)', 'tree_to_table(t.branches)'] },
+      { id: 'fa22f-7a', problem: 'fa22f-7a', label: 'i.', points: 2, topics: ['iterators'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-7b', problem: 'fa22f-7a', label: 'ii.', points: 1, topics: ['generators'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['while True', 'while next(coin) is not None', 'for x in coin'] },
+      { id: 'fa22f-7c', problem: 'fa22f-7a', label: 'iii.', points: 2, topics: ['generators'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa22f-7d', problem: 'fa22f-7a', label: 'iv.', points: 1, topics: ['iterators'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['coin', 'coin.pop()', 'next(coin)'] },
+      { id: 'fa22f-7e', problem: 'fa22f-7b', label: 'i.', points: 1, topics: ['hof', 'iterators'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-7f', problem: 'fa22f-7b', label: 'ii.', points: 2, topics: ['hof'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa22f-7g', problem: 'fa22f-7b', label: 'iii.', points: 1, topics: ['iterators', 'generators'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['it', 'coin', '(p1, p2)', 'three_flips(coin)'] },
+      { id: 'fa22f-8a', problem: 'fa22f-8', label: '(a)', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['(list? s)', '(list? (car s))', '(list? (cdr s))', '(null? (cdr s))', '(not (number? (car s)))'] },
+      { id: 'fa22f-8b', problem: 'fa22f-8', label: '(b)', points: 3, topics: ['scheme'], difficulty: 'hard', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa22f-8c', problem: 'fa22f-8', label: '(c)', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'c',
+        type: 'multi_select', mono: true, prompt: 'Select all of the expressions below that could fill in blank (c).',
+        choices: ['(remove-parens (cdr s))', '(remove-parens (cons (car s) (cdr s)))', '(remove-parens (list (car s) (cdr s)))', '(cons (car s) (remove-parens (cdr s)))', '(cons (remove-parens (car s)) (remove-parens (cdr s)))', '(list (car s) (remove-parens (cdr s)))', '(list (remove-parens (car s)) (remove-parens (cdr s)))'] },
+      { id: 'fa22f-9a', problem: 'fa22f-9', label: '(a)', points: 1, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Select all options that could fill in blank (a).', choices: ['Name', 'p.Name', 'q.Name', 'a.Name', 'b.Name'] },
+      { id: 'fa22f-9b', problem: 'fa22f-9', label: '(b)', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa22f-9c', problem: 'fa22f-9', label: '(c)', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'multi_select', mono: true, prompt: 'Select all options that could fill in blank (c).',
+        choices: ['Pokemon, Moves', 'Pokemon, Pokemon, Moves', 'Pokemon, Moves, Moves', 'Pokemon as p, Moves as a', 'Pokemon as p, Pokemon as q, Moves as a', 'Pokemon as p, Moves as a, Moves as b'] },
+      { id: 'fa22f-9d', problem: 'fa22f-9', label: '(d)', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'fa22f-10a', problem: 'fa22f-10', label: '(a)', points: 0, topics: ['trees'], difficulty: 'hard', blank: 'a', type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-10b', problem: 'fa22f-10', label: '(b)', points: 0, topics: ['trees'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa22f-10c', problem: 'fa22f-10', label: '(c)', points: 0, topics: ['trees'], difficulty: 'easy', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa22f-10d', problem: 'fa22f-10', label: '(d)', points: 0, topics: ['trees'], difficulty: 'hard', blank: 'd', type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'fa22f-10e', problem: 'fa22f-10', label: '(e)', points: 0, topics: ['trees'], difficulty: 'medium', blank: 'e', type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'fa22f-11a', problem: 'fa22f-11', label: '(a)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'a', type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-11b', problem: 'fa22f-11', label: '(b)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa22f-11c', problem: 'fa22f-11', label: '(c)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa22f-12a', problem: 'fa22f-12', label: '(a)', points: 0, topics: ['sql-agg'], difficulty: 'hard', blank: 'a', type: 'code', prompt: 'Fill in blank (a).' },
+      { id: 'fa22f-12b', problem: 'fa22f-12', label: '(b)', points: 0, topics: ['sql-agg'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+    ],
+    answers: {
+      'fa22f-1a': { correct: 1, explanation: '`(lambda x: print)(20)` is the `print` function, so `print(22)` runs first and displays 22.' },
+      'fa22f-1b': { correct: 2, explanation: 'Then the outer `print` displays 20 and the value of `print(22)`, which is `None`.' },
+      'fa22f-1c': { correct: 0, explanation: '`print(4)` displays 4 and returns `None`.' },
+      'fa22f-1d': { correct: 1, explanation: '`None or 3+2` is 5, which is truthy, so `1/0` is never evaluated; the interpreter displays 5.' },
+      'fa22f-1e': { correct: 1, explanation: '`fns` is `[triple, dec]`: `triple(dec(8))` is 21. Then both entries become `dec`.' },
+      'fa22f-1f': { correct: 0, explanation: 'Now `dec(dec(8))` is 6.' },
+      'fa22f-1g': { correct: 0, explanation: '`h` returns itself, and the interpreter displays that function value.' },
+      'fa22f-1h': { correct: 4, explanation: 'The first call uses the class’s `Sub.fns`: `2 * 8` is 16, then `str(16) + str(16)` is `1616`. Then `Sub.fns` becomes `[triple, dec]`.' },
+      'fa22f-1i': { correct: 3, explanation: 'Now `Sub.fns` is `[triple, dec]`: `triple(dec(8))` is 21.' },
+      'fa22f-1j': { correct: 3, explanation: 'The interpreter shows the returned `Sub` instance using `__repr__`: `triple(\'ha\')` is `\'hahaha\'`.' },
+      'fa22f-1k': { correct: 4, explanation: '`Pub.__init__` only sets a local `fns`, so `.fns` is the class attribute `Pub.fns`: `[[8], 8]`.' },
+      'fa22f-1l': { correct: 2, explanation: '`h` reads `Sub.fns`, which is still `[triple, dec]` from before: 21. Then `Sub.fns = self.fns`, which is `Pub.fns`.' },
+      'fa22f-1m': { correct: 1, explanation: 'Now `Sub.fns` is `Pub.fns`: `[z]` of `z` of 8 is `[8]`.' },
+      'fa22f-1n': { correct: 4, explanation: 'The interpreter shows the `Pub` instance using `__repr__`: `str([\'ha\'])`.' },
+      'fa22f-2a': { correct: 0, explanation: 'An ordinary call expression: 6 + 5.' },
+      'fa22f-2b': { correct: 1, explanation: 'A quoted expression is not evaluated.' },
+      'fa22f-2c': { correct: 2, explanation: 'In a quasiquote, only the unquoted part `,(* 3 \'2)` is evaluated, to 6.' },
+      'fa22f-2d': { correct: 4, explanation: 'Inside a quoted list, each `\'x` is shown as `(quote x)`.' },
+      'fa22f-3a': { correct: 1, explanation: 'The global `result` gets one element appended: the value returned by the lambda.' },
+      'fa22f-3b': { correct: 2, explanation: 'In `sums`, the parameter `result` is `totals`, so `pair` appends `4 + 2` to it.' },
+      'fa22f-3c': { correct: 1, explanation: '`vals` and `s` are the same list `[1, 2, 4]`; two `pop`s leave `[1]`.' },
+      'fa22f-3d': { accepted: ['6.1'], explanation: '`pair` returns `t` from `sums`’ frame, 0.1, and `sum(result)` sums `totals`, which is `[6]`.' },
+      'fa22f-4a': { correct: 0, explanation: 'Try each element.' },
+      'fa22f-4b': { correct: 2, explanation: 'Pair it with every element (1010 isn’t in the list, so an element never pairs with itself).' },
+      'fa22f-4c': { accepted: ['if i + j == 2020', 'if j + i == 2020', 'if 2020 == i + j', 'if i == 2020 - j', 'if j == 2020 - i'], explanation: 'Check whether the two sum to 2020.' },
+      'fa22f-4d': { correct: [0], explanation: 'Return the two numbers as a list. `list(i, j)` is an error, and `next` doesn’t work on numbers.' },
+      'fa22f-4e': { accepted: ['(contains? (cdr s) (- 2020 (car s)))'], explanation: 'Check whether the first element’s partner is in the rest of the list.' },
+      'fa22f-4f': { correct: 4, explanation: 'Build a two-element list.' },
+      'fa22f-4g': { correct: 4, explanation: 'Otherwise, look in the rest of the list.' },
+      'fa22f-4h': { correct: 4, explanation: 'One number from each copy of the table.' },
+      'fa22f-4i': { correct: 3, explanation: 'Join `s` with itself, with aliases.' },
+      'fa22f-4j': { correct: 3, explanation: 'The two numbers sum to 2020; `a.num < b.num` keeps just one of the two orders.' },
+      'fa22f-5a': { correct: 4, explanation: 'Using more than `k` coins of this type isn’t allowed.' },
+      'fa22f-5b': { correct: 4, explanation: 'Using one more coin of the current type.' },
+      'fa22f-5c': { correct: 6, explanation: 'Moving on to the next coin type, none of it has been used yet.' },
+      'fa22f-5d': { correct: 2, explanation: 'With at most 2 of each coin, 25 can be 25 or 10-10-5.' },
+      'fa22f-6a': { accepted: ['[(t.label, i.label) for i in t.branches]', '[(t.label, b.label) for b in t.branches]', '[(t.label, c.label) for c in t.branches]'], explanation: 'The relationships between `t` and its children.' },
+      'fa22f-6b': { correct: 1, explanation: 'Then each child…' },
+      'fa22f-6c': { correct: 1, explanation: '…adds all of its own relationships (a list), so `extend`.' },
+      'fa22f-6d': { correct: 3, explanation: 'The relationships inside the child’s subtree.' },
+      'fa22f-7a': { accepted: ['next(coin) + next(coin) + next(coin)'], explanation: 'The first three flips as one string.' },
+      'fa22f-7b': { correct: 0, explanation: 'Keep going until the coin runs out (then `next` stops the generator).' },
+      'fa22f-7c': { accepted: ['start[1:]', 'start[-2:]'], explanation: 'Drop the oldest flip…' },
+      'fa22f-7d': { correct: 2, explanation: '…and add the next one.' },
+      'fa22f-7e': { accepted: ['filter'], explanation: 'Keep only the triples that are one of the players’ sequences.' },
+      'fa22f-7f': { accepted: ['x in [p1, p2]', 'x == p1 or x == p2', 'x in (p1, p2)', 'x in [p2, p1]'], explanation: 'A triple matters only if one of the players chose it.' },
+      'fa22f-7g': { correct: 3, explanation: 'The triples of flips, in order.' },
+      'fa22f-8a': { correct: 1, explanation: 'When the first element is a list…' },
+      'fa22f-8b': { accepted: ['(append (remove-parens (car s)) (remove-parens (cdr s)))'], explanation: '…flatten it and the rest, and join them.' },
+      'fa22f-8c': { correct: [3], explanation: 'A non-list first element stays, in front of the flattened rest.' },
+      'fa22f-9a': { correct: [1], explanation: '`Name` alone is ambiguous (both tables have it); the Pokemon’s name is `p.Name`.' },
+      'fa22f-9b': { accepted: ['BaseAttack + a.MoveAttack + b.MoveAttack', 'p.BaseAttack + a.MoveAttack + b.MoveAttack', 'a.MoveAttack + b.MoveAttack + BaseAttack', 'a.MoveAttack + b.MoveAttack + p.BaseAttack'], explanation: 'The base attack plus each move’s attack.' },
+      'fa22f-9c': { correct: [5], explanation: 'One copy of `Moves` for each of the Pokemon’s two moves.' },
+      'fa22f-9d': { accepted: ['p.Move1 = a.Name AND p.Move2 = b.Name', 'p.Move1 = a.Name AND b.Name = p.Move2', 'a.Name = p.Move1 AND b.Name = p.Move2', 'p.Move2 = b.Name AND p.Move1 = a.Name'], explanation: 'Match each move copy to one of the Pokemon’s moves.' },
+      'fa22f-10a': { accepted: ['not dogs.get(dog)', 'dog not in dogs'] },
+      'fa22f-10b': { accepted: ['Tree(dog)'] },
+      'fa22f-10c': { accepted: ['parents'] },
+      'fa22f-10d': { accepted: ['dogs[i].branches.append(dogs[j])'] },
+      'fa22f-10e': { accepted: ['return dogs[ancestor]'] },
+      'fa22f-11a': { accepted: ['(helper (cdr expr))'] },
+      'fa22f-11b': { accepted: ['(helper (cdr x))'] },
+      'fa22f-11c': { accepted: ['(cons (list (car expr) (car x) (car y)) (cdr y))'] },
+      'fa22f-12a': { accepted: ['Name, Type1 AS Type FROM Pokemon UNION SELECT Name, Type2 FROM Pokemon WHERE Type != "None"'] },
+      'fa22f-12b': { accepted: ['GROUP BY Type ORDER BY count(*) DESC;'] },
+    },
+  });
 })();

@@ -24,8 +24,19 @@ const SUITES = sandbox.window.CS61A_SQL_TESTS.suites;
 const { sqlCore } = require(path.join(ROOT, 'app', 'sql_runner.js'));
 const CORE = sqlCore();
 
+// SQL questions without Run Code tests, and why.
+const NO_TESTS = {
+  'fa22f-12': 'The official answer for (a) fails in SQLite as printed: its WHERE Type != "None" belongs to the second SELECT, where there is no column Type.',
+};
+
 // Plausible wrong answers for written blanks (the suite must catch each one).
 const WRONG = {
+  'fa22f-9': [
+    { b: 'BaseAttack + a.MoveAttack' },
+    { b: 'BaseAttack + 2 * a.MoveAttack' },
+    { d: 'p.Move1 = a.Name' },
+    { d: 'p.Move1 = a.Name OR p.Move2 = b.Name' },
+  ],
   'sp23f-7': [
     { b: 'finals, sizes' },
     { b: 'finals, sizes WHERE hall=course' },
@@ -79,7 +90,8 @@ function fill(pid, answers) {
   const SQL = await initSqlJs({ wasmBinary: Buffer.from(assets.wasm, 'base64') });
 
   const sqlPids = Object.keys(B.PROBLEMS).filter((pid) => B.PROBLEMS[pid].lang === 'sql');
-  for (const pid of sqlPids) if (!SUITES[pid]) fail(`${pid}: SQL question without tests in sql_tests.js`);
+  for (const pid of sqlPids) if (!SUITES[pid] && !NO_TESTS[pid]) fail(`${pid}: SQL question without tests in sql_tests.js`);
+for (const pid of Object.keys(NO_TESTS)) if (!sqlPids.includes(pid) || SUITES[pid]) fail(`NO_TESTS: ${pid} is not an SQL question without tests`);
   for (const pid of Object.keys(SUITES)) if (!sqlPids.includes(pid)) fail(`sql_tests.js: ${pid} is not an SQL question`);
 
   let versions = 0;

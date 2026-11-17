@@ -815,4 +815,33 @@ module.exports = {
       { 'A+': 's[:n] + group(n, s[n:])' },
     ],
   },
+  'fa22f-5': { wrong: [] },
+  'fa22f-6': {
+    wrong: [
+      { a: '[(i.label, t.label) for i in t.branches]' },
+      { a: '[]' },
+      { a: '[t.label]' },
+    ],
+  },
+  'fa22f-7a': {
+    wrong: [
+      { a: 'next(coin) + next(coin)' },
+      { a: 'next(coin)' },
+      { c: 'start[:2]' },
+      { c: 'start' },
+    ],
+  },
+  'fa22f-7b': {
+    wrong: [
+      { a: 'map' },
+      { b: 'x == p1' },
+      { b: 'x in p1 + p2' },
+    ],
+  },
+  'fa22f-10': {
+    wrong: [
+      { d: 'dogs[j].branches.append(dogs[i])' },
+      { e: 'return dogs' },
+    ],
+  },
 };

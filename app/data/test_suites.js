@@ -286,6 +286,27 @@ def to_link(t):
 `;
 
 
+  // fa22f-7a's official code, including its docstring (the setup check only strips """ docstrings, and this one uses ''')
+  const THREE_FLIPS = `def three_flips(coin):
+    '''
+    >>> a = three_flips(iter("HTTHHT"))
+    >>> next(a)  # Coin flips 0, 1, and 2
+    'HTT'
+    >>> next(a)  # Coin flips 1, 2, and 3
+    'TTH'
+    >>> next(a)  # Coin flips 2, 3, and 4
+    'THH'
+    >>> next(a)  # Coin flips 3, 4, and 5
+    'HHT'
+    >>> next(a)  # A StopIteration exception is raised
+    StopIteration
+    '''
+    start = next(coin) + next(coin) + next(coin)
+    while True:
+        yield start
+        start = start[1:] + next(coin)
+`;
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -2111,6 +2132,94 @@ True`),
 [[3, 4, 5, 6], [7, 8]]`),
         added(`>>> group(1, [1, 2, 3]), group(5, [1, 2]), group(2, [1, 2, 3])
 ([[1], [2], [3]], [[1, 2]], [[1, 2], [3]])`),
+      ],
+    },
+    {
+      id: 'fa22f-5-tests', problem: 'fa22f-5', verified: true,
+      verification: verification({ passing: 1, failing: 21 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> count_change_register(20, 10)  # Excludes 20 pennies and excludes 1 nickel + 15 pennies
+7
+>>> count_change_register(20, 2)   # 10-10, 10-5-5
+2`),
+        exam(`>>> count_change_register(100, 10)
+84
+>>> count_change_register(100, 100)
+292`),
+        added(`>>> count_change_register(25, 2), count_change_register(0, 3), count_change_register(3, 2), count_change_register(5, 0)
+(2, 1, 0, 0)
+>>> count_change_register(10, 1)  # 10, 5-1-1-1-1-1 needs 5 pennies, so only one way
+1`),
+      ],
+    },
+    {
+      id: 'fa22f-6-tests', problem: 'fa22f-6', verified: true,
+      verification: verification({ passing: 3, failing: 16 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree('E', [Tree('F', [Tree('A', [Tree('B'), Tree('C')]), Tree('D', [Tree('H')]), Tree('G')])])
+>>> sorted(tree_to_table(t))
+[('A', 'B'), ('A', 'C'), ('D', 'H'), ('E', 'F'), ('F', 'A'), ('F', 'D'), ('F', 'G')]`),
+        added(`>>> tree_to_table(Tree('A')), tree_to_table(Tree('A', [Tree('B')]))
+([], [('A', 'B')])
+>>> sorted(tree_to_table(Tree(1, [Tree(2, [Tree(3, [Tree(4)])])])))
+[(1, 2), (2, 3), (3, 4)]`),
+      ],
+    },
+    {
+      id: 'fa22f-7a-tests', problem: 'fa22f-7a', verified: true,
+      verification: verification({ passing: 2, failing: 8 }, '2026-11-17'),
+      provenance: 'Exam doctests from the problem’s docstring except its last one (since Python 3.7 a generator that lets StopIteration escape raises RuntimeError instead), plus added boundary cases written for this app (marked “Added”).', setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> a = three_flips(iter("HTTHHT"))
+>>> next(a)  # Coin flips 0, 1, and 2
+'HTT'
+>>> next(a)  # Coin flips 1, 2, and 3
+'TTH'
+>>> next(a)  # Coin flips 2, 3, and 4
+'THH'
+>>> next(a)  # Coin flips 3, 4, and 5
+'HHT'`),
+        added(`>>> a = three_flips(iter('HTHTH'))
+>>> [next(a) for _ in range(3)]
+['HTH', 'THT', 'HTH']
+>>> b = three_flips(iter('TTTT'))
+>>> next(b), next(b)
+('TTT', 'TTT')`),
+      ],
+    },
+    {
+      id: 'fa22f-7b-tests', problem: 'fa22f-7b', verified: true,
+      verification: verification({ passing: 4, failing: 6 }, '2026-11-17'),
+      provenance: EXAM, setup: THREE_FLIPS, setupNote: 'These tests provide three_flips from part (a) (the official solution).', setupFrom: ['fa22f-7a'],
+      cases: [
+        exam(`>>> penney(iter("HTTHTHTTHTHTHH"),"THH","HHH")
+1
+>>> penney(iter("HTTHTHTTHTHTHH"),"HHH","THH")
+2
+>>> penney(iter("HTTHTHTTHTHTHH"),"HTT","THH")  # HTT happens first
+1`),
+        added(`>>> penney(iter("TTH"), "HHH", "TTH"), penney(iter("TTH"), "TTH", "HHH"), penney(iter("HTHHHT"), "HHT", "HHH")
+(2, 1, 2)
+>>> penney(iter("THHTTT"), "TTT", "HHH")  # THH is in "TTTHHH" but is neither player's sequence
+1`),
+      ],
+    },
+    {
+      id: 'fa22f-10-tests', problem: 'fa22f-10', verified: true,
+      verification: verification({ passing: 2, failing: 2 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = table_to_tree([['A','B'],['A','C'],['D','H'],['F','A'],['F','D'],['F','G'],['E','F']],'E')
+>>> t.label, [b.label for b in t.branches], sorted([b.label for b in t.branches[0].branches])
+('E', ['F'], ['A', 'D', 'G'])
+>>> sorted(b.label for b in t.branches[0].branches[0].branches)
+['B', 'C']`),
+        added(`>>> table_to_tree([['x', 'y']], 'x')
+Tree('x', [Tree('y')])
+>>> table_to_tree([['b', 'c'], ['a', 'b']], 'a')
+Tree('a', [Tree('b', [Tree('c')])])`),
       ],
     },
   ];
