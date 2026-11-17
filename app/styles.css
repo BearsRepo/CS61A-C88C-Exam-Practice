@@ -121,6 +121,8 @@ p code, li code, .rich code { background: var(--code-bg); padding: 0 3px; border
 .landing-resume { background: var(--accent-2); color: var(--ink); border: 0; border-radius: 999px; padding: 8px 18px; font-weight: 700; box-shadow: 0 4px 14px rgba(0,0,0,.2); }
 @keyframes pulse { 50% { opacity: .55; } }
 @font-face { font-family: "Patrick Hand"; src: url("assets/patrick-hand.woff2") format("woff2"); font-display: swap; }
+.landing-privacy { font-size: 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,30,70,.85); text-align: center; padding: 0 12px; }
+.landing-privacy a { color: #fff; text-decoration: underline; font-weight: 600; }
 .landing-byline { font-family: "Patrick Hand", "Comic Sans MS", cursive; font-size: 17px; color: #fff; text-shadow: 0 1px 3px rgba(0,30,70,.75); letter-spacing: .02em; }
 @media (prefers-reduced-motion: reduce) { .landing-hint { animation: none; } }
 
@@ -839,3 +841,16 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .scope-note { flex-basis: 100%; font-family: var(--sans); font-size: 12.5px; line-height: 1.45; color: var(--ink); background: var(--warn-soft); border: 1px solid #f0d27a; border-radius: 8px; padding: 7px 10px; margin: 2px 0 8px; }
 .scope-note b { font-weight: 700; }
 .scope-note code { background: #fff; border: 1px solid #e5cf86; border-radius: 4px; padding: 0 4px; }
+
+/* Privacy Policy page (privacy.html) */
+.policy { max-width: 760px; margin: 0 auto; padding: 28px 20px 64px; }
+.policy h1 { font-family: var(--serif); color: var(--accent); margin: 8px 0 2px; }
+.policy h2 { font-family: var(--serif); color: var(--accent); font-size: 21px; margin: 28px 0 6px; }
+.policy-meta { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+.policy-back { margin: 0; font-size: 14px; }
+.policy-back:last-child { margin-top: 32px; }
+.policy a { color: var(--accent); }
+.policy ul { padding-left: 22px; }
+.policy li { margin: 4px 0; }
+.policy-summary { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 18px 8px; margin: 18px 0; }
+.policy-summary h2 { font-size: 18px; margin-top: 14px; }

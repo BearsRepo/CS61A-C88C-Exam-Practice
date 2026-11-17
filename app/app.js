@@ -62,6 +62,9 @@
   const SQL_TOPICS_IN_SCOPE = SQL_TOPICS.map((t) => t.id).filter((id) => !OUT_TOPICS.has(id));
   const GUIDES = window.CS61A_GUIDES || {}; // topic id -> study-guide concepts (data/study_guides.js)
   const TOUR = window.CS61A_TOUR || null;   // first-visit tour and one-time tips (tour.js)
+  const AUTH = window.CS61A_AUTH || null;   // anonymous Supabase sign-in (auth.js); never waited on
+  const ANALYTICS = window.CS61A_ANALYTICS || null; // usage tracking (analytics.js); background only, never waited on
+  const newAid = () => (ANALYTICS ? ANALYTICS.newId() : undefined); // a practice set's / exam's id for usage tracking
   const QMAP = Object.fromEntries(EVERY_QUESTION.map((q) => [q.id, q]));
   const ORDER = Object.fromEntries(EVERY_QUESTION.map((q, i) => [q.id, i]));
   const STORE_KEY = 'cs61a-practice:v1';
@@ -103,6 +106,7 @@
   function save() {
     if (staleTab) return;
     try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage unavailable: work lives in memory only */ }
+    if (ANALYTICS) ANALYTICS.changed(); // usage tracking works out what changed, a moment later
   }
   let saveTimer = null;
   function saveSoon() {
@@ -261,6 +265,8 @@
   const ui = { screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
+  // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
+  const trackedSession = (s) => (s && s.reviewOf ? attemptById(s.reviewOf) : s) || null;
   function cur() {
     if (ui.view === 'exam') return store.exam;
     if (ui.view === 'review') return workspaceFor(ui.attemptId);
@@ -1844,6 +1850,7 @@
   function dgBlur() { if (dgIsEditing(document.activeElement)) document.activeElement.blur(); }
   function dgRecord(before) { // the change is already made
     if (before === dgSnapshot()) return;
+    if (ANALYTICS && dg.pid) ANALYTICS.feature('diagram_edit', { session: trackedSession(cur()), problem: dg.pid, source: PMAP[dg.pid].exam });
     const h = dgHist();
     h.undo.push(before);
     h.redo = [];
@@ -2448,7 +2455,7 @@
   function newSession(ids, title) {
     const p = store.prefs;
     const timer = p.timerOn ? { durationMs: p.minutes * 60000, remainingMs: p.minutes * 60000, runningSince: Date.now(), expired: false } : null;
-    store.session = { ids, groups: groupIds(ids), index: 0, title, answers: {}, checked: {}, revealed: {}, selfGrade: {}, marked: {}, eliminated: {}, notes: {}, annotations: {}, timer, startedAt: Date.now(), finishedAt: null, finished: false };
+    store.session = { aid: newAid(), ids, groups: groupIds(ids), index: 0, title, answers: {}, checked: {}, revealed: {}, selfGrade: {}, marked: {}, eliminated: {}, notes: {}, annotations: {}, timer, startedAt: Date.now(), finishedAt: null, finished: false };
     setView('practice');
     ui.screen = 'practice';
     ui.navOpen = false;
@@ -2492,6 +2499,7 @@
     ui.screen = 'results';
     ui.navOpen = false;
     save();
+    if (ANALYTICS) ANALYTICS.changed(true); // capture the finished set's final snapshot now (Review can't change it)
     render();
     window.scrollTo(0, 0);
   }
@@ -2546,7 +2554,7 @@
     const ids = pids.flatMap((pid) => partsOf(pid).map((q) => q.id)); // group order as given; parts in exam order
     const now = Date.now();
     store.exam = {
-      id: `x${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`, mode: 'exam', kind, examId: examId || null,
+      id: `x${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`, aid: newAid(), mode: 'exam', kind, examId: examId || null,
       title: kind === 'full' ? EXAMS[examId].label : `Custom exam · ${pids.length} question${pids.length === 1 ? '' : 's'}`,
       ids, groups: groupIds(ids), index: 0, answers: {}, checked: {}, revealed: {}, selfGrade: {}, marked: {}, eliminated: {},
       notes: {}, annotations: {},
@@ -2584,6 +2592,7 @@
     s.leftAt = null;
     if (s.timer && s.timer.remainingMs > 0 && !s.timer.runningSince) s.timer.runningSince = Date.now();
     if (!s.activeSince) s.activeSince = Date.now();
+    if (ANALYTICS) ANALYTICS.activity(s);
     setView('exam');
     ui.screen = 'practice';
     save();
@@ -2608,6 +2617,7 @@
     setView('review', s.id);
     ui.screen = 'exam-results';
     save();
+    if (ANALYTICS) ANALYTICS.changed(true); // capture the submitted exam's final snapshot now
     render();
     window.scrollTo(0, 0);
     announce(auto ? 'Time is up. Your exam was submitted automatically.' : 'Exam submitted.');
@@ -2631,7 +2641,7 @@
       <button class="landing-hit" data-action="enter" aria-label="CS61A Practice: Practice, Learn, Master. Start Practicing">
         <img src="assets/home_page.jpg" alt="" draggable="false">
       </button>
-      <div class="landing-foot">${resume}<span class="landing-hint">Click anywhere to start</span><span class="landing-byline">Made by Jacob Kao and Osbert Huang</span></div>
+      <div class="landing-foot">${resume}<span class="landing-hint">Click anywhere to start</span><span class="landing-privacy">Anonymous usage data helps improve this site. <a href="privacy.html">Privacy Policy</a></span><span class="landing-byline">Made by Jacob Kao and Osbert Huang</span></div>
     </main>`;
   }
 
@@ -2779,7 +2789,7 @@
 
       <div class="feedback-row"><a class="btn btn-sm btn-home btn-feedback" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer">${icon('msg')}Give Feedback</a><span class="feedback-note">Your feedback can make this platform better!</span></div>
       <div class="notice">No account needed. Your answers, code notes and annotations are saved in <b>this browser on this device</b> and are gone if you clear site data.</div>
-      <p class="disclaimer">Privacy: this site uses Cloudflare Web Analytics, which collects aggregate traffic statistics (such as visits and page views) without cookies. Your answers, code, grades and exam history stay in your browser’s localStorage and are never sent anywhere, unless you choose Python Tutor on a question, which opens pythontutor.com with that question’s code.</p>
+      <p class="disclaimer">Privacy: this site uses Cloudflare Web Analytics for aggregate visit counts, without cookies. When you start practicing, Supabase gives this browser an anonymous ID (no name, email or password), and the site records usage summaries under it: which questions you practice, automatic grades and your self-grades, Check counts, solutions opened, Run Code and other feature use, estimated active time and active days. Your answers, code, notes and exam history stay in your browser’s localStorage and are never sent anywhere, unless you choose Python Tutor on a question, which opens pythontutor.com with that question’s code. <a href="privacy.html">Privacy Policy</a></p>
       <p class="disclaimer">Independent student project, not an official UC Berkeley / CS 61A service. Questions and answers are transcribed from CS 61A Midterm 2 (Fall 2025, Spring 2025, Fall 2024, Spring 2024, Fall 2023, Spring 2023, Fall 2022 and Fall 2021), the Fall 2025 and Spring 2025 Finals (including their SQL questions) and, for Gleam, from this semester’s exam-prep worksheets and lecture examples, and credited on each question. Explanations were written for this prototype and are not official.</p>
     </main>`;
   }
@@ -3078,6 +3088,7 @@
       msg.hidden = false;
       return;
     }
+    if (ANALYTICS) ANALYTICS.feature('python_tutor', { session: trackedSession(cur()), problem: pid, source: PMAP[pid].exam });
     const code = window.CS61A_TUTOR.build(pid, runnableCode(pid), window.CS61A_BANK, window.CS61A_TEST_SUITES);
     window.open(`https://pythontutor.com/cp/composingprograms.html#code=${encodeURIComponent(code)}&cumulative=true&curInstr=0&mode=edit&py=3`, '_blank', 'noopener');
   }
@@ -3213,6 +3224,7 @@
     const pid = leftPid;
     if (!pid || !runnerAllowed(s, pid) || runBusy) return;
     const runner = runnerFor(pid);
+    if (ANALYTICS) ANALYTICS.feature('run_code', { session: trackedSession(s), problem: pid, source: PMAP[pid].exam });
     const key = runKey(s, pid);
     // A select-all blank with several checked options: run (and test) the code once per option, each on its own, so
     // every checked option gets its own verdict. (If two such blanks had several options, only the first is varied.)
@@ -3821,6 +3833,9 @@
   function render() {
     // Removing a focused input fires blur/change handlers that may call render() again; defer those.
     if (rendering) { queueMicrotask(render); return; }
+    // Past the welcome page by any route (Start Practicing, a Resume button, an exam reopening by itself), make sure
+    // there is an anonymous session. Runs in the background; does nothing once signed in or when sign-in is off.
+    if (AUTH && ui.screen !== 'landing') AUTH.ensureSession();
     rendering = true;
     try { renderNow(); } finally { rendering = false; }
   }
@@ -3969,6 +3984,7 @@
         setView('practice'); ui.screen = 'practice'; ui.menu = null;
         const t = store.session && store.session.timer; // restart a timer that Exit paused
         if (t && t.pausedByExit) { delete t.pausedByExit; if (t.remainingMs > 0) t.runningSince = Date.now(); }
+        if (ANALYTICS) ANALYTICS.activity(store.session);
         break;
       }
       // Results pages / review: back to the home page. Never starts, ends or changes a session or attempt.
@@ -4009,6 +4025,7 @@
       case 'exam-results': ui.screen = 'exam-results'; ui.navOpen = false; ui.dirOpen = false; window.scrollTo(0, 0); break;
       case 'exam-review': { // opens the attempt's review workspace (never the attempt itself)
         const w = workspaceFor(ui.attemptId);
+        if (ANALYTICS) ANALYTICS.feature('review_open', { session: attemptById(ui.attemptId) });
         ui.screen = 'practice';
         w.index = Number(btn.dataset.i);
         save(); render();
@@ -4077,6 +4094,7 @@
         const ans = s.answers[q.id];
         if (isMC(q)) s.checked[q.id] = gradeMC(q, ans) ? 'correct' : 'incorrect';
         else s.checked[q.id] = matchesOfficial(q, ans) ? 'correct' : 'unmatched';
+        if (ANALYTICS) ANALYTICS.checked(s, q.id, s.checked[q.id]);
         announce(`Part ${q.label}: ${{ correct: 'Correct.', incorrect: 'Incorrect.', unmatched: 'Not an exact match. Show the solution to grade yourself.' }[s.checked[q.id]]}`);
         break;
       }
@@ -4334,6 +4352,41 @@
     const t = store.exam.timer;
     if (t && t.runningSince && timeLeft(t) <= 0) submitExam(true);
     else if (!store.exam.leftAt) { setView('exam'); ui.screen = 'practice'; }
+  }
+  // Usage tracking reads the app's state through these (the same grading rules as the app), never the answers.
+  if (ANALYTICS) {
+    ANALYTICS.init({
+      getStore: () => store,
+      save,
+      isStale: () => staleTab, // an out-of-date tab (another tab saved since) tracks nothing
+      isGleam,
+      part(id) {
+        const q = QMAP[id];
+        return q && PMAP[q.problem] ? { problem: q.problem, source: PMAP[q.problem].exam, topics: q.topics || [], auto: autoGradable(q) } : null;
+      },
+      // A practice part's result. Only choices and exact short-answer matches are automatic grades; a short answer
+      // that isn't an exact match is 'unmatched' (not wrong), and the student's own grade is kept apart.
+      practiceResult(s, id) {
+        const q = QMAP[id];
+        if (!hasAnswer(s, id)) return 'unanswered';
+        if (isMC(q)) return gradeMC(q, s.answers[id]) ? 'correct' : 'incorrect';
+        if (q.type === 'short_answer' && matchesOfficial(q, s.answers[id])) return 'correct';
+        if (s.selfGrade && s.selfGrade[id]) return s.selfGrade[id] === 'correct' ? 'self_correct' : 'self_incorrect';
+        return autoGradable(q) ? 'unmatched' : 'not_graded';
+      },
+      // The set or exam being worked on right now (for engaged time); not results pages or reviews.
+      activeAid() {
+        const s = ui.screen === 'practice' && cur();
+        return s && !isReview(s) && !locked(s) && s.aid ? s.aid : null;
+      },
+    });
+    // Walkthrough links (Practice Summary, Exam Results) are plain links, not app actions.
+    app.addEventListener('click', (e) => {
+      const a = e.target.closest('a.btn-walk');
+      if (!a) return;
+      const where = ui.screen === 'exam-results' ? attemptById(ui.attemptId) : ui.screen === 'results' ? store.session : null;
+      ANALYTICS.feature('walkthrough_open', { session: where, source: a.dataset.exam || null });
+    });
   }
   if (TOUR) {
     TOUR.init({
