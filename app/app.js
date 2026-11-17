@@ -100,18 +100,9 @@
   // If another tab writes the store, this tab's copy is out of date: saving it would overwrite the other tab's
   // work (e.g. erase an exam submitted there). Stop saving and ask for a reload instead (see the 'storage' listener).
   let staleTab = false;
-  // Browsers give a site about 5 million characters of localStorage (Chrome measured 5.2 million). The home page warns
-  // from 90% on, and when a save fails because storage is full (new work would otherwise be lost silently).
-  const STORAGE_LIMIT = 5000000;
-  const storage = { used: 0, full: false };
   function save() {
     if (staleTab) return;
-    const json = JSON.stringify(store);
-    storage.used = json.length;
-    try { localStorage.setItem(STORE_KEY, json); storage.full = false; } catch (e) {
-      // storage unavailable (e.g. blocked): work lives in memory only; a quota error means it is full
-      if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) storage.full = true;
-    }
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage unavailable: work lives in memory only */ }
   }
   let saveTimer = null;
   function saveSoon() {
@@ -173,13 +164,6 @@
     return notes;
   }
 
-  // A practice set kept in the history: a practice session with its own notes and annotations.
-  function migratePracticeSet(s) {
-    if (!migrateSession(s)) return null;
-    s.notes = migrateNotes(isObj(s.notes) ? s.notes : {});
-    s.annotations = isObj(s.annotations) ? s.annotations : {};
-    return s;
-  }
   // Exam attempts have the same shape as a practice session plus mode: 'exam'. They carry their own
   // scratch notes and annotations, so practice work never shows up inside an exam (or the reverse).
   function migrateAttempt(a) {
@@ -196,8 +180,6 @@
     prefs: cleanPrefs(Object.assign({}, DEFAULT_PREFS, isObj(saved && saved.prefs) ? saved.prefs : {}), DEFAULT_PREFS,
       { topics: TOPICS_IN_SCOPE, exams: Object.keys(EXAMS), glTopics: GL.TOPICS.map((t) => t.id), glSources: Object.keys(GL.SOURCES), sqlTopics: SQL_TOPICS_IN_SCOPE, sqlSources: SQL_SOURCES, difficulties: DIFFS }),
     session: migrateSession(saved && saved.session), // the practice set; carries its own notes/annotations (see below)
-    // Practice history: every other practice set, finished or not (the open one is `session`). Newest last.
-    practice: (Array.isArray(saved && saved.practice) ? saved.practice : []).map(migratePracticeSet).filter(Boolean),
     examPrefs: cleanPrefs(Object.assign({}, DEFAULT_EXAM_PREFS, isObj(saved && saved.examPrefs) ? saved.examPrefs : {}), DEFAULT_EXAM_PREFS,
       { topics: TOPICS_IN_SCOPE.concat(GLEAM_CHIP, SQL_CHIP), picked: EXAM_PIDS }),
     exam: migrateAttempt(saved && saved.exam),         // the exam in progress (never submitted), or null
@@ -215,10 +197,6 @@
     store.session.annotations = Object.fromEntries(Object.entries(oldAnns).filter(([pid]) => own.has(pid) && Array.isArray(oldAnns[pid])));
   }
   if (store.session) store.session.annotations = store.session.annotations || {};
-  // Every practice set has an id (the history opens and deletes sets by id). Sets saved before the history had none.
-  const newSetId = () => `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  [store.session, ...store.practice].forEach((s) => { if (s && typeof s.id !== 'string') s.id = newSetId(); });
-  storage.used = JSON.stringify(store).length; // for the storage warning, before the first save
   // Drop review workspaces whose attempt is gone or whose record is damaged (they are rebuilt from the attempt on open).
   Object.keys(store.reviews).forEach((id) => {
     const w = store.reviews[id];
@@ -2467,36 +2445,10 @@
     if (!ids.length) return 'All topics';
     return ids.map((id) => topicById(id).name).join(', ');
   }
-  // Move the open practice set into the history (a running timer is paused, and restarts when the set is resumed).
-  function shelveSession() {
-    const s = store.session;
-    if (!s) return;
-    if (s.timer && s.timer.runningSince) { pauseTimer(s.timer); s.timer.pausedByExit = true; }
-    store.practice.push(s);
-    store.session = null;
-  }
-  // Open a set from the practice history: a finished set shows its summary, an unfinished one continues.
-  function openPracticeSet(id) {
-    if (!store.session || store.session.id !== id) {
-      const i = store.practice.findIndex((x) => x.id === id);
-      if (i < 0) return;
-      const target = store.practice.splice(i, 1)[0];
-      shelveSession();
-      store.session = target;
-    }
-    const s = store.session;
-    setView('practice');
-    ui.menu = null;
-    if (s.finished) { ui.screen = 'results'; window.scrollTo(0, 0); return; }
-    ui.screen = 'practice';
-    const t = s.timer; // restart a timer that was paused when the set was left
-    if (t && t.pausedByExit) { delete t.pausedByExit; if (t.remainingMs > 0) t.runningSince = Date.now(); }
-  }
   function newSession(ids, title) {
     const p = store.prefs;
     const timer = p.timerOn ? { durationMs: p.minutes * 60000, remainingMs: p.minutes * 60000, runningSince: Date.now(), expired: false } : null;
-    shelveSession(); // the previous set stays in the practice history
-    store.session = { id: newSetId(), ids, groups: groupIds(ids), index: 0, title, answers: {}, checked: {}, revealed: {}, selfGrade: {}, marked: {}, eliminated: {}, notes: {}, annotations: {}, timer, startedAt: Date.now(), finishedAt: null, finished: false };
+    store.session = { ids, groups: groupIds(ids), index: 0, title, answers: {}, checked: {}, revealed: {}, selfGrade: {}, marked: {}, eliminated: {}, notes: {}, annotations: {}, timer, startedAt: Date.now(), finishedAt: null, finished: false };
     setView('practice');
     ui.screen = 'practice';
     ui.navOpen = false;
@@ -2802,7 +2754,6 @@
     const modeBtn = (m, title, sub) => `<button class="mode-opt" id="mode-${m}" data-action="mode" data-v="${m}" aria-pressed="${mode === m}"><b>${title}</b><span>${sub}</span></button>`;
     return `<main class="home">
       <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div>${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div>
-      ${storageWarningHTML()}
       ${examResumeHTML()}
       ${resume}
 
@@ -2824,7 +2775,7 @@
           <div class="summary">${practiceSummaryHTML()}</div>
           <button class="btn btn-primary btn-lg" data-action="start" ${n && minutesOk ? '' : 'disabled'}>Start practice →</button>
         </div>
-      </section>${renderPracticeHistory()}`}
+      </section>`}
 
       <div class="feedback-row"><a class="btn btn-sm btn-home btn-feedback" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer">${icon('msg')}Give Feedback</a><span class="feedback-note">Your feedback can make this platform better!</span></div>
       <div class="notice">No account needed. Your answers, code notes and annotations are saved in <b>this browser on this device</b> and are gone if you clear site data.</div>
@@ -2964,33 +2915,6 @@
 
   function scoreText(sc) {
     return sc.auto ? `Auto-graded ${fmtPts(sc.earned)} / ${fmtPts(sc.possible)} pts` : 'No auto-graded points';
-  }
-  // Practice history: every practice set, newest first, with a Finished / Unfinished tag and a Delete button.
-  function renderPracticeHistory() {
-    const sets = [store.session, ...store.practice].filter(Boolean).sort((a, b) => b.startedAt - a.startedAt);
-    if (!sets.length) return '';
-    const rows = sets.map((s) => {
-      const answered = s.ids.filter((id) => hasAnswer(s, id)).length;
-      const c = { correct: 0, incorrect: 0 };
-      s.ids.forEach((id) => { const st = statusOf(s, id); if (st in c) c[st]++; });
-      const detail = s.finished
-        ? `${when(s.finishedAt || s.startedAt)} · ${plural(s.groups.length, 'question')} · ${c.correct} correct · ${c.incorrect} incorrect · ${s.ids.length - answered} unanswered · ${fmt((s.finishedAt || Date.now()) - s.startedAt)} spent`
-        : `${when(s.startedAt)} · Question ${s.index + 1} of ${s.groups.length} · ${answered} of ${s.ids.length} parts answered${s.timer ? ` · ${fmt(timeLeft(s.timer))} left` : ''}`;
-      return `<div class="hist-item">
-        <button class="result-row hist-row" data-action="open-set" data-id="${s.id}" title="${s.finished ? 'See this set’s summary' : 'Continue this set'}">
-          <span class="t">${esc(s.title)}<small>${detail}</small></span>
-          <span class="badge ${s.finished ? 'set-done' : 'set-open'}">${s.finished ? 'Finished' : 'Unfinished'}</span></button>
-        <button class="hist-del" data-action="delete-set" data-id="${s.id}" aria-label="Delete ${esc(s.title)} from the practice history" title="Delete">✕</button>
-      </div>`;
-    }).join('');
-    return `<section class="history practice-history" aria-label="Practice history"><h2>Practice history</h2><div class="result-list">${rows}</div>
-      <p class="hint">Every practice set is kept, finished or not. Click a finished set to see its summary and review it, or an unfinished one to continue it.</p></section>`;
-  }
-  function storageWarningHTML() {
-    const pct = Math.round((storage.used / STORAGE_LIMIT) * 100);
-    if (storage.full) return `<div class="storage-warn" role="alert"><b>Storage is full.</b> Your latest work could not be saved in this browser. Delete old sets in Practice history or Exam history to make room.</div>`;
-    if (pct < 90) return '';
-    return `<div class="storage-warn" role="note"><b>Storage almost full (${pct}%).</b> This browser keeps about 5 MB for this site. Delete old sets in Practice history or Exam history, or new work may not be saved.</div>`;
   }
   function renderHistory() {
     if (!store.attempts.length) return '';
@@ -3631,7 +3555,6 @@
   function bannerHTML(s) {
     if (isReview(s)) return `<div class="review-banner" role="note"><span>Review workspace: edit answers and code freely. Your submitted answers and score stay as they were.</span><span class="banner-actions"><button class="btn btn-sm" data-action="exam-results">Back to results</button><button class="btn btn-sm btn-home" data-action="go-home">${icon('home')}Go to Home</button></span></div>`;
     if (isExam(s)) return '';
-    if (s.finished) return `<div class="review-banner" role="note"><span>Reviewing a finished set: ${esc(s.title)}</span><span class="banner-actions"><button class="btn btn-sm" data-action="show-results">Back to summary</button><button class="btn btn-sm btn-home" data-action="go-home">${icon('home')}Go to Home</button></span></div>`;
     return s.timer && s.timer.expired
       ? `<div class="expired-banner" role="alert"><span>⏰ Time’s up. Your answers are saved, so you can keep reviewing or finish.</span><button class="btn btn-sm" data-action="finish">Finish set</button></div>` : '';
   }
@@ -3645,10 +3568,9 @@
         <button class="btn btn-primary" data-action="next" ${isLast ? 'disabled' : ''}>Next</button>
         ${review ? '' : '<button class="btn btn-submit" data-action="submit-exam">Submit Exam</button>'}`
       : `<button class="btn btn-primary" data-action="prev" ${s.index === 0 ? 'disabled' : ''}>Back</button>
-        <button class="btn btn-primary" data-action="${isLast ? (s.finished ? 'show-results' : 'finish') : 'next'}">${isLast ? (s.finished ? 'Summary' : 'Finish') : 'Next'}</button>`;
+        <button class="btn btn-primary" data-action="${isLast ? 'finish' : 'next'}">${isLast ? 'Finish' : 'Next'}</button>`;
     const left = review ? '<button class="btn btn-ghost" data-action="exam-results">← Results</button>'
       : exam ? '<button class="btn" data-action="save-leave">Save &amp; Leave</button>'
-      : s.finished ? '<button class="btn btn-ghost" data-action="show-results">← Summary</button>'
       : '<button class="btn btn-ghost" data-action="home">← Exit</button>';
     return `<div class="left">${left}<div class="note-dock" id="note-dock" role="toolbar" aria-label="Minimized notes">${dockButtons()}</div></div>
       <div class="center"><button class="nav-toggle" id="nav-toggle" data-action="toggle-nav" aria-expanded="${ui.navOpen}" aria-haspopup="dialog"${ui.navOpen ? ' aria-controls="navigator"' : ''}>Question ${s.index + 1} of ${s.groups.length} <span aria-hidden="true">${ui.navOpen ? '▾' : '▴'}</span></button></div>
@@ -4041,6 +3963,7 @@
       }
       case 'start':
         ui.menu = null;
+        if (store.session && !store.session.finished && !confirm('Starting a new set replaces your unfinished one. Continue?')) return;
         startFromPrefs(); return;
       case 'resume': {
         setView('practice'); ui.screen = 'practice'; ui.menu = null;
@@ -4064,15 +3987,7 @@
       }
       case 'new-set': // Practice Summary: home, with the practice setup showing
         p.mode = 'practice'; setView('practice'); ui.screen = 'home'; window.scrollTo(0, 0); break;
-      case 'discard': shelveSession(); break; // Start Over: the unfinished set moves to the practice history
-      case 'open-set': openPracticeSet(btn.dataset.id); break;
-      case 'delete-set': {
-        const id = btn.dataset.id;
-        const set = store.session && store.session.id === id ? store.session : store.practice.find((x) => x.id === id);
-        if (!set || !confirm(`Delete "${set.title}" from your practice history? Its answers, code notes and annotations are removed for good.`)) return;
-        if (set === store.session) store.session = null; else store.practice = store.practice.filter((x) => x !== set);
-        break;
-      }
+      case 'discard': if (!confirm('Discard your unfinished set? Your answers in it will be lost.')) return; store.session = null; break;
       case 'show-results': setView('practice'); ui.screen = 'results'; break;
       case 'mode': p.mode = btn.dataset.v; ui.menu = null; break;
       // exam setup (home, Exam Mode)
@@ -4124,6 +4039,7 @@
       case 'practice-group': { // recommendation: a new practice set with just this question group (all its parts)
         const pid = btn.dataset.pid;
         if (!PMAP[pid]) return;
+        if (store.session && !store.session.finished && !confirm('Practicing this question replaces your unfinished practice set. Continue?')) return;
         const pr = PMAP[pid];
         p.mode = 'practice';
         newSession(partsOf(pid).map((q) => q.id), `Practice: ${pr.title} (${shortExam(pr.exam)} Q${pr.number})`);

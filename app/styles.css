@@ -551,15 +551,6 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .unpick:hover { color: var(--bad); background: var(--bad-soft); }
 .history h2 { font-family: var(--serif); color: var(--accent); font-size: 22px; margin: 26px 0 10px; }
 .result-row.hist-row { grid-template-columns: minmax(0, 1fr) auto; }
-/* Practice history: a row is the set (opens it) plus a Delete button */
-.hist-item { display: flex; align-items: stretch; border-top: 1px solid var(--line); }
-.hist-item:first-child { border-top: 0; }
-.hist-item .result-row { flex: 1; min-width: 0; border-top: 0; }
-.hist-del { flex: 0 0 auto; width: 44px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--muted); font-size: 14px; cursor: pointer; }
-.hist-del:hover { background: var(--bad-soft); color: var(--bad); }
-.badge.set-done { background: var(--good-soft); color: var(--good); }
-.badge.set-open { background: var(--bad-soft); color: var(--bad); }
-.storage-warn { font-size: 14px; line-height: 1.45; background: var(--bad-soft); border: 1px solid #f0b8b2; color: var(--ink); border-radius: 10px; padding: 12px 16px; margin: 18px 0; }
 
 /* ─────────── Exam taking & review ─────────── */
 .mode-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; background: var(--accent); color: #fff; border-radius: 4px; padding: 0 6px; }
