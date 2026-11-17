@@ -1,6 +1,6 @@
 // Past CS 61A FINAL exams, added to the question bank in questions.js (load this file right after it).
 //
-// Content source: CS 61A Final of Fall 2025 and Spring 2025 (exam + official solutions, final/ in the repo),
+// Content source: CS 61A Final of Fall 2025, Spring 2025, Fall 2024, Spring 2024, Fall 2023, Spring 2023, Fall 2022, Fall 2021 and Fall 2020 (exam + official solutions, final/ in the repo),
 // transcribed for a personal/prototype build. Verify course-material permissions before publishing.
 //
 // Same shapes as questions.js (EXAMS, PROBLEMS, QUESTIONS, ANSWER_KEY), plus:
@@ -20,7 +20,7 @@
   const B = window.CS61A_BANK;
   const code = (s) => s.replace(/^\n/, '').replace(/\s+$/, '');
 
-  // complete: every question of the PDF is transcribed. Both total 75 points (A+ questions are 0 points).
+  // complete: every question of the PDF is transcribed. Fall 2025 and Spring 2025 total 75 points (A+ questions are 0 points).
   const EXAMS = {
     fa25f: { id: 'fa25f', label: 'Fall 2025 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
     sp25f: { id: 'sp25f', label: 'Spring 2025 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
