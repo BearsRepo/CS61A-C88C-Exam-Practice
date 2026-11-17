@@ -4195,4 +4195,413 @@ PROCEDURE: "f"
       'fa21f-5c': { accepted: ['SELECT parent FROM parents, dogs WHERE child=name AND fur="short" GROUP BY parent HAVING COUNT(*)=1;'], explanation: 'Join each child to its row in `dogs`, keep the short-furred children, and keep parents with exactly one of them.' },
     },
   });
+
+  // ───────────────────────────── Fall 2020 Final ─────────────────────────────
+  // An online exam: few, long questions; Q1 gives a finished environment diagram and asks for the code.
+  const FA20_STATES = code(`
+class State:
+    electors = {}
+    def __init__(self, code, electors):
+        self.code = code
+        self.electors = electors
+        State.electors[code] = electors
+
+battleground = [State('AZ', 11), State('PA', 20), State('NV', 6),
+                State('GA', 16), State('WI', 10), State('MI', 16)]
+
+def print_all(s):
+    for x in s:
+        print(x)
+`);
+  const FA20_ELECTION = '**Definition:** For some collection of states `s`, a *win by at least k* is a (possibly empty) subset `w` of `s` such that the total number of electors for the states in `w` is at least `k` more than the total number of electors for the states not in `w` but in `s`. For example, Arizona (AZ), Pennsylvania (PA), and Michigan (MI) have a total of 11 + 20 + 16 = 47 electors. The remaining battleground states have a total of 6 + 16 + 10 = 32 electors. So, the subset `<AZ PA MI>` is a win by 47 - 32 = 15. The total number of electors for an empty set of states is 0. The `print_all` function prints all elements of an iterable.';
+  const FA20_LLAMAS = 'Llambda the llama breeder had four original llamas, but now has 12. An arrow from one llama to another indicates that the first is a parent of the second. For example, Jackie’s parents are Sidney and Finley. All llamas except the originals have 2 parents, and each has a unique name.\n\n**Definition.** An *offspring tree* is a `Tree` instance with string labels in which each node represents a llama and the branches of a node represent its (biological) children. The `Tree` class appears on the Midterm 2 Study Guide. Assume `originals` is a list of offspring trees for the original four: `[Tree(\'Charlie\', ...), Tree(\'Sidney\', ...), Tree(\'Finley\', ...), Tree(\'Frankie\', ...)]`. For example, Sidney’s offspring tree is `Tree(\'Sidney\', [Tree(\'Jaidyn\', [Tree(\'Lee\'), Tree(\'Max\')]), Tree(\'Jackie\', [Tree(\'Alex\')])])`.';
+  const FA20_FAMILY = code(`
+CREATE TABLE family(parent, child);
+INSERT INTO family VALUES ('Charlie', 'Jaidyn'), ('Charlie', 'Jules'), ('Sidney', 'Jaidyn'), ('Sidney', 'Jackie'),
+  ('Finley', 'Jackie'), ('Finley', 'Jan'), ('Finley', 'Jess'), ('Frankie', 'Jules'), ('Frankie', 'Jan'),
+  ('Jaidyn', 'Lee'), ('Jaidyn', 'Max'), ('Jules', 'Alex'), ('Jules', 'Jess'), ('Jackie', 'Alex'), ('Jan', 'Lee'), ('Jan', 'Max');
+`);
+  const FA20_LLAMA_FIG = { src: 'assets/fa20-final-q4.png', width: 1008, height: 588, alt: 'From the exam: a family diagram of 12 llamas. The four originals are Charlie, Sidney, Finley and Frankie. Charlie is a parent of Jaidyn and Jules; Sidney of Jaidyn and Jackie; Finley of Jackie, Jan and Jess; Frankie of Jules and Jan. Jaidyn is a parent of Lee and Max; Jules of Alex and Jess; Jackie of Alex; Jan of Lee and Max.' };
+  add({
+    exam: { id: 'fa20f', label: 'Fall 2020 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
+    problems: {
+      'fa20f-1': {
+        exam: 'fa20f', number: '1', title: 'The Droids You’re Looking For', points: 6,
+        intro: 'Fill in each blank in the code example below so that executing it would generate the environment diagram shown (from tutor.cs61a.org).\n\n**RESTRICTIONS.** You must use all of the blanks. Each blank can only include one statement or expression.',
+        illustration: { src: 'assets/fa20-final-q1.png', width: 790, height: 800, alt: 'From the exam: the target environment diagram. Global binds x to func x(wing), droid to a list [8], and b to func λ(poe) <line 2> [parent=f1]. Frame f1: x [parent=Global] binds wing to a list [1, list] (whose second element is the list [8]), poe to the lambda, and returns the lambda. Frame f2: λ <line 2> [parent=f1] binds poe to a list [8] and returns a list [1, list [8], 8]. Frame f3: λ <line 2> [parent=f1] binds poe to a list containing that list, and returns a list [1, ..., ...].' },
+        code: code(`
+def x(wing):
+    poe = lambda poe: ⟦a⟧
+    wing.append(⟦b⟧)
+    return ⟦c⟧
+
+droid = [8]
+
+b = x([1])
+
+⟦d⟧
+`),
+      },
+      'fa20f-2a': {
+        exam: 'fa20f', number: '2(a)', title: 'Stoned — hailstone', points: 9,
+        intro: '**Definition:** A *hailstone sequence* begins with a positive integer `n`. If `n` is even, divide it by 2. If `n` is odd, triple it and add 1. Repeat until 1 is reached. For example, the hailstone sequence starting at 10 is 10, 5, 16, 8, 4, 2, 1. Assume that all hailstone sequences are finite.\n\nImplement `hailstone`, which takes a positive integer `n` and a one-argument function `g`. It calls `g` on each element of the hailstone sequence starting at `n` and returns the length of the sequence.',
+        code: code(`
+def hailstone(n, g):
+    """Call g on each element of the hailstone sequence starting
+    at n and return its length.
+
+    >>> a = hailstone(10, print)
+    10
+    5
+    16
+    8
+    4
+    2
+    1
+    >>> a
+    7
+    >>> s = []
+    >>> hailstone(10, s.append)
+    7
+    >>> s
+    [10, 5, 16, 8, 4, 2, 1]
+    """
+    if n == 1:
+        h = ⟦a⟧
+    elif ⟦b⟧:
+        h = up
+    else:
+        h = down
+    ⟦c⟧
+    return ⟦d⟧(n, ⟦e⟧)
+
+def up(n, f):
+    return 1 + f(3 * n + 1)
+
+def down(n, f):
+    return 1 + f(n // 2)
+`),
+      },
+      'fa20f-2b': {
+        exam: 'fa20f', number: '2(b)', title: 'Stoned — collide', points: 7,
+        intro: 'Implement `collide`, which takes positive integers `m` and `n`. It returns the earliest element of the hailstone sequence starting at `n` that also appears in the hailstone sequence starting at `m`. Assume `hailstone` is implemented correctly.',
+        code: code(`
+def collide(m, n):
+    """Return the earliest number in the hailstone sequence starting at n that
+    also appears in the hailstone sequence starting at m.
+
+    >>> collide(10, 32)  # 10, 5, 16, 8, ...   vs   32, 16, 8, ...
+    16
+    >>> collide(13, 11)  # 13, 40, ...   vs   11, 34, 17, 52, 26, 13, 40, ...
+    13
+    """
+    s = []
+    hailstone(m, ⟦a⟧)
+    found = None
+    def f(k):
+        ⟦b⟧
+        if ⟦c⟧:
+            ⟦d⟧
+    hailstone(n, f)
+    return ⟦e⟧
+`),
+      },
+      'fa20f-3a': {
+        exam: 'fa20f', number: '3(a)', title: 'College Party — wins', points: 8,
+        intro: 'In a US presidential election, each state has a number of electors. ' + FA20_ELECTION + '\n\nImplement `wins`, a generator function that takes a list of `State` instances `states` and an integer `k`. For every possible win by at least `k` among the states, it yields a linked list containing strings of the two-letter codes for the states in that win. Any order of the wins and any order of the states within a win is acceptable. A linked list is a `Link` instance or `Link.empty`. The `Link` class appears on the Midterm 2 Study Guide.',
+        code: FA20_STATES + '\n\n' + code(`
+def wins(states, k):
+    """Yield each linked list of two-letter state codes that describes a win by at least k.
+
+    >>> print_all(wins(battleground, 50))
+    <AZ PA NV GA WI MI>
+    <AZ PA NV GA MI>
+    <AZ PA GA WI MI>
+    <PA NV GA WI MI>
+    >>> print_all(wins(battleground, 75))
+    <AZ PA NV GA WI MI>
+    """
+    if ⟦a⟧:
+        yield Link.empty
+    if states:
+        first = states[0].electors
+        for win in wins(states[1:], ⟦b⟧):
+            yield Link(⟦c⟧, win)
+        yield from wins(states[1:], ⟦d⟧)
+`),
+      },
+      'fa20f-3b': {
+        exam: 'fa20f', number: '3(b)', title: 'College Party — must_win', points: 7,
+        intro: FA20_ELECTION + '\n\nImplement `must_win`, which takes a list of `State` instances `states` and an integer `k`. It returns a list of two-letter state codes (strings) for all states that appear in every win by at least `k` among the states. Assume `wins` is implemented correctly.',
+        code: FA20_STATES + '\n\n' + code(`
+def must_win(states, k):
+    """List all states that must be won in every scenario that wins by k.
+
+    >>> must_win(battleground, 50)
+    ['PA', 'GA', 'MI']
+    >>> must_win(battleground, 75)
+    ['AZ', 'PA', 'NV', 'GA', 'WI', 'MI']
+    """
+    def contains(s, x):
+        """Return whether x is a value in linked list s."""
+        return (⟦a⟧) and (⟦b⟧)
+    return [⟦c⟧ for s in states if ⟦d⟧([⟦e⟧ for w in wins(states, k)])]
+`),
+      },
+      'fa20f-3c': {
+        exam: 'fa20f', number: '3(c)', title: 'College Party — is_minimal', points: 6,
+        intro: '**Definition.** A win by at least `k` is *minimal* if every state in it is necessary to win by at least `k`. Assume that only the code below has been executed. You may not call `wins` or `must_win`.\n\nImplement `is_minimal`, which takes a non-empty list of strings `state_codes` in which every element is the code for some `State` instance, as well as an integer `k`. It returns whether the states named in `state_codes` form a minimal win by `k` among all `State` instances that have ever been constructed.',
+        code: code(`
+class State:
+    electors = {}
+    def __init__(self, code, electors):
+        self.code = code
+        self.electors = electors
+        State.electors[code] = electors
+
+battleground = [State('AZ', 11), State('PA', 20), State('NV', 6),
+                State('GA', 16), State('WI', 10), State('MI', 16)]
+
+def is_minimal(state_codes, k):
+    """Return whether a non-empty list of state_codes describes a minimal win by
+    at least k.
+
+    >>> is_minimal(['AZ', 'NV', 'GA', 'WI'], 0)  # Every state is necessary
+    True
+    >>> is_minimal(['AZ', 'GA', 'WI'], 0)        # Not a win
+    False
+    >>> is_minimal(['AZ', 'NV', 'PA', 'WI'], 0)  # NV is not necessary
+    False
+    >>> is_minimal(['AZ', 'PA', 'WI'], 0)        # Every state is necessary
+    True
+    """
+    assert state_codes, 'state_codes must not be empty'
+    votes_in_favor = ⟦a⟧
+    total_possible_votes = sum(⟦b⟧)
+    def win_margin(n):
+        "Margin of victory if n votes are in favor and the rest are against."
+        return n - (total_possible_votes - n)
+    if win_margin(sum(votes_in_favor)) < k:
+        return False  # Not a win
+    in_favor_no_smallest = ⟦c⟧
+    return win_margin(in_favor_no_smallest) < k
+`),
+      },
+      'fa20f-4a': {
+        exam: 'fa20f', number: '4(a)', title: 'Last Lecture AMA — related', points: 6,
+        intro: FA20_LLAMAS + '\n\nImplement `related`, which takes two strings `a` and `b` that are names, as well as a list of `offspring_trees` for the originals. It returns whether `a` and `b` are related. That is, they either share a common ancestor or one is an ancestor of the other.',
+        illustration: FA20_LLAMA_FIG,
+        code: code(`
+def related(a, b, offspring_trees):
+    """Return whether the llamas named a and b are related.
+
+    >>> related('Charlie', 'Max', originals)  # Grandparent
+    True
+    >>> related('Jules', 'Jackie', originals)  # Not related, even though they have child
+    False
+    >>> related('Max', 'Jules', originals)     # Both descend from Charlie and Frankie
+    True
+    >>> related('Max', 'Jess', originals)      # Both descend from Charlie and Finley
+    True
+    """
+    def family(t):
+        """Return a list of the names of all llamas in Tree t."""
+        result = ⟦a⟧
+        for b in t.branches:
+            result.⟦b⟧(⟦c⟧)
+        return result
+    for s in ⟦d⟧:
+        if a in s and b in s:
+            return True
+    return False
+`),
+      },
+      'fa20f-4b': {
+        exam: 'fa20f', number: '4(b)', title: 'Last Lecture AMA — parents', points: 8,
+        intro: FA20_LLAMAS + '\n\nImplement `parents`, which takes two strings `a` and `b` that are names of llamas, as well as a list of `offspring_trees` for the originals. It returns whether `a` and `b` are both parents of the same child.',
+        illustration: FA20_LLAMA_FIG,
+        code: code(`
+def parents(a, b, offspring_trees):
+    """Return whether a and b are both parents of the same child.
+
+    >>> parents('Jules', 'Jackie', originals)  # Parents of Alex
+    True
+    >>> parents('Jules', 'Finley', originals)  # Parents of Jess
+    True
+    >>> parents('Jules', 'Jaidyn', originals)
+    False
+    >>> parents('Jules', 'Sidney', originals)
+    False
+    """
+    storage = {}
+    def traverse(t):
+        for b in ⟦a⟧:
+            if ⟦b⟧:
+                storage[b.label] = []
+            storage[b.label].⟦c⟧
+            ⟦d⟧
+    for t in ⟦e⟧:
+        traverse(t)
+    return ⟦f⟧([a in s and b in s for s in storage.⟦g⟧])
+`),
+      },
+      'fa20f-4c': {
+        exam: 'fa20f', number: '4(c)', title: 'Last Lecture AMA — multigenerational (SQL)', points: 6, lang: 'sql',
+        intro: '**Definition.** A llama `p` is *multigenerational* if it has a child whose other parent is also a parent of `p`’s grandchild. For example:\n\n- Finley has a child Jess whose other parent Jules is also a parent of Alex, which is Finley’s grandchild.\n- Frankie has a child Jan whose other parent Finley is also a parent of Jess, which is Frankie’s grandchild.\n\n**Hint:** In the diagram, the labels a through e correspond to the five joined tables in the query and are meant to help you.\n\nThe `family` table has one row per arrow in the llama diagram: a `parent` and a `child`. Complete a query that selects a one-column table with the name of each multigenerational llama. The result has two rows: Finley and Frankie.',
+        illustration: { src: 'assets/fa20-final-q4c.png', width: 696, height: 800, alt: 'From the exam: the llama diagram twice, with arrows labeled a to e. Top: Finley to Jackie (a), Jackie to Alex (b), Jules to Alex (c), Finley to Jess (d), Jules to Jess (e). Bottom: Frankie to Jules (a), Jules to Jess (b), Finley to Jess (c), Frankie to Jan (d), Finley to Jan (e).' },
+        sqlSetup: FA20_FAMILY,
+        code: code(`
+SELECT a.parent FROM family AS a, family AS b, family AS c, family AS d, family AS e
+  WHERE ⟦u⟧ AND ⟦v⟧ AND ⟦w⟧ AND ⟦x⟧ AND ⟦y⟧ AND ⟦z⟧;
+`),
+      },
+      'fa20f-5a': {
+        exam: 'fa20f', number: '5(a)', title: 'SchemeQL — cons', points: 4,
+        intro: 'Implement the procedure `cons` that behaves just like the built-in `cons` when called on a value `x` and a (possibly empty) list `s`. You may not write `cons` in your solution.',
+        code: code(`
+(define (cons x s) ( ⟦a⟧ ⟦b⟧ ⟦c⟧ ))
+`),
+      },
+      'fa20f-5b': {
+        exam: 'fa20f', number: '5(b)', title: 'SchemeQL — join', points: 6,
+        intro: 'The `join` procedure takes two lists of lists `s` and `t`. It returns a list of lists that has one element for each possible pairing of an element of `s` with an element of `t`. Each element of the result is a list that has all the elements of a list from `s` followed by all the elements of a list from `t`.',
+        code: code(`
+;;; scm> (define instructors '((john 61a) (hany 61a) (josh 61b)))
+;;; scm> (define grades '((a b) (c d)))
+;;; scm> (join instructors grades)
+;;; ((john 61a a b) (john 61a c d) (hany 61a a b) (hany 61a c d) (josh 61b a b) (josh 61b c d))
+(define (join s t)
+  (if (null? s) nil
+      (⟦a⟧ (⟦b⟧ (lambda (v) (⟦c⟧ ⟦d⟧ ⟦e⟧)) t)
+           (join ⟦f⟧ t))))
+`),
+      },
+    },
+    questions: [
+      { id: 'fa20f-1a', problem: 'fa20f-1', label: '(a)', points: 1, topics: ['env', 'lists'], difficulty: 'medium', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Which of these could fill in blank (a)? **Check all that apply.**',
+        choices: ['wing + poe', 'wing.extend(poe)', 'wing.append(poe)', 'list(wing).extend(poe)', 'list(wing).append(poe)'] },
+      { id: 'fa20f-1b', problem: 'fa20f-1', label: '(b)', points: 1, topics: ['env', 'lists'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa20f-1c', problem: 'fa20f-1', label: '(c)', points: 1, topics: ['env', 'hof'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (c)?', choices: ['poe', 'poe(droid)', 'poe(wing)', 'poe(b)'] },
+      { id: 'fa20f-1d', problem: 'fa20f-1', label: '(d)', points: 3, topics: ['env', 'hof', 'lists'], difficulty: 'hard', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'fa20f-2a', problem: 'fa20f-2a', label: 'i.', points: 2, topics: ['hof'], difficulty: 'medium', blank: 'a', type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa20f-2b', problem: 'fa20f-2a', label: 'ii.', points: 2, topics: ['fundamentals'], difficulty: 'easy', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa20f-2c', problem: 'fa20f-2a', label: 'iii.', points: 2, topics: ['hof'], difficulty: 'medium', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa20f-2d', problem: 'fa20f-2a', label: 'iv.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'd', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (d)?',
+        choices: ['f', 'g', 'h', 'hailstone', 'up', 'down'] },
+      { id: 'fa20f-2e', problem: 'fa20f-2a', label: 'v.', points: 2, topics: ['hof', 'recursion'], difficulty: 'hard', blank: 'e', type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'fa20f-2f', problem: 'fa20f-2b', label: 'i.', points: 2, topics: ['hof', 'lists'], difficulty: 'medium', blank: 'a', type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa20f-2g', problem: 'fa20f-2b', label: 'ii.', points: 1, topics: ['hof'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa20f-2h', problem: 'fa20f-2b', label: 'iii.', points: 2, topics: ['hof', 'lists'], difficulty: 'hard', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa20f-2i', problem: 'fa20f-2b', label: 'iv.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'd', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (d)?',
+        choices: ['found = k', 'found = min(k, n)', 'return k', 'return min(k, n)', 'found.append(k)', 'found.append(min(k, n))'] },
+      { id: 'fa20f-2j', problem: 'fa20f-2b', label: 'v.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'e', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (e)?',
+        choices: ['found', 'found[0]', 'found[-1]', 'f(m)', 'f(n)', 's', 's[0]', 's[-1]'] },
+      { id: 'fa20f-3a', problem: 'fa20f-3a', label: 'i.', points: 2, topics: ['generators', 'recursion'], difficulty: 'medium', blank: 'a', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (a)?',
+        choices: ['k >= 0', 'k <= 0', 'k == 0', 'not states', 'k >= 0 and not states', 'k <= 0 and not states', 'k == 0 and not states'] },
+      { id: 'fa20f-3b', problem: 'fa20f-3a', label: 'ii.', points: 2, topics: ['generators', 'recursion'], difficulty: 'hard', blank: 'b', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (b)?',
+        choices: ['k - first', 'k + first', 'k', '-k', '0', 'first', 'min(k, first)', 'max(k, first)'] },
+      { id: 'fa20f-3c', problem: 'fa20f-3a', label: 'iii.', points: 2, topics: ['links', 'oop'], difficulty: 'easy', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa20f-3d', problem: 'fa20f-3a', label: 'iv.', points: 2, topics: ['generators', 'recursion'], difficulty: 'hard', blank: 'd', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (d)?',
+        choices: ['k - first', 'k + first', 'k', '-k', '0', 'first', 'min(k, first)', 'max(k, first)'] },
+      { id: 'fa20f-3e', problem: 'fa20f-3b', label: 'i.', points: 1, topics: ['links'], difficulty: 'easy', blank: 'a', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (a)?',
+        choices: ['s is Link.empty', 's is not Link.empty', 'x in s', 'x not in s', 'x == s.first', 'x != s.first'] },
+      { id: 'fa20f-3f', problem: 'fa20f-3b', label: 'ii.', points: 2, topics: ['links', 'recursion'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa20f-3g', problem: 'fa20f-3b', label: 'iii.', points: 1, topics: ['oop', 'lists'], difficulty: 'easy', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa20f-3h', problem: 'fa20f-3b', label: 'iv.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'd', type: 'short_answer', prompt: 'Fill in blank (d) with a single function name.' },
+      { id: 'fa20f-3i', problem: 'fa20f-3b', label: 'v.', points: 2, topics: ['links', 'lists'], difficulty: 'medium', blank: 'e', type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'fa20f-3j', problem: 'fa20f-3c', label: 'i.', points: 2, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'a', type: 'short_answer', prompt: 'Fill in blank (a). You may not write `battleground` in your response.' },
+      { id: 'fa20f-3k', problem: 'fa20f-3c', label: 'ii.', points: 2, topics: ['oop', 'fundamentals'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b). You may not write `battleground` in your response.' },
+      { id: 'fa20f-3l', problem: 'fa20f-3c', label: 'iii.', points: 2, topics: ['lists'], difficulty: 'medium', blank: 'c', type: 'multi_select', mono: true, prompt: 'Which of these could fill in blank (c)? **Check all that apply.** Hint: Two states may have the same number of electors.',
+        choices: ['sum(votes_in_favor) - min(votes_in_favor)', 'sum(votes_in_favor - min(votes_in_favor))', 'sum(votes_in_favor - [min(votes_in_favor)])', 'sum(votes_in_favor.remove(min(votes_in_favor)))', 'sum([v for v in votes_in_favor if v > min(votes_in_favor)])'] },
+      { id: 'fa20f-4a', problem: 'fa20f-4a', label: 'i.', points: 1, topics: ['trees', 'lists'], difficulty: 'easy', blank: 'a', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (a)?',
+        choices: ['[]', '[t]', '[t.label]', 'list(t.branches)', '[b.label for b in t.branches]'] },
+      { id: 'fa20f-4b', problem: 'fa20f-4a', label: 'ii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'b', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (b)?',
+        choices: ['append', 'extend', 'pop', 'remove', 'insert'] },
+      { id: 'fa20f-4c', problem: 'fa20f-4a', label: 'iii.', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa20f-4d', problem: 'fa20f-4a', label: 'iv.', points: 2, topics: ['trees', 'hof'], difficulty: 'medium', blank: 'd', type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'fa20f-4e', problem: 'fa20f-4b', label: 'i.', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'a', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (a)?',
+        choices: ['t.branches', 'b.branches', 'branches(t)', 'branches(b)'] },
+      { id: 'fa20f-4f', problem: 'fa20f-4b', label: 'ii.', points: 1, topics: ['fundamentals'], difficulty: 'easy', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa20f-4g', problem: 'fa20f-4b', label: 'iii.', points: 2, topics: ['trees', 'lists'], difficulty: 'medium', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'fa20f-4h', problem: 'fa20f-4b', label: 'iv.', points: 1, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'd', type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'fa20f-4i', problem: 'fa20f-4b', label: 'v.', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'e', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (e)?',
+        choices: ['offspring_trees', 'map(traverse, offspring_trees)', 'map(list, offspring_trees)', 'filter(traverse, offspring_trees)', 'filter(list, offspring_trees)'] },
+      { id: 'fa20f-4j', problem: 'fa20f-4b', label: 'vi.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'f', type: 'short_answer', prompt: 'Fill in blank (f) with a single function name.' },
+      { id: 'fa20f-4k', problem: 'fa20f-4b', label: 'vii.', points: 1, topics: ['fundamentals'], difficulty: 'easy', blank: 'g', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (g)?',
+        choices: ['values()', 'keys()', 'items()', 'copy()'] },
+      { id: 'fa20f-4u', problem: 'fa20f-4c', label: 'i.', points: 1, topics: ['sql-joins'], difficulty: 'medium', blank: 'u', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (u)?', choices: ['a.child = b.parent', 'a.parent = b.parent', 'a.child = b.child'] },
+      { id: 'fa20f-4v', problem: 'fa20f-4c', label: 'ii.', points: 1, topics: ['sql-joins'], difficulty: 'medium', blank: 'v', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (v)?', choices: ['b.parent = c.parent', 'b.parent != c.parent', 'b.parent = c.child', 'b.parent != c.child'] },
+      { id: 'fa20f-4w', problem: 'fa20f-4c', label: 'iii.', points: 1, topics: ['sql-joins'], difficulty: 'medium', blank: 'w', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (w)?', choices: ['b.child = c.child', 'b.child != c.child', 'b.child < c.child'] },
+      { id: 'fa20f-4x', problem: 'fa20f-4c', label: 'iv.', points: 1, topics: ['sql-joins'], difficulty: 'medium', blank: 'x', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (x)?', choices: ['a.parent = d.parent', 'a.parent = d.child', 'a.parent != d.parent', 'a.parent != d.child'] },
+      { id: 'fa20f-4y', problem: 'fa20f-4c', label: 'v.', points: 1, topics: ['sql-joins'], difficulty: 'medium', blank: 'y', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (y)?', choices: ['c.parent = e.parent', 'c.parent = e.child', 'c.parent != e.parent', 'c.parent != e.child'] },
+      { id: 'fa20f-4z', problem: 'fa20f-4c', label: 'vi.', points: 1, topics: ['sql-joins'], difficulty: 'medium', blank: 'z', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (z)?', choices: ['d.child = e.parent', 'd.child = e.child', 'd.child != e.parent', 'd.child != e.child'] },
+      { id: 'fa20f-5a', problem: 'fa20f-5a', label: 'i.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'a', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (a)?', choices: ['list', 'append', 'if', 'map', 'lambda'] },
+      { id: 'fa20f-5b', problem: 'fa20f-5a', label: 'ii.', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa20f-5c', problem: 'fa20f-5a', label: 'iii.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'c', type: 'multi_select', mono: true, prompt: 'Which of these could fill in blank (c)? **Check all that apply.**', choices: ['s', '(cdr s)', '(car s)', '(list s)'] },
+      { id: 'fa20f-5d', problem: 'fa20f-5b', label: 'i.', points: 1, topics: ['scheme'], difficulty: 'medium', blank: 'a', type: 'short_answer', prompt: 'Fill in blank (a) with a single procedure name or symbol.' },
+      { id: 'fa20f-5e', problem: 'fa20f-5b', label: 'ii.', points: 1, topics: ['scheme'], difficulty: 'medium', blank: 'b', type: 'short_answer', prompt: 'Fill in blank (b) with a single procedure name or symbol.' },
+      { id: 'fa20f-5f', problem: 'fa20f-5b', label: 'iii.', points: 1, topics: ['scheme'], difficulty: 'medium', blank: 'c', type: 'short_answer', prompt: 'Fill in blank (c) with a single procedure name or symbol.' },
+      { id: 'fa20f-5g', problem: 'fa20f-5b', label: 'iv.', points: 1, topics: ['scheme'], difficulty: 'medium', blank: 'd', type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'fa20f-5h', problem: 'fa20f-5b', label: 'v.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'e', type: 'single_choice', mono: true, prompt: 'Which of these could fill in blank (e)?', choices: ['s', 't', 'v'] },
+      { id: 'fa20f-5i', problem: 'fa20f-5b', label: 'vi.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'f', type: 'short_answer', prompt: 'Fill in blank (f).' },
+    ],
+    answers: {
+      'fa20f-1a': { correct: [0], explanation: 'f2’s return value is a new list `[1, [8], 8]`: `wing + poe` builds it without changing `wing`. The other options mutate a list or return `None`.' },
+      'fa20f-1b': { accepted: ['droid'], explanation: '`wing`’s second element is the list `droid`.' },
+      'fa20f-1c': { correct: 0, explanation: '`x` returns the lambda itself, which is bound to `b`.' },
+      'fa20f-1d': { accepted: ['b([b([8])])'], explanation: 'Two calls to the lambda: f2 gets a new list `[8]` and f3 gets a list containing the result of the first call.' },
+      'fa20f-2a': { accepted: ['lambda n, f: 1'], explanation: 'At 1 the sequence ends, so the length from here is 1 (like `up`/`down`, `h` takes `n` and `f`).' },
+      'fa20f-2b': { accepted: ['n % 2 == 1', 'n % 2', 'n % 2 != 0', 'not n % 2 == 0'], explanation: 'Odd numbers go up.' },
+      'fa20f-2c': { accepted: ['g(n)'], explanation: 'Call `g` on this element.' },
+      'fa20f-2d': { correct: 2, explanation: '`h` is `up`, `down`, or the function for 1.' },
+      'fa20f-2e': { accepted: ['lambda n: hailstone(n, g)', 'lambda x: hailstone(x, g)', 'lambda k: hailstone(k, g)'], explanation: '`h` calls this on the next number: continue the sequence from there, still calling `g`.' },
+      'fa20f-2f': { accepted: ['s.append'], explanation: 'Collect the sequence from `m` in `s`.' },
+      'fa20f-2g': { accepted: ['nonlocal found'], explanation: '`f` assigns `found`, which belongs to `collide`’s frame.' },
+      'fa20f-2h': { accepted: ['found is None and k in s', 'k in s and found is None', 'not found and k in s', 'found == None and k in s'], explanation: 'Record only the first element of `n`’s sequence that is also in `m`’s.' },
+      'fa20f-2i': { correct: 0, explanation: 'Remember it.' },
+      'fa20f-2j': { correct: 0, explanation: 'Return what was found.' },
+      'fa20f-3a': { correct: 5, explanation: 'With no states left, the empty set is a win when the remaining margin needed is at most 0.' },
+      'fa20f-3b': { correct: 0, explanation: 'Winning the first state counts its electors toward the margin.' },
+      'fa20f-3c': { accepted: ['states[0].code'], explanation: 'Put the first state’s code in front of each such win.' },
+      'fa20f-3d': { correct: 1, explanation: 'Losing the first state means the others must make up its electors as well.' },
+      'fa20f-3e': { correct: 1, explanation: 'An empty list contains nothing.' },
+      'fa20f-3f': { accepted: ['s.first == x or contains(s.rest, x)', 'x == s.first or contains(s.rest, x)'], explanation: 'Either it is the first element or it is in the rest.' },
+      'fa20f-3g': { accepted: ['s.code'], explanation: 'The state’s code.' },
+      'fa20f-3h': { accepted: ['all'], explanation: 'A state that must be won is in every win.' },
+      'fa20f-3i': { accepted: ['contains(w, s.code)'], explanation: 'Whether this win includes the state.' },
+      'fa20f-3j': { accepted: ['[State.electors[s] for s in state_codes]', '[State.electors[c] for c in state_codes]', 'list(map(lambda s: State.electors[s], state_codes))'], explanation: 'Look up each named state’s electors in the class-level dictionary.' },
+      'fa20f-3k': { accepted: ['State.electors.values()', 'list(State.electors.values())', '[State.electors[s] for s in State.electors]'], explanation: 'Every state ever constructed is in `State.electors`.' },
+      'fa20f-3l': { correct: [0], explanation: 'A list minus a number is an error, `remove` returns `None`, and dropping every copy of the minimum is wrong when two states tie. Removing the smallest state’s votes once is right: if it is still a win without the smallest state, some state isn’t necessary.' },
+      'fa20f-4a': { correct: 2, explanation: 'The family list holds names, starting with this llama’s.' },
+      'fa20f-4b': { correct: 1, explanation: 'Add every name from the branch’s family.' },
+      'fa20f-4c': { accepted: ['family(b)'], explanation: 'The names in each branch’s tree.' },
+      'fa20f-4d': { accepted: ['map(family, offspring_trees)', '[family(t) for t in offspring_trees]', 'list(map(family, offspring_trees))'], explanation: 'Two llamas are related exactly when they are both in some original’s family.' },
+      'fa20f-4e': { correct: 0, explanation: 'Visit each child.' },
+      'fa20f-4f': { accepted: ['b.label not in storage', 'not b.label in storage'], explanation: 'Start an empty list of parents the first time a child is seen.' },
+      'fa20f-4g': { accepted: ['append(t.label)'], explanation: 'Record `t` as one of the child’s parents.' },
+      'fa20f-4h': { accepted: ['traverse(b)'], explanation: 'Then visit the child’s own children.' },
+      'fa20f-4i': { correct: 0, explanation: 'Traverse every original’s tree.' },
+      'fa20f-4j': { accepted: ['any'], explanation: 'Some child has both as parents.' },
+      'fa20f-4k': { correct: 0, explanation: 'The lists of parents.' },
+      'fa20f-4u': { correct: 0, explanation: 'Edge a goes from the llama p to its child, and edge b from that child to p’s grandchild.' },
+      'fa20f-4v': { correct: 1, explanation: 'Edge c comes from a different parent of the grandchild…' },
+      'fa20f-4w': { correct: 0, explanation: '…and ends at the same grandchild as edge b.' },
+      'fa20f-4x': { correct: 0, explanation: 'Edge d goes from p to a child of p…' },
+      'fa20f-4y': { correct: 0, explanation: '…and edge e comes from that other parent (the start of edge c)…' },
+      'fa20f-4z': { correct: 1, explanation: '…to the same child as edge d, so p has a child whose other parent is also a parent of p’s grandchild.' },
+      'fa20f-5a': { correct: 1, explanation: 'Join two lists.' },
+      'fa20f-5b': { accepted: ['(list x)'], explanation: 'A one-element list with `x`.' },
+      'fa20f-5c': { correct: [0], explanation: 'Followed by all of `s`.' },
+      'fa20f-5d': { accepted: ['append'], explanation: 'Join the results for the first list with the rest.' },
+      'fa20f-5e': { accepted: ['map'], explanation: 'Pair the first list of `s` with every list of `t`.' },
+      'fa20f-5f': { accepted: ['append'], explanation: 'Join the two lists.' },
+      'fa20f-5g': { accepted: ['(car s)'], explanation: 'The first list of `s`…' },
+      'fa20f-5h': { correct: 2, explanation: '…followed by the list from `t`.' },
+      'fa20f-5i': { accepted: ['(cdr s)'], explanation: 'The rest of `s`.' },
+    },
+  });
 })();

@@ -329,6 +329,37 @@ def to_link(t):
     return Link(part, parts)
 `;
 
+  const WINS = `class State:
+    electors = {}
+    def __init__(self, code, electors):
+        self.code = code
+        self.electors = electors
+        State.electors[code] = electors
+
+battleground = [State('AZ', 11), State('PA', 20), State('NV', 6),
+                State('GA', 16), State('WI', 10), State('MI', 16)]
+
+def print_all(s):
+    for x in s:
+        print(x)
+
+def wins(states, k):
+    if k <= 0 and not states:
+        yield Link.empty
+    if states:
+        first = states[0].electors
+        for win in wins(states[1:], k - first):
+            yield Link(states[0].code, win)
+        yield from wins(states[1:], k + first)
+`;
+  // The four original llamas' offspring trees, built from the exam's figure.
+  const LLAMAS = `originals = [Tree('Charlie', [Tree('Jaidyn', [Tree('Lee'), Tree('Max')]), Tree('Jules', [Tree('Alex'), Tree('Jess')])]),
+             Tree('Sidney', [Tree('Jaidyn', [Tree('Lee'), Tree('Max')]), Tree('Jackie', [Tree('Alex')])]),
+             Tree('Finley', [Tree('Jackie', [Tree('Alex')]), Tree('Jan', [Tree('Lee'), Tree('Max')]), Tree('Jess')]),
+             Tree('Frankie', [Tree('Jules', [Tree('Alex'), Tree('Jess')]), Tree('Jan', [Tree('Lee'), Tree('Max')])])]
+`;
+  const LLAMA_NOTE = 'These tests provide the course’s Tree class and originals, the four offspring trees built from the exam’s llama diagram (the exam assumes both are defined).';
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -2391,6 +2422,107 @@ True`),
 (True, Tree(1, [Tree(2)]))
 >>> pruned(Tree(1, [Tree(2, [Tree(3), Tree(4, [Tree(5)])]), Tree(6)]))
 Tree(1, [Tree(2, [Tree(4, [Tree(5)])])])`),
+      ],
+    },
+    {
+      id: 'fa20f-2a-tests', problem: 'fa20f-2a', verified: true,
+      verification: verification({ passing: 6, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> a = hailstone(10, print)
+10
+5
+16
+8
+4
+2
+1
+>>> a
+7`),
+        exam(`>>> s = []
+>>> hailstone(10, s.append)
+7
+>>> s
+[10, 5, 16, 8, 4, 2, 1]`),
+        added(`>>> hailstone(1, print)
+1
+1
+>>> s = []
+>>> hailstone(3, s.append), s
+(8, [3, 10, 5, 16, 8, 4, 2, 1])
+>>> hailstone(27, lambda x: None)
+112`),
+      ],
+    },
+    {
+      id: 'fa20f-3a-tests', problem: 'fa20f-3a', verified: true,
+      verification: verification({ passing: 1, failing: 22 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK_STR, setupNote: LINK_STR_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> print_all(wins(battleground, 50))
+<AZ PA NV GA WI MI>
+<AZ PA NV GA MI>
+<AZ PA GA WI MI>
+<PA NV GA WI MI>
+>>> print_all(wins(battleground, 75))
+<AZ PA NV GA WI MI>`),
+        added(`>>> list(wins([], 0)) == [Link.empty], list(wins([], 1))
+(True, [])
+>>> len(list(wins(battleground, 0))), len(list(wins(battleground, 79))), len(list(wins(battleground, 80)))
+(32, 1, 0)`),
+      ],
+    },
+    {
+      id: 'fa20f-3b-tests', problem: 'fa20f-3b', verified: true,
+      verification: verification({ passing: 2, failing: 9 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK + '\n' + WINS, setupNote: 'These tests provide the course’s Link class (the exam uses it but does not print it) and wins from part (a) (the official solution).', setupFrom: ['fa20f-3a'],
+      cases: [
+        exam(`>>> must_win(battleground, 50)
+['PA', 'GA', 'MI']
+>>> must_win(battleground, 75)
+['AZ', 'PA', 'NV', 'GA', 'WI', 'MI']`),
+        added(`>>> must_win(battleground, 0), must_win(battleground, 79)
+([], ['AZ', 'PA', 'NV', 'GA', 'WI', 'MI'])
+>>> must_win([State('XX', 3)], 3), must_win([State('XX', 3), State('YY', 1)], 2)
+(['XX'], ['XX'])`),
+      ],
+    },
+    {
+      id: 'fa20f-3c-tests', problem: 'fa20f-3c', verified: true,
+      verification: verification({ passing: 5, failing: 6 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> is_minimal(['AZ', 'NV', 'GA', 'WI'], 0)  # Every state is necessary
+True
+>>> is_minimal(['AZ', 'GA', 'WI'], 0)        # Not a win
+False
+>>> is_minimal(['AZ', 'NV', 'PA', 'WI'], 0)  # NV is not necessary
+False
+>>> is_minimal(['AZ', 'PA', 'WI'], 0)        # Every state is necessary
+True`),
+        added(`>>> is_minimal(['GA', 'MI', 'PA'], -30)  # two smallest states tie: dropping one GA or MI still wins
+False
+>>> is_minimal(['AZ', 'PA', 'NV', 'GA', 'WI', 'MI'], 79), is_minimal(['PA'], -39), is_minimal(['PA'], -38)
+(True, True, False)`),
+      ],
+    },
+    {
+      id: 'fa20f-4a-tests', problem: 'fa20f-4a', verified: true,
+      verification: verification({ passing: 3, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE + '\n' + LLAMAS, setupNote: LLAMA_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> related('Charlie', 'Max', originals)  # Grandparent
+True
+>>> related('Jules', 'Jackie', originals)  # Not related, even though they have child
+False`),
+        exam(`>>> related('Max', 'Jules', originals)     # Both descend from Charlie and Frankie
+True
+>>> related('Max', 'Jess', originals)      # Both descend from Charlie and Finley
+True`),
+        added(`>>> related('Lee', 'Max', originals), related('Sidney', 'Frankie', originals), related('Sidney', 'Alex', originals)
+(True, False, True)
+>>> related('Jackie', 'Jess', originals), related('Jaidyn', 'Jan', originals)
+(True, False)`),
       ],
     },
   ];

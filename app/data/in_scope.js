@@ -123,6 +123,10 @@ window.CS61A_SCOPE = {
     'fa21f-4c': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
     'fa21f-5a': { status: 'out', reason: 'Regular expressions (not on this semester’s syllabus)', source: 'inferred' },
     'fa21f-5b': { status: 'out', reason: 'BNF grammars (not on this semester’s syllabus)', source: 'inferred' },
+    // Fall 2020 Final
+    'fa20f-2b': { status: 'out', reason: 'Uses nonlocal', source: 'inferred' },
+    'fa20f-5a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa20f-5b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
   },
 
   questions: {

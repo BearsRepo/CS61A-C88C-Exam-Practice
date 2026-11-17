@@ -899,4 +899,36 @@ module.exports = {
       { c: 't' },
     ],
   },
+  'fa20f-2a': {
+    wrong: [
+      { a: 'lambda n, f: 0' },
+      { a: '1' },
+      { b: 'n % 2 == 0' },
+      { c: 'g' },
+      { e: 'g' },
+      { e: 'lambda n: hailstone(n, print)' },
+    ],
+  },
+  'fa20f-3a': { wrong: [{ c: 'states[0]' }, { c: 'first' }] },
+  'fa20f-3b': {
+    wrong: [
+      { b: 's.first == x' },
+      { b: 'contains(s.rest, x)' },
+      { d: 'any' },
+      { e: 'contains(w, s)' },
+    ],
+  },
+  'fa20f-3c': {
+    wrong: [
+      { a: '[s.electors for s in state_codes]' },
+      { b: 'State.electors.keys()' },
+    ],
+  },
+  'fa20f-4a': {
+    wrong: [
+      { c: 'b.label' },
+      { c: '[b.label]' },
+      { d: 'offspring_trees' },
+    ],
+  },
 };

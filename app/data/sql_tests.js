@@ -161,6 +161,17 @@ CREATE TABLE dogs(name, fur, height);
 INSERT INTO dogs VALUES ('Ace', 'short', 30), ('Bo', 'short', 30), ('Cy', 'short', 30), ('Di', 'short', 30), ('Ed', 'long', 30), ('Fy', 'curly', 30);` },
       ],
     },
+    'fa20f-4c': {
+      cases: [
+        { name: 'The llama family from the exam', origin: 'exam', input: '', columns: ['parent'], expect: [['Finley'], ['Frankie']] },
+        { name: 'A smaller family with one multigenerational llama', origin: 'added', input: '', columns: ['parent'], expect: [['P']],
+          data: `CREATE TABLE family(parent, child);
+INSERT INTO family VALUES ('P', 'C1'), ('Q', 'C1'), ('P', 'C2'), ('C2', 'G'), ('Q', 'G'), ('R', 'C2');` },
+        { name: 'P and P’s child C are both parents of Y (one row per matching combination)', origin: 'added', input: '', columns: ['parent'], expect: [['P'], ['P']],
+          data: `CREATE TABLE family(parent, child);
+INSERT INTO family VALUES ('P', 'C'), ('C', 'Y'), ('P', 'Y');` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();
