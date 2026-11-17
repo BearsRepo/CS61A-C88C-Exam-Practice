@@ -47,14 +47,14 @@ for (const [e, rows] of Object.entries(PDF)) {
 }
 ok(B.QUESTIONS.length === new Set(B.QUESTIONS.map((q) => q.id)).size, `all ${B.QUESTIONS.length} question ids are unique`);
 ok(['fa25', 'sp25', 'fa24', 'sp24'].every((e) => examIds(e).length === { fa25: 33, sp25: 29, fa24: 31, sp24: 30 }[e]), 'earlier exams unchanged in size (33, 29, 31 and 30 subparts)');
-ok(B.QUESTIONS.filter((q) => /^(fa23|sp23)/.test(q.id)).every((q) => B.ANSWER_KEY[q.id]), 'every 2023 subpart has an official answer');
-ok(B.QUESTIONS.filter((q) => /^(fa23|sp23)/.test(q.id) && q.type === 'code').every((q) => q.points === 0), 'only the 0-point A+ parts are graded by course staff');
+ok(B.QUESTIONS.filter((q) => /^(fa23|sp23)-/.test(q.id)).every((q) => B.ANSWER_KEY[q.id]), 'every 2023 subpart has an official answer');
+ok(B.QUESTIONS.filter((q) => /^(fa23|sp23)-/.test(q.id) && q.type === 'code').every((q) => q.points === 0), 'only the 0-point A+ parts are graded by course staff');
 ok(['fa23-1', 'fa23-2', 'fa23-4a', 'fa23-5aplus', 'sp23-1', 'sp23-2b', 'sp23-3a-iii'].every((pid) => !SUITES.some((t) => t.problem === pid)),
   'no test suites for WWPD, the diagram, order of growth, the select-all fa23 Q4(a), or code that needs part (a) to run');
 const fig = B.PROBLEMS['fa23-2'].figure;
 ok(fig && fig.slots.length === 8 && fig.slots.every(([x, y, w]) => x === 263 && w === 33 && y > 0 && y < fig.height), 'fa23 Q2: diagram figure with its 8 empty value boxes as blanks');
 ok(!B.PROBLEMS['fa23-5'].figure && B.PROBLEMS['fa23-5'].illustration, 'fa23 Q5: the tree drawing is an illustration, not a diagram workspace');
-ok(Object.keys(B.PROBLEMS).filter((pid) => /^sp23/.test(pid)).every((pid) => !B.PROBLEMS[pid].figure), 'sp23: no environment diagram questions (Q1 only hints at drawing one)');
+ok(Object.keys(B.PROBLEMS).filter((pid) => /^sp23-/.test(pid)).every((pid) => !B.PROBLEMS[pid].figure), 'sp23: no environment diagram questions (Q1 only hints at drawing one)');
 
 (async () => {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
@@ -94,7 +94,7 @@ ok(Object.keys(B.PROBLEMS).filter((pid) => /^sp23/.test(pid)).every((pid) => !B.
   await seed({ prefs: { ...prefs, exams: ['fa23', 'sp23'], topics: ['generators'], examsKnown: Object.keys(B.EXAMS) } });
   await click('[data-action="enter"]'); await click('[data-action="start"]'); await page.waitForSelector('#pane-right .part');
   S = await st();
-  const gen23 = B.QUESTIONS.filter((q) => /^(fa23|sp23)/.test(q.id) && q.topics.includes('generators')).map((q) => q.id);
+  const gen23 = B.QUESTIONS.filter((q) => /^(fa23|sp23)-/.test(q.id) && q.topics.includes('generators')).map((q) => q.id);
   ok(S.session.ids.length > 0 && S.session.ids.every((id) => /^(fa23|sp23)/.test(id)) && gen23.every((id) => S.session.ids.includes(id)),
     `Generators practice from 2023 exams: ${S.session.ids.length} parts, all 2023, every Generators-tagged part included`);
 

@@ -846,8 +846,8 @@ module.exports = {
   },
   'fa21f-1b': {
     wrong: [
-      { a: 'Blink(s)' },
       { a: 's.rest' },
+      { a: 'Blink(s)' },
       { b: 'self.sublists[s] = s' },
       { b: 'self.sublists[s.first] = self' },
     ],
