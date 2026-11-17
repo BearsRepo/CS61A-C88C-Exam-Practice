@@ -31,6 +31,13 @@ const NO_TESTS = {
 
 // Plausible wrong answers for written blanks (the suite must catch each one).
 const WRONG = {
+  'fa21f-5c': [
+    { a: 'SELECT parent FROM parents, dogs WHERE child=name AND fur="short" GROUP BY parent;' },
+    { a: 'SELECT parent FROM parents, dogs WHERE parent=name AND fur="short" GROUP BY parent HAVING COUNT(*)=1;' },
+    { a: 'SELECT parent FROM parents, dogs WHERE child=name AND fur="short";' },
+    { a: 'SELECT parent FROM parents, dogs WHERE child=name AND fur="short" GROUP BY parent HAVING COUNT(*)>=1;' },
+    { a: 'SELECT child FROM parents, dogs WHERE child=name AND fur="short" GROUP BY parent HAVING COUNT(*)=1;' },
+  ],
   'fa22f-9': [
     { b: 'BaseAttack + a.MoveAttack' },
     { b: 'BaseAttack + 2 * a.MoveAttack' },

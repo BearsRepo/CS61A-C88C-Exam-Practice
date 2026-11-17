@@ -151,6 +151,16 @@ CREATE TABLE Moves(Name, MoveAttack, MoveDefense);
 INSERT INTO Moves VALUES ('Tackle', 10, 0), ('Charm', 0, 10), ('Bite', 45, 5);` },
       ],
     },
+    'fa21f-5c': {
+      cases: [
+        { name: 'The study guide’s dogs and parents tables', origin: 'exam', input: '', columns: ['parent'], expect: [['Abraham'], ['Fillmore']] },
+        { name: 'A parent with two short-furred children, and one with none', origin: 'added', input: '', columns: ['parent'], expect: [['Bo']],
+          data: `CREATE TABLE parents(parent, child);
+INSERT INTO parents VALUES ('Ace', 'Bo'), ('Ace', 'Cy'), ('Bo', 'Di'), ('Bo', 'Ed'), ('Cy', 'Fy');
+CREATE TABLE dogs(name, fur, height);
+INSERT INTO dogs VALUES ('Ace', 'short', 30), ('Bo', 'short', 30), ('Cy', 'short', 30), ('Di', 'short', 30), ('Ed', 'long', 30), ('Fy', 'curly', 30);` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

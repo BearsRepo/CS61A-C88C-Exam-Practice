@@ -117,6 +117,12 @@ window.CS61A_SCOPE = {
     'fa22f-11': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
     'fa22f-1': { status: 'note', source: 'inferred',
       note: 'The `Sub` class defines a `__repr__` method, which is no longer taught, so parts (j) and (n), which show how the interpreter displays a `Sub` or `Pub` instance, were removed. The other parts are in scope.' },
+    // Fall 2021 Final
+    'fa21f-4a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa21f-4b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa21f-4c': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa21f-5a': { status: 'out', reason: 'Regular expressions (not on this semester’s syllabus)', source: 'inferred' },
+    'fa21f-5b': { status: 'out', reason: 'BNF grammars (not on this semester’s syllabus)', source: 'inferred' },
   },
 
   questions: {

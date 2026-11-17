@@ -844,4 +844,59 @@ module.exports = {
       { e: 'return dogs' },
     ],
   },
+  'fa21f-1b': {
+    wrong: [
+      { a: 'Blink(s)' },
+      { a: 's.rest' },
+      { b: 'self.sublists[s] = s' },
+      { b: 'self.sublists[s.first] = self' },
+    ],
+  },
+  'fa21f-2a': { wrong: [{ b: 'return False' }, { b: 'return n' }] },
+  'fa21f-2b': {
+    wrong: [
+      { a: '0' },
+      { a: 'n' },
+      { b: 'tooth(n, d)' },
+      { b: 'tooth(n // 10, n % 10)' },
+    ],
+  },
+  'fa21f-2c': {
+    wrong: [
+      { a: 'yield from range(m + 1)' },
+      { a: 'yield from range(1, m)' },
+      { b: 'thumper(k, m)' },
+      { b: 'range(10 ** (k - 1), 10 ** k)' },
+    ],
+  },
+  'fa21f-2d': {
+    wrong: [
+      { a: 'grouped(part.first, n % 10)' },
+      { a: 'grouped(n, part.first)' },
+      { e: 'n = n % 10' },
+      { f: 'parts' },
+      { f: 'Link(parts, part)' },
+    ],
+  },
+  'fa21f-2e': {
+    wrong: [
+      { a: 'segment(n, lambda a, b: True)' },
+      { a: 'segment(n, is_worm)' },
+    ],
+  },
+  'fa21f-3a': {
+    wrong: [
+      { a: 't.label' },
+      { a: 't.branches[0]' },
+      { b: '0' },
+      { b: 'sum([b.label for b in t.branches])' },
+    ],
+  },
+  'fa21f-3b': {
+    wrong: [
+      { c: 'Tree(t.label, cut)' },
+      { c: 'Tree(t.label, [b for b in t.branches if b])' },
+      { c: 't' },
+    ],
+  },
 };

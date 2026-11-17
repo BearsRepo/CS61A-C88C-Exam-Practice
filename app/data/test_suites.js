@@ -307,6 +307,28 @@ def to_link(t):
         start = start[1:] + next(coin)
 `;
 
+  // The course's Link class with its __str__ method, which prints a linked list as <3 4 5> (nested ones as <<3> <4>>).
+  const LINK_STR = LINK + `    def __str__(self):
+        string = '<'
+        while self.rest is not Link.empty:
+            string += str(self.first) + ' '
+            self = self.rest
+        return string + str(self.first) + '>'
+`;
+  const LINK_STR_NOTE = 'These tests provide the course’s Link class with its __str__ method, which prints a linked list like <3 4 5> (the exam uses it but does not print it).';
+  const SEGMENT = `def segment(n, grouped):
+    part = Link.empty
+    parts = Link.empty
+    while n:
+        if part is Link.empty or grouped(n % 10, part.first):
+            part = Link(n % 10, part)
+        else:
+            parts = Link(part, parts)
+            part = Link(n % 10)
+        n = n // 10
+    return Link(part, parts)
+`;
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -2220,6 +2242,155 @@ True`),
 Tree('x', [Tree('y')])
 >>> table_to_tree([['b', 'c'], ['a', 'b']], 'a')
 Tree('a', [Tree('b', [Tree('c')])])`),
+      ],
+    },
+    {
+      id: 'fa21f-1b-tests', problem: 'fa21f-1b', verified: true,
+      verification: verification({ passing: 1, failing: 15 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> s = Link(3, Link(1, Link(4, Link(1, Link(5)))))
+>>> b = Blink(s)
+>>> b.link is s
+True
+>>> b.rest.rest.link is s.rest.rest
+True
+>>> b.rest.rest.rest.rest.rest.link is Link.empty
+True`),
+        exam(`>>> s = Link(3, Link(1, Link(4, Link(1, Link(5)))))
+>>> b = Blink(s)
+>>> b.sublists[4]
+Link(4, Link(1, Link(5)))
+>>> b.sublists[1]
+Link(1, Link(4, Link(1, Link(5))))
+>>> b.rest.rest.sublists[1]
+Link(1, Link(5))
+>>> b.sublists[3] is s
+True`),
+        added(`>>> e = Blink(Link.empty)
+>>> e.sublists, e.link is Link.empty, hasattr(e, 'rest')
+({}, True, False)
+>>> b = Blink(Link(2, Link(2)))
+>>> b.sublists[2] is b.link, len(b.sublists), b.rest.sublists[2] is b.link.rest
+(True, 1, True)`),
+      ],
+    },
+    {
+      id: 'fa21f-2a-tests', problem: 'fa21f-2a', verified: true,
+      verification: verification({ passing: 1, failing: 19 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> [is_worm(0), is_worm(4), is_worm(4345), is_worm(4334), is_worm(4354)]
+[True, True, True, False, False]
+>>> [n for n in range(200, 300) if is_worm(n)]
+[210, 212, 232, 234]`),
+        added(`>>> [is_worm(9), is_worm(10), is_worm(11), is_worm(98), is_worm(97), is_worm(1010101), is_worm(1010102)]
+[True, True, False, True, False, True, False]`),
+      ],
+    },
+    {
+      id: 'fa21f-2b-tests', problem: 'fa21f-2b', verified: true,
+      verification: verification({ passing: 1, failing: 16 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> sandworm(13531)            # 13[5]31
+5
+>>> sandworm(152)              # [1]5[2]
+12`),
+        exam(`>>> sandworm(31415926535)      # [3]1[4]1[5]92[6]53[5]
+34565
+>>> sandworm(314159265358973)  # [3]1[4]1[5]92[6]53589[7]3
+34567`),
+        added(`>>> sandworm(0), sandworm(7), sandworm(70), sandworm(21), sandworm(1357)
+(0, 7, 7, 21, 7)
+>>> sandworm(98765)
+98765`),
+      ],
+    },
+    {
+      id: 'fa21f-2c-tests', problem: 'fa21f-2c', verified: true,
+      verification: verification({ passing: 3, failing: 22 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> list(thumper(1, 7))  # Note: 0 has no digits, so it is not a 1-digit worm.
+[1, 2, 3, 4, 5, 6, 7]
+>>> list(thumper(2, 3))
+[10, 12, 21, 23, 32]
+>>> list(thumper(3, 3))
+[101, 121, 123, 210, 212, 232, 321, 323]`),
+        added(`>>> list(thumper(1, 1)), list(thumper(2, 1)), list(thumper(3, 1))
+([1], [10], [101])
+>>> len(list(thumper(4, 9))), list(thumper(2, 9))[-1]
+(61, 98)`),
+      ],
+    },
+    {
+      id: 'fa21f-2d-tests', problem: 'fa21f-2d', verified: true,
+      verification: verification({ passing: 2, failing: 20 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK_STR, setupNote: LINK_STR_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> print(segment(3233344, lambda a, b: a == b))
+<<3> <2> <3 3 3> <4 4>>
+>>> print(segment(314159, lambda a, b: a == 1))
+<<3> <1 4> <1 5> <9>>`),
+        added(`>>> print(segment(7, lambda a, b: True)), print(segment(1234, lambda a, b: True)), print(segment(1234, lambda a, b: False))
+<<7>>
+<<1 2 3 4>>
+<<1> <2> <3> <4>>
+(None, None, None)
+>>> print(segment(1203, lambda a, b: a < b))  # digits read right to left; a is the left digit
+<<1 2> <0 3>>`),
+      ],
+    },
+    {
+      id: 'fa21f-2e-tests', problem: 'fa21f-2e', verified: true,
+      verification: verification({ passing: 2, failing: 2 }, '2026-11-17'),
+      provenance: EXAM, setup: LINK_STR + '\n' + SEGMENT, setupNote: 'These tests provide the course’s Link class with its __str__ method (the exam uses it but does not print it) and segment from part (d) (the official solution).', setupFrom: ['fa21f-2d'],
+      cases: [
+        exam(`>>> print(desert(43587))
+<<4 3> <5> <8 7>>
+>>> print(desert(11235813213455))
+<<1> <1 2 3> <5> <8> <1> <3 2 1> <3 4 5> <5>>`),
+        added(`>>> print(desert(5)), print(desert(12121)), print(desert(19))
+<<5>>
+<<1 2 1 2 1>>
+<<1> <9>>
+(None, None, None)`),
+      ],
+    },
+    {
+      id: 'fa21f-3a-tests', problem: 'fa21f-3a', verified: true,
+      verification: verification({ passing: 3, failing: 4 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> apple = Tree(5, [Tree(6, [Tree(7)]), Tree(8), Tree(9, [Tree(10)])])
+>>> sum_fruit_labels(apple)  # 7 + 10
+17
+>>> pineapple = Tree(3, [Tree(4), apple, apple, Tree(1, [Tree(2)])])
+>>> sum_fruit_labels(pineapple)  # 7 + 10 + 7 + 10 + 2
+36
+>>> sum_fruit_labels(Tree(3, [Tree(4), Tree(5)]))  # No fruits!
+0`),
+        added(`>>> sum_fruit_labels(Tree(1)), sum_fruit_labels(Tree(1, [Tree(2)])), sum_fruit_labels(Tree(1, [Tree(2, [Tree(3)])]))
+(0, 2, 3)`),
+      ],
+    },
+    {
+      id: 'fa21f-3b-tests', problem: 'fa21f-3b', verified: true,
+      verification: verification({ passing: 3, failing: 11 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> t = Tree(5, [Tree(6, [Tree(7)]), Tree(8), Tree(9, [Tree(10)])])
+>>> pruned(t)
+Tree(5, [Tree(6, [Tree(7)]), Tree(9, [Tree(10)])])
+>>> t  # t is not modified by calling pruned(t)
+Tree(5, [Tree(6, [Tree(7)]), Tree(8), Tree(9, [Tree(10)])])
+>>> pruned(Tree(2, [Tree(3), Tree(4)])) is None  # No fruit!
+True`),
+        added(`>>> pruned(Tree(1)) is None, pruned(Tree(1, [Tree(2)]))
+(True, Tree(1, [Tree(2)]))
+>>> pruned(Tree(1, [Tree(2, [Tree(3), Tree(4, [Tree(5)])]), Tree(6)]))
+Tree(1, [Tree(2, [Tree(4, [Tree(5)])])])`),
       ],
     },
   ];
