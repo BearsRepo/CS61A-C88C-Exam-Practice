@@ -673,4 +673,47 @@ module.exports = {
       { 'A+': 'repromote(s[:j] + s[j+1:], k)' },
     ],
   },
+  'sp24f-2a': { wrong: [] },
+  'sp24f-2b': {
+    wrong: [
+      { g: 'lambda y: y >= x' },
+      { g: 'lambda y: y < x' },
+      { g: 'lambda y: True' },
+    ],
+    alternatives: [
+      { g: 'lambda y: x < y' },
+    ],
+  },
+  'sp24f-3a': {
+    wrong: [
+      { c: 'self.ns = [self.ns[0], self.ns[1]]' },
+      { c: 'self = Domino([self.ns[1], self.ns[0]])' },
+    ],
+    alternatives: [
+      { c: 'self.ns[0], self.ns[1] = self.ns[1], self.ns[0]' },
+      { c: 'self.ns = [first, self.ns[0]]' },  // inside the if, first is the second number
+    ],
+  },
+  'sp24f-3b': {
+    wrong: [
+      { f: '[x for x in ds if x.ns != d.ns]' },
+      { f: 'ds.remove(d)' },
+      { f: 'ds[1:]' },
+    ],
+    alternatives: [
+      { f: '[x for x in ds if x != d]' },  // Domino has no __eq__, so != compares identity
+    ],
+  },
+  'sp24f-3c': {
+    wrong: [
+      { h: 'd' },
+      { h: 'd.align(first.ns[0])' },
+      { j: 'first.ns[0] in d.ns' },
+      { j: 'True' },
+    ],
+    alternatives: [
+      { j: 'd.ns[0] == first.ns[1] or d.ns[1] == first.ns[1]' },
+    ],
+  },
+  'sp24f-5a': { wrong: [] },
 };

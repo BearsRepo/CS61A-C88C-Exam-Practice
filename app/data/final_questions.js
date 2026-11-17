@@ -1778,4 +1778,484 @@ def repromote(s, k):
       'fa24f-9b': { accepted: ['repromote(s[:j] + s[j+1:], k - min(1, j))'] },
     },
   });
+
+  // ───────────────────────────── Spring 2024 Final ─────────────────────────────
+  // The PDF's questions total 70 points (Q7 and Q6(d) are A+ questions worth 0).
+  const SP24_DOMINOS = code(`
+CREATE TABLE dominos AS
+  SELECT 0 AS id, 3 AS m, 2 AS n UNION
+  SELECT 1      , 3     , 1      UNION
+  SELECT 2      , 6     , 3      UNION
+  SELECT 3      , 4     , 4      UNION
+  SELECT 4      , 3     , 2      UNION
+  SELECT 5      , 2     , 6;
+`);
+  add({
+    exam: { id: 'sp24f', label: 'Spring 2024 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
+    problems: {
+      'sp24f-1': {
+        exam: 'sp24f', number: '1', title: 'What Would Python Display?', points: 6,
+        intro: 'Assume the following code has been executed. No error occurs.',
+        code: code(`
+s = [2, 4]
+t, u = [2, 0, s], [2, 0, s]
+t.append(5)
+u[2].extend(s)
+v = t[2]
+t[2] = [6, 7]
+`),
+        outro: 'Write the output printed for each expression below. **Hint:** Draw an environment diagram!',
+      },
+      'sp24f-2a': {
+        exam: 'sp24f', number: '2(a)', title: 'Only Up — up', points: 4,
+        intro: '**Definition:** The *increasing sublist* of a sequence of numbers `s` is a list containing each element of `s` that is larger than all previous elements.\n\nImplement `up`, which takes a list of numbers `s` and returns its increasing sublist.',
+        code: code(`
+def up(s):
+    """Return the increasing sublist of list s.
+
+    >>> up([3, 1, 2, 5, 4, 5, 7, 6, 12, 11])
+    [3, 5, 7, 12]
+    """
+    result = ⟦a⟧
+    for x in s:
+        if ⟦b⟧:
+            result.⟦c⟧(x)
+    return result
+`),
+      },
+      'sp24f-2b': {
+        exam: 'sp24f', number: '2(b)', title: 'Only Up — upiter', points: 5,
+        intro: 'Implement `upiter`, which takes a finite iterator over numbers `t` and returns its increasing sublist. You may not call `up` in `upiter`.',
+        code: code(`
+def upiter(t):
+    """Return the increasing sublist of iterator t.
+
+    >>> upiter(iter([3, 1, 2, 5, 4, 5, 7, 6, 12, 11]))
+    [3, 5, 7, 12]
+    """
+    try:
+        x = next(t)
+    except StopIteration:
+        ⟦d⟧
+    return ⟦e⟧ + ⟦f⟧(filter( ⟦g⟧ , t))
+`),
+      },
+      'sp24f-3a': {
+        exam: 'sp24f', number: '3(a)', title: 'Dominos — Domino', points: 8,
+        intro: 'A *domino* is a tile with two numbers, such as 3-4. A 3-4 domino can be flipped around so that it is now a 4-3 domino.\n\nImplement the `Domino` class. A `Domino` instance is constructed from a two-element list of non-negative integers below 10 that is stored as an instance attribute `ns`. The `align` method takes an integer `first` which must be one of the numbers in `ns`. It returns the same domino instance on which it was invoked, but first mutates it so that `first` comes first in `ns`. A `Domino([3, 4])` is displayed as `3-4`.',
+        code: code(`
+class Domino:
+    """A Domino has two numbers and can be aligned to place one of them first.
+
+    >>> d = Domino([3, 4])
+    >>> original = d
+    >>> d.align(3)
+    3-4
+    >>> d.align(4)
+    4-3
+    >>> d is original  # No new Domino instance was created
+    True
+    >>> d              # A Domino's order is changed by align
+    4-3
+    """
+    def __init__(self, ns):
+        assert len(ns) == 2 and ns[0] in range(10) and ns[1] in range(10)
+        self.ns = ns
+
+    def align(self, first):
+        assert ⟦a⟧, 'first must be a number on the domino.'
+        if ⟦b⟧:
+            ⟦c⟧
+        return ⟦d⟧
+
+    def __repr__(self):
+        return ⟦e⟧
+`),
+      },
+      'sp24f-3b': {
+        exam: 'sp24f', number: '3(b)', title: 'Dominos — drop', points: 2,
+        intro: 'Implement `drop`, which takes a `Domino` instance `d` and a list of `Domino` instances `ds`. It returns a new list with all of the elements of `ds` except for `d`.',
+        code: code(`
+def drop(d, ds):
+    """Return a new list of dominos with all elements of ds except d.
+
+    >>> ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [3, 4]]]
+    >>> drop(ds[1], ds)
+    [5-2, 5-5, 3-4]
+    >>> drop(ds[3], ds)
+    [5-2, 3-4, 5-5]
+    >>> ds
+    [5-2, 3-4, 5-5, 3-4]
+    """
+    return ⟦f⟧
+`),
+      },
+      'sp24f-3b-ii': {
+        exam: 'sp24f', number: '3(b) ii', title: 'Dominos — drop and align', points: 2,
+        intro: 'What is the value of `drop(ds[2], drop(ds[1].align(4), ds))` assuming `drop` and `Domino` are defined correctly and `ds` is assigned to:',
+        code: code(`
+ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [4, 3]]]
+`),
+      },
+      'sp24f-3c': {
+        exam: 'sp24f', number: '3(c)', title: 'Dominos — longest', points: 10,
+        intro: '**Definition:** A *line* of Dominos is a sequence of dominos in which pairs of adjacent numbers on different dominos are equal, such as `2-4 4-3 3-3 3-6`.\n\nImplement `longest`, which takes a list of `Domino` instances `ds`. It returns a string that describes the longest line of dominos that can be formed from `ds`. This result should contain domino repr strings separated by spaces, such as `\'2-4 4-3 3-3 3-6\'`. The dominos described in the result can appear in any order and may be flipped using the `align` method. If more than one line is longest, describe any of the longest lines. You may call `drop`.\n\nBlanks (l) and (m) are filled with the same expression, so both are shown as (l) below.',
+        code: code(`
+def longest(ds):
+    """Return a string describing the longest line that can be formed from dominos in ds.
+
+    >>> ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [6, 1], [3, 2]]]
+    >>> print(longest(ds))
+    4-3 3-2 2-5 5-5
+    >>> ds = [Domino(ns) for ns in [[1, 2],[1, 2],[3, 2],[3, 2],[3, 2],[4, 3],[4, 3],[4, 3],[6,5]]]
+    >>> print(longest(ds))
+    2-1 1-2 2-3 3-2 2-3 3-4 4-3 3-4
+    """
+    def finish(first, rest):
+        s = [ ⟦g⟧ + ' ' + finish( ⟦h⟧ , ⟦i⟧ ) for d in rest if ⟦j⟧ ]
+        if not s:
+            return ⟦k⟧
+        return max(s, key=⟦l⟧ )
+
+    candidates = []
+    for first in ds:
+        candidates.append(finish(first,                    drop(first, ds)))
+        candidates.append(finish(first.align(first.ns[1]), drop(first, ds)))
+    return max(candidates, key=⟦l⟧ )
+`),
+      },
+      'sp24f-3d': {
+        exam: 'sp24f', number: '3(d)', title: 'Dominos — matching numbers (SQL)', points: 4, lang: 'sql',
+        intro: 'The `dominos` table has one row per domino that gives its unique `id` (number) and the numbers appearing on the domino `m` and `n` (numbers).\n\n```\n' + SP24_DOMINOS + '\n```\n\nComplete this query that creates one row per domino for which at least one other domino has a number equal to its `n` value. The row contains the domino’s `id`, `m` value, `n` value, and the count of other dominos that have a number equal to its `n` value.',
+        sqlSetup: SP24_DOMINOS,
+        code: code(`
+SELECT a.id, a.m, a.n, COUNT(*) FROM dominos AS a, dominos AS b
+  WHERE ⟦o⟧ AND (⟦p⟧)
+  GROUP BY ⟦q⟧;
+`),
+      },
+      'sp24f-4a': {
+        exam: 'sp24f', number: '4(a)', title: 'Merry-Go-Round — cycle', points: 6,
+        intro: 'Implement `cycle`, which takes a non-empty finite linked list `s` (a `Link` instance). It returns a linked list in which the first `Link` of `s` has been moved to become the last `Link` of the result. If `s` has only one element, then it is not moved. The `Link` class appears on Page 2 of the Midterm 2 Study Guide. A linked list is finite if it contains a `Link` that has `Link.empty` as its `rest` attribute rather than having a cyclical structure.',
+        code: code(`
+def cycle(s):
+    """Move the first Link of a non-empty finite linked list to be the last.
+
+    >>> a = Link(3, Link(5, Link(7, Link(9))))  # <3 5 7 9>
+    >>> print(cycle(a))
+    <5 7 9 3>
+    >>> print(a)
+    <3>
+    """
+    assert isinstance(s, Link)
+    if s.rest is Link.empty:
+        return s
+    last = s
+    while last.rest is not Link.empty:
+        last = last.rest
+    s.rest, last.rest, result = ⟦a⟧ , ⟦b⟧ , ⟦c⟧
+    return result
+`),
+      },
+      'sp24f-4b': {
+        exam: 'sp24f', number: '4(b)', title: 'Merry-Go-Round — repeat', points: 6,
+        intro: 'Implement `repeat`, a generator function that takes a non-empty finite linked list `s` and a positive integer `k`. It yields `k` elements from `s`, restarting from the first element of `s` each time the end is reached. It is ok to mutate `s`. You may call `cycle`.',
+        code: code(`
+def repeat(s, k):
+    """Yield k items from a non-empty finite linked list, starting over as needed.
+    It is ok to mutate s in the process.
+
+    >>> t = repeat(Link(4, Link(2, Link(6))), 10)
+    >>> [next(t), next(t), next(t), next(t)]
+    [4, 2, 6, 4]
+    >>> list(t)  # 6 of the 10 elements remain
+    [2, 6, 4, 2, 6, 4]
+    """
+    for x in ⟦d⟧:
+        yield ⟦e⟧
+        ⟦f⟧
+`),
+      },
+      'sp24f-5a': {
+        exam: 'sp24f', number: '5(a)', title: 'Trees — count_ones', points: 4,
+        intro: 'Implement `count_ones`, which takes a `Tree` instance `t`. It returns the number of nodes in `t` that have one child. The `Tree` class is defined on Page 2 of the Midterm 2 study guide.',
+        code: code(`
+def count_ones(t):
+    """Return the number of nodes that have one child.
+
+    >>> count_ones(Tree(1, [Tree(2), Tree(3, [Tree(4)])]))
+    1
+    >>> count_ones(Tree(1, [Tree(2), Tree(3), Tree(4)]))
+    0
+    >>> count_ones(Tree(1, [Tree(2, [Tree(3, [Tree(4)]), Tree(5, [Tree(6)])])]))
+    3
+    """
+    count = sum([ count_ones(⟦a⟧) for b in t.branches if ⟦b⟧ ])
+    if ⟦c⟧:
+        return count + 1
+    else:
+        return count
+`),
+      },
+      'sp24f-5b': {
+        exam: 'sp24f', number: '5(b)', title: 'Trees — shorten', points: 6,
+        intro: 'Implement `shorten`, which takes a `Tree` instance `t`. It removes all non-root nodes that have no siblings (no other nodes with the same parent), then returns `t`.',
+        code: code(`
+def shorten(t):
+    """Remove all non-root nodes with no siblings and return t.
+
+    >>> shorten(Tree(1, [Tree(2), Tree(3, [Tree(4)])]))
+    Tree(1, [Tree(2), Tree(3)])
+    >>> shorten(Tree(1, [Tree(2, [Tree(3, [Tree(4)])])]))
+    Tree(1)
+    >>> shorten(Tree(1, [Tree(2, [Tree(3), Tree(4)])]))
+    Tree(1, [Tree(3), Tree(4)])
+    >>> shorten(Tree(1, [Tree(2, [Tree(3, [Tree(4), Tree(5)]), Tree(6, [Tree(7)])])]))
+    Tree(1, [Tree(3, [Tree(4), Tree(5)]), Tree(6)])
+    """
+    ⟦d⟧:
+        ⟦e⟧ = ⟦f⟧
+    for b in t.branches:
+        shorten(b)
+    return t
+`),
+      },
+      'sp24f-5b-iv': {
+        exam: 'sp24f', number: '5(b) iv', title: 'Trees — order of growth', points: 1,
+        intro: 'What order of growth describes the time it takes to execute `u = Tree(1, [t])` in terms of the number of nodes in a `Tree` instance `t`. Assume every non-leaf node in `t` has two children.',
+        code: code(`
+u = Tree(1, [t])
+`),
+      },
+      'sp24f-6': {
+        exam: 'sp24f', number: '6', title: 'Scheme — truths', points: 6,
+        intro: 'A *nested list of numbers* is a list containing numbers and nested lists of numbers. For example: `((7 5) 3 ((1)) 9)`\n\nImplement `truths`, which takes a nested list of numbers `s` and a one-argument procedure `f`. It returns the count of numbers `x` in `s` for which `(f x)` returns a true value.\n\n**Hint:** The built-in `number?` procedure returns whether its argument is a number.',
+        code: code(`
+;;; scm> (define (eight? x) (and (number? x) (= x 8)))
+;;; scm> (truths '(8 (8 ((3 8)) 8 ())) eight?)
+;;; 4
+;;; scm> (truths '(8 (8 ((3 8)) 8 ())) number?)
+;;; 5
+(define (truths s f)
+  (if (null? s) 0
+    (+
+      (if (number? (car s)) ⟦a⟧ (truths ⟦b⟧ f))  ; first argument to +
+      ⟦c⟧ )))                                     ; second argument to +
+`),
+      },
+      'sp24f-6d': {
+        exam: 'sp24f', number: '6(d)', title: 'Scheme — eights (A+)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nFill in blank (d) to implement `eights`, which returns the number of eights that appear in a row at the beginning of a nested list `s`. You may call `truths`. The only special form you may use to fill in the blank is `if`.',
+        code: code(`
+;;; scm> (eights '(8 8 8 3 8))
+;;; 3
+;;; scm> (eights '((8 (8) 8) (3) 8 ()))
+;;; 3
+;;; scm> (eights '(8 (8 ((8 3 8)) 8 ())))
+;;; 3
+;;; scm> (eights '(7 (8 ((3 8)) 8 ())))
+;;; 0
+;;; Return the number of eights at the start of a nested list of numbers s.
+(define (eights s)
+  (cond
+    ((null? s) 0)
+    ((eight? (car s)) (+ 1 (eights (cdr s))))
+    ((number? (car s)) 0)
+    (else (let ((k (eights (car s)))) (+ k ⟦A+⟧ ) ))))
+`),
+      },
+      'sp24f-7': {
+        exam: 'sp24f', number: '7', title: 'Tree Swap (A+)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nImplement `swap`, which takes a `Tree` instance `t` with unique node labels and two different values `x` and `y` that are labels of `t`. It mutates the tree by placing the node labeled `x` in the position of the node labeled `y`, and the node labeled `y` in the position of the node labeled `x`.\n\n**Hint:** The built-in `exec` function takes a string and executes the Python statement it contains in the current environment. For example, after `exec(\'x = 1 + 1\')`, `x` is 2.\n\nThere are two blanks in `swap`, but they both contain exactly the same code, so you just need to write that code once. The `find` function takes four arguments, so your answer should contain two expressions separated by a comma.',
+        code: code(`
+def find(t, x, s, f):
+    result = []
+    def g(t, s):
+        if t.label == x:
+            result.append(s)
+        for i in range(len(t.branches)):
+            g(t.branches[i], s + f(i))
+    g(t, s)
+    assert len(result) == 1, 'x should appear as a label exactly once'
+    return result[0]
+
+def swap(t, x, y):
+    """Swap the positions of the nodes labeled x and y in Tree t.
+
+    >>> n = Tree(1, [Tree(2, [Tree(3, [Tree(4)]), Tree(5)]), Tree(6, [Tree(7)])])
+    >>> b = n.branches[0].branches[0]
+    >>> b is n.branches[1]
+    False
+    >>> swap(n, 3, 6)
+    >>> n
+    Tree(1, [Tree(2, [Tree(6, [Tree(7)]), Tree(5)]), Tree(3, [Tree(4)])])
+    >>> b is n.branches[1]
+    True
+    """
+    px = find(t, x, ⟦A+⟧ )
+    py = find(t, y, ⟦A+⟧ )
+    exec(px + ',' + py + '=' + py + ',' + px)
+`),
+      },
+    },
+    questions: [
+      { id: 'sp24f-1a', problem: 'sp24f-1', label: '(a)', points: 0.5, topics: ['lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: '`print(s is u)`', choices: ['True', 'False'] },
+      { id: 'sp24f-1b', problem: 'sp24f-1', label: '(b)', points: 0.5, topics: ['lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: '`print(s is v)`', choices: ['True', 'False'] },
+      { id: 'sp24f-1c', problem: 'sp24f-1', label: '(c)', points: 0.5, topics: ['lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: '`print(s is u[2])`', choices: ['True', 'False'] },
+      { id: 'sp24f-1d', problem: 'sp24f-1', label: '(d)', points: 0.5, topics: ['lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '`print(s is t[2])`', choices: ['True', 'False'] },
+      { id: 'sp24f-1e', problem: 'sp24f-1', label: '(e)', points: 2, topics: ['lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: '`print(t)`' },
+      { id: 'sp24f-1f', problem: 'sp24f-1', label: '(f)', points: 2, topics: ['lists'], difficulty: 'hard',
+        type: 'short_answer', prompt: '`print(u)`' },
+      { id: 'sp24f-2a', problem: 'sp24f-2a', label: 'i.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['[]', '[[]]', '[s]', '[s[0]]', 'None'] },
+      { id: 'sp24f-2b', problem: 'sp24f-2a', label: 'ii.', points: 2, topics: ['lists', 'fundamentals'], difficulty: 'medium', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['result and s[0] < x', 'result and result[-1] < x', 'result or s[0] < x', 'result or result[-1] < x', 'not result and s[0] < x', 'not result and result[-1] < x', 'not result or s[0] < x', 'not result or result[-1] < x'] },
+      { id: 'sp24f-2c', problem: 'sp24f-2a', label: 'iii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['append', 'extend', 'pop', 'list'] },
+      { id: 'sp24f-2d', problem: 'sp24f-2b', label: 'i.', points: 1, topics: ['iterators'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['return t', 'return []', 'return None', 'x = t', 'x = []', 'x = None'] },
+      { id: 'sp24f-2e', problem: 'sp24f-2b', label: 'ii.', points: 1, topics: ['iterators', 'lists'], difficulty: 'easy', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).', choices: ['x', 'next(t)', '[x]', '[next(t)]', '[x, next(t)]'] },
+      { id: 'sp24f-2f', problem: 'sp24f-2b', label: 'iii.', points: 1, topics: ['recursion', 'iterators'], difficulty: 'medium', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).', choices: ['max', 'list', 'iter', 'next', 'upiter'] },
+      { id: 'sp24f-2g', problem: 'sp24f-2b', label: 'iv.', points: 2, topics: ['hof', 'iterators'], difficulty: 'medium', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank (g). You may not call `up`.' },
+      { id: 'sp24f-3a', problem: 'sp24f-3a', label: 'i.', points: 2, topics: ['oop'], difficulty: 'easy', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (a). **Select all that apply.**',
+        choices: ['first == self.ns', '[first] == self.ns', 'first == self.ns[0] or self.ns[1]', 'first in self.ns', 'self.first == self.ns', '[self.first] == self.ns', 'self.first == self.ns[0] or self.ns[1]', 'self.first in self.ns'] },
+      { id: 'sp24f-3b', problem: 'sp24f-3a', label: 'ii.', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['first == self.ns[0]', 'first != self.ns[0]', 'self.first == self.ns[0]', 'self.first != self.ns[0]'] },
+      { id: 'sp24f-3c', problem: 'sp24f-3a', label: 'iii.', points: 3, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'sp24f-3d', problem: 'sp24f-3a', label: 'iv.', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).',
+        choices: ['Domino', 'Domino(self.ns)', 'Domino([self.ns])', 'self', 'self.ns', 'repr(self)', 'repr(self.ns)'] },
+      { id: 'sp24f-3e', problem: 'sp24f-3a', label: 'v.', points: 1, topics: ['oop', 'fundamentals'], difficulty: 'medium', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).',
+        choices: ['str(self)', 'str(self.ns)', "ns[0] + '-' + ns[1]", "self.ns[0] + '-' + self.ns[1]", "str(self.ns[0] + '-' + self.ns[1])", "str(self.ns[0]) + '-' + str(self.ns[1])"] },
+      { id: 'sp24f-3f', problem: 'sp24f-3b', label: 'i.', points: 2, topics: ['lists', 'oop'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'sp24f-3f-ii', problem: 'sp24f-3b-ii', label: 'ii.', points: 2, topics: ['oop', 'lists'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the value of `drop(ds[2], drop(ds[1].align(4), ds))`?',
+        choices: ['[5-2]', '[5-2, 3-4]', '[5-2, 4-3]', '[5-2, 5-5]', '[5-2, 3-4, 5-5]', '[5-2, 4-3, 5-5]', '[5-2, 5-5, 4-3]', '[5-2, 3-4, 5-5, 4-3]', '[5-2, 4-3, 5-5, 4-3]'] },
+      { id: 'sp24f-3g', problem: 'sp24f-3c', label: 'i.', points: 1, topics: ['recursion', 'oop'], difficulty: 'easy', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (g).', choices: ['d', 'first', 'rest[0]', 'repr(d)', 'repr(first)', 'repr(rest[0])'] },
+      { id: 'sp24f-3h', problem: 'sp24f-3c', label: 'ii.', points: 3, topics: ['recursion', 'oop'], difficulty: 'hard', blank: 'h',
+        type: 'short_answer', prompt: 'Fill in blank (h).' },
+      { id: 'sp24f-3i', problem: 'sp24f-3c', label: 'iii.', points: 1, topics: ['recursion', 'lists'], difficulty: 'medium', blank: 'i',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (i).', choices: ['rest', 'rest[1:]', 'drop(d, rest)', 'drop(first, rest)'] },
+      { id: 'sp24f-3j', problem: 'sp24f-3c', label: 'iv.', points: 2, topics: ['recursion', 'oop'], difficulty: 'medium', blank: 'j',
+        type: 'short_answer', prompt: 'Fill in blank (j).' },
+      { id: 'sp24f-3k', problem: 'sp24f-3c', label: 'v.', points: 2, topics: ['recursion'], difficulty: 'medium', blank: 'k',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (k).',
+        choices: ["''", 'None', 'first', 'repr(first)', 'max(rest)', 'repr(max(rest))', 'longest(ds[1:])'] },
+      { id: 'sp24f-3l', problem: 'sp24f-3c', label: 'vi.', points: 1, topics: ['hof'], difficulty: 'medium', blank: 'l',
+        type: 'single_choice', mono: true, prompt: 'Fill in blanks (l) and (m) with the same expression. Numbers on a domino must be below 10.',
+        choices: ['len', 'max', 'str', 'repr', 'lambda s: s', 'lambda s: s[0]', 'lambda s: len(s[0])'] },
+      { id: 'sp24f-3o', problem: 'sp24f-3d', label: 'i.', points: 1, topics: ['sql-joins'], difficulty: 'easy', blank: 'o',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (o).', choices: ['a.id = b.id', 'a.id < b.id', 'a.id != b.id'] },
+      { id: 'sp24f-3p', problem: 'sp24f-3d', label: 'ii.', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'p',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (p).',
+        choices: ['a.m = b.m OR a.n = b.n', 'a.m = b.m AND a.n = b.n', 'a.n = b.m OR a.n = b.n', 'a.n = b.m AND a.n = b.n', 'a.m = b.n OR a.n = b.n', 'a.m = b.n AND a.n = b.n'] },
+      { id: 'sp24f-3q', problem: 'sp24f-3d', label: 'iii.', points: 1, topics: ['sql-agg'], difficulty: 'easy', blank: 'q',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (q).', choices: ['m', 'a.m', 'b.m', 'id', 'a.id', 'b.id'] },
+      { id: 'sp24f-4a', problem: 'sp24f-4a', label: 'i.', points: 2, topics: ['links'], difficulty: 'medium', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['s', 's.rest', 'last', 'last.rest', 'Link.empty'] },
+      { id: 'sp24f-4b', problem: 'sp24f-4a', label: 'ii.', points: 2, topics: ['links'], difficulty: 'medium', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['s', 's.rest', 'last', 'last.rest', 'Link.empty'] },
+      { id: 'sp24f-4c', problem: 'sp24f-4a', label: 'iii.', points: 2, topics: ['links'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['s', 's.rest', 'last', 'last.rest', 'Link.empty'] },
+      { id: 'sp24f-4d', problem: 'sp24f-4b', label: 'i.', points: 2, topics: ['generators'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['s', 'iter(s)', 'next(s)', 'range(k)', 'range(s)', 'range(len(s))'] },
+      { id: 'sp24f-4e', problem: 'sp24f-4b', label: 'ii.', points: 2, topics: ['generators', 'links'], difficulty: 'medium', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).',
+        choices: ['s', 's.first', 's.rest.first', 'from repeat(s.rest, k-1)', 'x', 's[x]', 's[x % len(s)]'] },
+      { id: 'sp24f-4f', problem: 'sp24f-4b', label: 'iii.', points: 2, topics: ['links'], difficulty: 'medium', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).',
+        choices: ['cycle(s)', 's = cycle(s)', 'cycle(s.rest)', 's = cycle(s.rest)', 's.rest = cycle(s.rest)'] },
+      { id: 'sp24f-5a', problem: 'sp24f-5a', label: 'i.', points: 1, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['b', 't', 'b.branches', 't.branches'] },
+      { id: 'sp24f-5b', problem: 'sp24f-5a', label: 'ii.', points: 1, topics: ['trees'], difficulty: 'medium', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['True', 'is_leaf(b)', 'is_leaf(t)', 'len(b.branches) == 1', 'len(t.branches) == 1'] },
+      { id: 'sp24f-5c', problem: 'sp24f-5a', label: 'iii.', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['True', 'is_leaf(b)', 'is_leaf(t)', 'len(b.branches) == 1', 'len(t.branches) == 1', 'all([len(b.branches) == 1 for b in t.branches])', 'any([len(b.branches) == 1 for b in t.branches])'] },
+      { id: 'sp24f-5d', problem: 'sp24f-5b', label: 'i.', points: 3, topics: ['trees'], difficulty: 'hard', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d). Include the type of the control statement you are using (`if`, `while`, `for`, etc.).' },
+      { id: 'sp24f-5e', problem: 'sp24f-5b', label: 'ii.', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).', choices: ['t', 't.branches', 't.branches[i]', 'Tree(t.label, t.branches)'] },
+      { id: 'sp24f-5f', problem: 'sp24f-5b', label: 'iii.', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f). You may not use `and`, `or`, `if`, or `lambda` in your answer.' },
+      { id: 'sp24f-5g', problem: 'sp24f-5b-iv', label: 'iv.', points: 1, topics: ['efficiency'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'What order of growth describes the time it takes to execute `u = Tree(1, [t])` in terms of the number of nodes in `t`?',
+        choices: ['constant', 'logarithmic', 'linear', 'quadratic', 'exponential'] },
+      { id: 'sp24f-6a', problem: 'sp24f-6', label: '(a)', points: 3, topics: ['scheme'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'sp24f-6b', problem: 'sp24f-6', label: '(b)', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['s', '(car s)', '(cdr s)', '(list s)'] },
+      { id: 'sp24f-6c', problem: 'sp24f-6', label: '(c)', points: 2, topics: ['scheme'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['nil', '0', '1', 'f', 's', '(f s)', 'truths', '(truths (cdr s) f)'] },
+      { id: 'sp24f-6d', problem: 'sp24f-6d', label: '(d)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in blank (d).' },
+      { id: 'sp24f-7', problem: 'sp24f-7', label: '(a)', points: 0, topics: ['trees', 'hof'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Write the code that fills in both blanks (the same code fills in each blank).' },
+    ],
+    answers: {
+      'sp24f-1a': { correct: 1, explanation: '`u` is the list `[2, 0, s]`, not `s` itself.' },
+      'sp24f-1b': { correct: 0, explanation: '`v = t[2]` happened before `t[2]` was replaced, and `t[2]` was `s`.' },
+      'sp24f-1c': { correct: 0, explanation: '`u[2]` is still `s` (`extend` mutated `s` in place).' },
+      'sp24f-1d': { correct: 1, explanation: '`t[2] = [6, 7]` replaced that element with a new list.' },
+      'sp24f-1e': { accepted: ['[2, 0, [6, 7], 5]'], explanation: '`t` had 5 appended, then its element at index 2 was replaced by `[6, 7]`.' },
+      'sp24f-1f': { accepted: ['[2, 0, [2, 4, 2, 4]]'], explanation: '`u[2]` is `s`, and `s.extend(s)` doubled it to `[2, 4, 2, 4]`. `t.append(5)` changed only `t`.' },
+      'sp24f-2a': { correct: 0, explanation: 'Start with an empty result.' },
+      'sp24f-2b': { correct: 7, explanation: 'The first element always goes in; after that, `x` must be larger than the last element added, which is the largest so far.' },
+      'sp24f-2c': { correct: 0, explanation: 'Add one element.' },
+      'sp24f-2d': { correct: 1, explanation: 'An empty iterator has an empty increasing sublist.' },
+      'sp24f-2e': { correct: 2, explanation: 'The first element always starts the sublist, as a one-element list.' },
+      'sp24f-2f': { correct: 4, explanation: 'Recurse on the rest of the iterator, keeping only elements above `x`.' },
+      'sp24f-2g': { accepted: ['lambda y: y > x', 'lambda v: v > x', 'lambda z: z > x', 'lambda n: n > x', 'lambda y: x < y'], explanation: 'Only elements larger than `x` can be in the sublist after it; `filter` keeps them lazily.' },
+      'sp24f-3a': { correct: [3], explanation: '`first` must be one of the two numbers. `first == self.ns[0] or self.ns[1]` is truthy whenever `self.ns[1]` isn’t 0, and the domino has no `first` attribute.' },
+      'sp24f-3b': { correct: 1, explanation: 'Only flip when `first` isn’t already first.' },
+      'sp24f-3c': { accepted: ['self.ns = [self.ns[1], self.ns[0]]', 'self.ns = self.ns[::-1]', 'self.ns.reverse()', 'self.ns = list(reversed(self.ns))', 'self.ns[0], self.ns[1] = self.ns[1], self.ns[0]'], explanation: 'Swap the two numbers.' },
+      'sp24f-3d': { correct: 3, explanation: '`align` returns the same instance, mutated.' },
+      'sp24f-3e': { correct: 5, explanation: 'The numbers are integers, so each must be turned into a string before joining with `\'-\'`.' },
+      'sp24f-3f': { accepted: ['[x for x in ds if x is not d]', '[e for e in ds if e is not d]', '[y for y in ds if y is not d]', '[x for x in ds if not x is d]'], explanation: 'Use `is not` to drop only that exact domino: another domino with the same numbers (like the second 3-4) stays.' },
+      'sp24f-3f-ii': { correct: 2, explanation: '`ds[1].align(4)` flips `ds[1]` to 4-3 and returns it, so the inner `drop` removes it: `[5-2, 5-5, 4-3]` (the last one is the original 4-3). The outer `drop` removes `ds[2]`, 5-5.' },
+      'sp24f-3g': { correct: 4, explanation: 'Each line starts with the current domino’s string.' },
+      'sp24f-3h': { accepted: ['d.align(first.ns[1])'], explanation: 'The next domino must start with `first`’s second number, so align it that way.' },
+      'sp24f-3i': { correct: 2, explanation: 'The rest of the line uses the remaining dominos, without `d`.' },
+      'sp24f-3j': { accepted: ['first.ns[1] in d.ns', 'd.ns[0] == first.ns[1] or d.ns[1] == first.ns[1]', 'first.ns[1] == d.ns[0] or first.ns[1] == d.ns[1]'], explanation: 'A domino can come next only if it has `first`’s second number on it.' },
+      'sp24f-3k': { correct: 3, explanation: 'With nothing left to add, the line is just this domino.' },
+      'sp24f-3l': { correct: 0, explanation: 'Every domino string has the same length (3 characters plus a space), so the longest string describes the most dominos.' },
+      'sp24f-3o': { correct: 2, explanation: 'Compare each domino with every *other* domino.' },
+      'sp24f-3p': { correct: 2, explanation: 'Another domino matches if either of its numbers equals `a.n`.' },
+      'sp24f-3q': { correct: 4, explanation: 'One row per domino `a`; `id` alone would be ambiguous.' },
+      'sp24f-4a': { correct: 4, explanation: 'The first Link becomes the last, so its `rest` becomes `Link.empty`.' },
+      'sp24f-4b': { correct: 0, explanation: 'The old last Link now points to the old first Link.' },
+      'sp24f-4c': { correct: 1, explanation: 'The result starts at the old second Link (read before `s.rest` changes, since multiple assignment evaluates the right side first).' },
+      'sp24f-4d': { correct: 3, explanation: 'Exactly `k` elements are yielded.' },
+      'sp24f-4e': { correct: 1, explanation: 'Yield the current first element.' },
+      'sp24f-4f': { correct: 1, explanation: 'Rotate the list and keep the new first Link.' },
+      'sp24f-5a': { correct: 0, explanation: 'Count in every branch.' },
+      'sp24f-5b': { correct: 0, explanation: 'Every branch is counted (the blank only filters, and no branch should be skipped).' },
+      'sp24f-5c': { correct: 4, explanation: 'This node counts if it has exactly one child.' },
+      'sp24f-5d': { accepted: ['while len(t.branches) == 1'], explanation: 'Keep removing an only child (its children take its place) until `t` has zero or several children.' },
+      'sp24f-5e': { correct: 1, explanation: 'Replace `t`’s branches.' },
+      'sp24f-5f': { accepted: ['t.branches[0].branches'], explanation: 'The only child’s children take its place.' },
+      'sp24f-5g': { correct: 0, explanation: 'Making a `Tree` with one branch copies a one-element list; the size of `t` doesn’t matter.' },
+      'sp24f-6a': { accepted: ['(if (f (car s)) 1 0)'], explanation: 'A number counts 1 if `f` is true for it.' },
+      'sp24f-6b': { correct: 1, explanation: 'A nested list: count inside it.' },
+      'sp24f-6c': { correct: 7, explanation: 'Add the count for the rest of the list.' },
+      'sp24f-6d': { accepted: ['(if (< k (truths (car s) number?)) 0 (eights (cdr s)))'] },
+      'sp24f-7': { accepted: ["'t', lambda i: '.branches[' + str(i) + ']'"] },
+    },
+  });
 })();

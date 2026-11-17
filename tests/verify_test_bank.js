@@ -37,7 +37,8 @@ const EXCLUDED = ['fa25-1', 'sp25-1', 'fa25-2', 'sp25-2', 'sp25-2c', 'sp25-3b', 
   'fa25f-1', 'fa25f-2', 'fa25f-2c', 'fa25f-5', 'fa25f-6b', 'fa25f-6c', 'fa25f-9a', 'fa25f-8a', 'fa25f-8b',
   'sp25f-1', 'sp25f-2', 'sp25f-2c', 'sp25f-4b', 'sp25f-7a', 'sp25f-7b', 'sp25f-8a', 'sp25f-8b',
   // fa24f-4b: MissDict's class body calls Counter() (part (a)), and Run Code runs the student's code alone first.
-  'fa24f-4b', 'fa24f-1', 'fa24f-2', 'fa24f-5c', 'fa24f-5c-v', 'fa24f-7a', 'fa24f-7b', 'fa24f-7b-iv', 'fa24f-7c', 'fa24f-8', 'fa24f-9a'];
+  'fa24f-4b', 'fa24f-1', 'fa24f-2', 'fa24f-5c', 'fa24f-5c-v', 'fa24f-7a', 'fa24f-7b', 'fa24f-7b-iv', 'fa24f-7c', 'fa24f-8', 'fa24f-9a',
+  'sp24f-1', 'sp24f-3b-ii', 'sp24f-3d', 'sp24f-4a', 'sp24f-4b', 'sp24f-5b', 'sp24f-5b-iv', 'sp24f-6', 'sp24f-6d', 'sp24f-7'];
 
 let problems = 0;
 const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };

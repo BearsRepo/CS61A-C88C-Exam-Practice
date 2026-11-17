@@ -92,6 +92,19 @@ CREATE TABLE gov(place, ruler);
 INSERT INTO gov VALUES ('noxus', 'triumvirate'), ('zaun', 'council'), ('piltover', 'council');` },
       ],
     },
+    'sp24f-3d': {
+      cases: [
+        { name: 'The dominos table printed in the exam', origin: 'exam', input: '', columns: ['id', 'm', 'n', 'COUNT(*)'],
+          expect: [[0, 3, 2, 2], [2, 6, 3, 3], [4, 3, 2, 2], [5, 2, 6, 1]] },
+        { name: 'A double (2-2) and a match on either number', origin: 'added', input: '', columns: ['id', 'm', 'n', 'COUNT(*)'],
+          expect: [[0, 1, 2, 2], [1, 2, 2, 2], [2, 5, 2, 2], [3, 7, 5, 1]],
+          data: `CREATE TABLE dominos AS
+  SELECT 0 AS id, 1 AS m, 2 AS n UNION
+  SELECT 1      , 2     , 2      UNION
+  SELECT 2      , 5     , 2      UNION
+  SELECT 3      , 7     , 5;` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

@@ -263,6 +263,24 @@ def to_link(t):
     return s[:i] + [s[j]] + s[i:j] + s[j+1:]
 `;
 
+  const DOMINO = `class Domino:
+    def __init__(self, ns):
+        assert len(ns) == 2 and ns[0] in range(10) and ns[1] in range(10)
+        self.ns = ns
+
+    def align(self, first):
+        assert first in self.ns, 'first must be a number on the domino.'
+        if first != self.ns[0]:
+            self.ns = [self.ns[1], self.ns[0]]
+        return self
+
+    def __repr__(self):
+        return str(self.ns[0]) + '-' + str(self.ns[1])
+`;
+  const DROP = `def drop(d, ds):
+    return [x for x in ds if x is not d]
+`;
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -1709,6 +1727,119 @@ Tree(1, [Tree(7)])
 ([10], [5, 5], [3, 7], [7, 3, 2])
 >>> make_tens([11]) is None
 True`),
+      ],
+    },
+    {
+      id: 'sp24f-2a-tests', problem: 'sp24f-2a', verified: true,
+      verification: verification({ passing: 1, failing: 14 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> up([3, 1, 2, 5, 4, 5, 7, 6, 12, 11])
+[3, 5, 7, 12]`),
+        added(`>>> up([]), up([4]), up([5, 4, 3]), up([1, 2, 3]), up([2, 2, 3])
+([], [4], [5], [1, 2, 3], [2, 3])
+>>> up([-5, -7, -1, 0])  # negative numbers
+[-5, -1, 0]`),
+      ],
+    },
+    {
+      id: 'sp24f-2b-tests', problem: 'sp24f-2b', verified: true,
+      verification: verification({ passing: 6, failing: 16 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> upiter(iter([3, 1, 2, 5, 4, 5, 7, 6, 12, 11]))
+[3, 5, 7, 12]`),
+        added(`>>> upiter(iter([])), upiter(iter([4])), upiter(iter([5, 4, 3])), upiter(iter([2, 2, 3]))
+([], [4], [5], [2, 3])
+>>> upiter(x * x for x in [-3, 1, 4, -5])  # any iterator
+[9, 16, 25]`),
+      ],
+    },
+    {
+      id: 'sp24f-3a-tests', problem: 'sp24f-3a', verified: true,
+      verification: verification({ passing: 7, failing: 23 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> d = Domino([3, 4])
+>>> original = d
+>>> d.align(3)
+3-4
+>>> d.align(4)
+4-3
+>>> d is original  # No new Domino instance was created
+True
+>>> d              # A Domino's order is changed by align
+4-3`),
+        added(`>>> d = Domino([0, 9])
+>>> d, d.align(0), d.align(9), d.align(9)
+(9-0, 9-0, 9-0, 9-0)
+>>> d.ns
+[9, 0]
+>>> e = Domino([5, 5])
+>>> e.align(5)
+5-5`),
+        added(`>>> try:
+...     Domino([1, 2]).align(3)
+... except AssertionError as e:
+...     print(e)
+first must be a number on the domino.`),
+      ],
+    },
+    {
+      id: 'sp24f-3b-tests', problem: 'sp24f-3b', verified: true,
+      verification: verification({ passing: 5, failing: 3 }, '2026-11-17'),
+      provenance: EXAM, setup: DOMINO, setupNote: 'These tests provide the Domino class from part (a) (the official solution).', setupFrom: ['sp24f-3a'],
+      cases: [
+        exam(`>>> ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [3, 4]]]
+>>> drop(ds[1], ds)
+[5-2, 5-5, 3-4]
+>>> drop(ds[3], ds)
+[5-2, 3-4, 5-5]
+>>> ds
+[5-2, 3-4, 5-5, 3-4]`),
+        added(`>>> d = Domino([1, 2])
+>>> drop(d, []), drop(d, [d]), drop(d, [d, d])
+([], [], [])
+>>> drop(Domino([1, 2]), [d])  # a different domino with the same numbers stays
+[1-2]`),
+      ],
+    },
+    {
+      id: 'sp24f-3c-tests', problem: 'sp24f-3c', verified: true,
+      verification: verification({ passing: 4, failing: 24 }, '2026-11-17'),
+      provenance: EXAM, setup: DOMINO + '\n' + DROP, setupNote: 'These tests provide Domino and drop from parts (a) and (b) (the official solutions).', setupFrom: ['sp24f-3a', 'sp24f-3b'],
+      cases: [
+        exam(`>>> ds = [Domino(ns) for ns in [[5, 2], [3, 4], [5, 5], [6, 1], [3, 2]]]
+>>> print(longest(ds))
+4-3 3-2 2-5 5-5`),
+        exam(`>>> ds = [Domino(ns) for ns in [[1, 2],[1, 2],[3, 2],[3, 2],[3, 2],[4, 3],[4, 3],[4, 3],[6,5]]]
+>>> print(longest(ds))
+2-1 1-2 2-3 3-2 2-3 3-4 4-3 3-4`),
+        added(`>>> len(longest([Domino([1, 2])]).split())
+1
+>>> len(longest([Domino([1, 2]), Domino([3, 4])]).split())  # no line longer than one domino
+1
+>>> len(longest([Domino([1, 2]), Domino([2, 3]), Domino([3, 1])]).split())  # a full circle uses all three
+3
+>>> len(longest([Domino([1, 2]), Domino([5, 5]), Domino([2, 5]), Domino([6, 1])]).split())
+4`),
+      ],
+    },
+    {
+      id: 'sp24f-5a-tests', problem: 'sp24f-5a', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> count_ones(Tree(1, [Tree(2), Tree(3, [Tree(4)])]))
+1
+>>> count_ones(Tree(1, [Tree(2), Tree(3), Tree(4)]))
+0
+>>> count_ones(Tree(1, [Tree(2, [Tree(3, [Tree(4)]), Tree(5, [Tree(6)])])]))
+3`),
+        added(`>>> count_ones(Tree(1)), count_ones(Tree(1, [Tree(2)])), count_ones(Tree(1, [Tree(2, [Tree(3, [Tree(4)])])]))
+(0, 1, 3)
+>>> count_ones(Tree(1, [Tree(2, [Tree(3)]), Tree(4, [Tree(5), Tree(6, [Tree(7)])])]))
+2`),
       ],
     },
   ];

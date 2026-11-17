@@ -79,6 +79,22 @@ window.CS61A_SCOPE = {
       note: 'The `MissDict` class defines a `__str__` method, which is no longer taught. All you need to know: `print(double)` shows the string `__str__` returns.' },
     'fa24f-6b': { status: 'note', source: 'inferred',
       note: 'The second example prints a tree with the course `Tree` class’s `__str__` method (one label per line, indented by depth), which is no longer taught. The first example shows the same kind of tree with `repr`.' },
+    // Spring 2024 Final
+    'sp24f-4a': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'sp24f-4b': { status: 'out', reason: 'Mutates a linked list (calls cycle)', source: 'inferred' },
+    'sp24f-5b': { status: 'out', reason: 'Mutates a tree', source: 'inferred' },
+    'sp24f-5b-iv': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'sp24f-6': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'sp24f-6d': { status: 'out', reason: 'Scheme (replaced by Gleam; A+ question)', source: 'inferred' },
+    'sp24f-7': { status: 'out', reason: 'Mutates a tree (A+ question)', source: 'inferred' },
+    'sp24f-3a': { status: 'note', source: 'inferred',
+      note: 'The `Domino` class defines a `__repr__` method, which is no longer taught. All you need to know: Python shows a domino using the string `__repr__` returns, so `Domino([3, 4])` is shown as `3-4`. Blank (e) writes that string.' },
+    'sp24f-3b': { status: 'note', source: 'inferred',
+      note: 'Dominos are shown as `5-2`, `3-4` and so on because of the `Domino` class’s `__repr__` method (from part (a)), which is no longer taught.' },
+    'sp24f-3b-ii': { status: 'note', source: 'inferred',
+      note: 'Dominos are shown as `5-2`, `4-3` and so on because of the `Domino` class’s `__repr__` method, which is no longer taught.' },
+    'sp24f-3c': { status: 'note', source: 'inferred',
+      note: '`repr(d)` calls the `Domino` class’s `__repr__` method (no longer taught): it gives a string like `\'3-4\'`. That is all you need for blanks (g) and (k).' },
   },
 
   questions: {
