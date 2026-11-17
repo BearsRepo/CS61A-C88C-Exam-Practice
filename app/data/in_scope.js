@@ -67,6 +67,18 @@ window.CS61A_SCOPE = {
     'sp25f-7b': { status: 'out', reason: 'Scheme macros (replaced by Gleam)', source: 'inferred' },
     'sp25f-5': { status: 'note', source: 'inferred',
       note: 'The `Rower` class defines a `__str__` method, which is no longer taught. All you need to know: printing a rower (as `print(self, ...)` and `print(hank)` do) shows the string `__str__` returns. Blank (c) is inside that method, but it is an ordinary dictionary lookup.' },
+    // Fall 2024 Final
+    'fa24f-5c': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'fa24f-5c-v': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'fa24f-7a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa24f-7b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa24f-7b-iv': { status: 'out', reason: 'Scheme and orders of growth', source: 'inferred' },
+    'fa24f-7c': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    'fa24f-9a': { status: 'out', reason: 'Scheme macros (replaced by Gleam; A+ question)', source: 'inferred' },
+    'fa24f-4b': { status: 'note', source: 'inferred',
+      note: 'The `MissDict` class defines a `__str__` method, which is no longer taught. All you need to know: `print(double)` shows the string `__str__` returns.' },
+    'fa24f-6b': { status: 'note', source: 'inferred',
+      note: 'The second example prints a tree with the course `Tree` class’s `__str__` method (one label per line, indented by depth), which is no longer taught. The first example shows the same kind of tree with `repr`.' },
   },
 
   questions: {

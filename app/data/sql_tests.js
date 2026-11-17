@@ -79,6 +79,19 @@ CREATE TABLE kinds(living, what);
 INSERT INTO kinds VALUES ('yes', 'mammal'), ('yes', 'reptile'), ('no', 'object');` },
       ],
     },
+    'fa24f-8': {
+      cases: [
+        { name: 'The tables printed in the exam', origin: 'exam', input: '', columns: ['name', 'job'],
+          expect: [['vander', 'barkeep'], ['silco', 'chembaron'], ['ekko', 'firelight'], ['jinx', 'rebel']] },
+        { name: 'A job shared with someone outside the council’s regions still counts as unique', origin: 'added', input: '', columns: ['name', 'job'],
+          expect: [['ana', 'enforcer'], ['cid', 'baker']],
+          data: `CREATE TABLE who(name, region, job);
+INSERT INTO who VALUES ('ana', 'zaun', 'enforcer'), ('bo', 'noxus', 'enforcer'), ('cid', 'piltover', 'baker'),
+  ('dee', 'zaun', 'scientist'), ('eli', 'piltover', 'scientist');
+CREATE TABLE gov(place, ruler);
+INSERT INTO gov VALUES ('noxus', 'triumvirate'), ('zaun', 'council'), ('piltover', 'council');` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

@@ -248,6 +248,21 @@ def to_link(t):
         return Link.empty
 `;
 
+  const TENS = `def tens(s):
+    t = 0
+    for x in s:
+        t += x
+        if t > 10:
+            return False
+        if t == 10:
+            t = 0
+    return True
+`;
+  const PROMOTE = `def promote(s, i, j):
+    assert i >= 0 and i < j and j < len(s)
+    return s[:i] + [s[j]] + s[i:j] + s[j+1:]
+`;
+
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -1554,6 +1569,146 @@ True`),
 >>> s = equal('1234', -8)
 >>> eval(s), s.replace('+', '').replace('-', '')
 (-8, '1234')`),
+      ],
+    },
+    {
+      id: 'fa24f-3-tests', problem: 'fa24f-3', verified: true,
+      verification: verification({ passing: 1, failing: 12 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> tens([3, 2, 2, 3, 6, 2, 2, 4, 1, 5, 2])  # sum(s[:4])==10, sum(s[:7])==20, sum(s[:10])==30
+True
+>>> tens([3, 2, 2, 3, 6, 2, 6, 1, 5, 2])  # sum(s[:4])==10, but no slice starting at 0 sums to 20
+False`),
+        added(`>>> [tens([]), tens([1]), tens([10]), tens([5, 5, 5]), tens([4, 6, 10])]
+[True, True, True, True, True]
+>>> [tens([11]), tens([9, 2]), tens([5, 5, 6, 6]), tens([5, 15])]  # 5 + 15 passes 10 and lands on 20
+[False, False, False, False]`),
+      ],
+    },
+    {
+      id: 'fa24f-4a-tests', problem: 'fa24f-4a', verified: true,
+      verification: verification({ passing: 1, failing: 24 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> total = Counter()
+>>> odd, even = total.spawn(), total.spawn()  # these are offspring of total
+>>> one, three = odd.spawn(), odd.spawn()     # these are offspring of odd and total
+>>> for c in [one, even, three, even, odd, even]:
+...     c.inc()
+>>> [c.count for c in [one, three, even, odd, total]]
+[1, 1, 3, 3, 6]`),
+        added(`>>> c = Counter()
+>>> c.count, c.parent
+(0, None)
+>>> c.inc()
+>>> c.count
+1
+>>> a = Counter()
+>>> b = a.spawn()
+>>> d = b.spawn()
+>>> d.parent is b, b.parent is a
+(True, True)
+>>> d.inc()
+>>> b.inc()
+>>> [a.count, b.count, d.count]
+[2, 2, 1]`),
+      ],
+    },
+    {
+      id: 'fa24f-5a-tests', problem: 'fa24f-5a', verified: true,
+      verification: verification({ passing: 2, failing: 9 }, '2026-11-17'),
+      provenance: EXAM, setup: '', setupFrom: [],
+      cases: [
+        exam(`>>> promote([3, 6, 9, 12, 15, 18], 2, 4)
+[3, 6, 15, 9, 12, 18]
+>>> promote([3, 6, 9, 12, 15, 18], 0, 4)
+[15, 3, 6, 9, 12, 18]`),
+        added(`>>> promote([1, 2], 0, 1), promote([1, 2, 3, 4], 1, 3), promote([1, 2, 3, 4], 2, 3)
+([2, 1], [1, 4, 2, 3], [1, 2, 4, 3])
+>>> s = [1, 2, 3]
+>>> t = promote(s, 0, 2)
+>>> s, t  # s is not mutated
+([1, 2, 3], [3, 1, 2])`),
+      ],
+    },
+    {
+      id: 'fa24f-5b-tests', problem: 'fa24f-5b', verified: true,
+      verification: verification({ passing: 4, failing: 12 }, '2026-11-17'),
+      provenance: EXAM, setup: PROMOTE, setupNote: 'These tests provide promote from part (a) (the official solution).', setupFrom: ['fa24f-5a'],
+      cases: [
+        exam(`>>> promotions([2, 4, 6, 8, 10, 12],
+...            [2, 6, 8, 4, 12, 10])  # promote (1, 2) then (2, 3) then (4, 5)
+3
+>>> promotions([6, 1, 6, 1, 6, 1],
+...            [1, 1, 6, 6, 1, 6])    # promote (0, 1) then (1, 5)
+2`),
+        exam(`>>> promotions([1, 2, 3], [1, 2, 3])        # no promotions needed
+0
+>>> promotions([1, 2, 1, 2], [2, 1, 2, 1])  # promote (0, 3)
+1`),
+        added(`>>> promotions([], []), promotions([1, 2], [2, 1]), promotions([3, 2, 1], [1, 2, 3]), promotions([1, 2, 3], [3, 1, 2])
+(0, 1, 2, 1)`),
+      ],
+    },
+    {
+      id: 'fa24f-6a-tests', problem: 'fa24f-6a', verified: true,
+      verification: verification({ passing: 2, failing: 10 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(`>>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(6)]), 6)
+True
+>>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(6)]), 12)
+False`),
+        exam(`>>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(5)]), 6)
+False
+>>> products(Tree(1, [Tree(5, [Tree(2)]), Tree(12)]), 12)
+False`),
+        added(`>>> [products(Tree(5), 5), products(Tree(5), 10), products(Tree(2, [Tree(3), Tree(3, [Tree(1)])]), 6)]
+[True, False, True]
+>>> products(Tree(2, [Tree(2, [Tree(2)]), Tree(4)]), 8), products(Tree(4, [Tree(2)]), 6)
+(True, False)`),
+      ],
+    },
+    {
+      id: 'fa24f-6b-tests', problem: 'fa24f-6b', verified: true,
+      verification: verification({ passing: 2, failing: 17 }, '2026-11-17'),
+      provenance: EXAM, setup: TREE_STR, setupNote: 'These tests provide the course’s Tree class with its __str__ method, which prints one label per line, indented by depth (the exam uses it but does not print it).', setupFrom: [],
+      cases: [
+        exam(`>>> produce(12)
+Tree(1, [Tree(2, [Tree(6)]), Tree(3, [Tree(4)]), Tree(12)])`),
+        exam(`>>> print(produce(24))  # Paths are 1-2-3-4, 1-2-12, 1-3-8, 1-4-6, and 1-24
+1
+  2
+    3
+      4
+    12
+  3
+    8
+  4
+    6
+  24`),
+        added(`>>> produce(1), produce(2), produce(6)
+(Tree(1), Tree(1, [Tree(2)]), Tree(1, [Tree(2, [Tree(3)]), Tree(6)]))
+>>> produce(7)
+Tree(1, [Tree(7)])
+>>> str(produce(156)).count('\\n') + 1  # 18 nodes; using n instead of x in blank (e) adds extra paths
+18`),
+      ],
+    },
+    {
+      id: 'fa24f-9b-tests', problem: 'fa24f-9b', verified: true,
+      verification: verification({ passing: 1, failing: 3 }, '2026-11-17'),
+      provenance: EXAM, setup: TENS, setupNote: 'These tests provide tens from Q3 (the official solution).', setupFrom: ['fa24f-3'],
+      cases: [
+        exam(`>>> make_tens([4, 2, 2, 2, 4, 6, 1, 3, 3, 2, 5])  # promote (6, 7), (7, 9), and (8, 10)
+[4, 2, 2, 2, 4, 6, 3, 2, 5, 1, 3]`),
+        exam(`>>> make_tens([4, 2, 2, 2, 4, 5, 1, 4, 3, 4])  # promote (2, 4), (4, 7), (5, 9), and (8, 9)
+[4, 2, 4, 2, 4, 4, 2, 5, 3, 1]`),
+        added(`>>> make_tens([10]), make_tens([5, 5]), make_tens([3, 7]), make_tens([7, 2, 3])
+([10], [5, 5], [3, 7], [7, 3, 2])
+>>> make_tens([11]) is None
+True`),
       ],
     },
   ];

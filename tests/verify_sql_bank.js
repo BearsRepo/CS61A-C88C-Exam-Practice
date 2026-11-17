@@ -26,6 +26,13 @@ const CORE = sqlCore();
 
 // Plausible wrong answers for written blanks (the suite must catch each one).
 const WRONG = {
+  'fa24f-8': [
+    { c: 'GROUP BY job' },
+    { c: 'GROUP BY job HAVING COUNT(*) > 1' },
+    { c: 'HAVING COUNT(*) = 1' },
+    { c: 'GROUP BY name HAVING COUNT(*) = 1' },
+    { c: '' },
+  ],
   'fa25f-8b': [
     { c: 'ON discussion_id = id GROUP BY id HAVING COUNT(*) >= 20' },
     { c: 'ON discussion_id = id HAVING COUNT(*) > 20' },

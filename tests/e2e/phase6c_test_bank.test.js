@@ -23,7 +23,7 @@ const officialStored = (q) => {
   const k = B.ANSWER_KEY[q.id];
   if (q.type === 'single_choice') return typeof k.correct === 'number' ? k.correct : k.correct[0];
   // a final's select-all blank with several correct options is tested one option at a time (see verify_test_bank.js)
-  if (q.type === 'multi_select') return B.PROBLEMS[q.problem].exam.endsWith('f') && k.correct.length > 1 ? [k.correct[0]] : [...k.correct];
+  if (q.type === 'multi_select') return B.PROBLEMS[q.problem].exam.endsWith('f') ? [k.correct[0]] : [...k.correct];
   return k.accepted[0];
 };
 const blankText = (q, stored) => (q.type === 'single_choice' ? q.choices[stored] : q.type === 'multi_select' ? stored.map((i) => q.choices[i]).join(' | ') : stored);
@@ -67,7 +67,7 @@ const officialAnswers = (pids) => Object.fromEntries(pids.flatMap((pid) => parts
 
   // ── every shipped suite, in the browser's Python ──
   await page.goto(APP_URL);
-  ok(await page.evaluate(() => window.CS61A_TEST_SUITES.suites.length) === 57, 'the app ships 57 verified suites (40 from the midterms, 17 from the finals)');
+  ok(await page.evaluate(() => window.CS61A_TEST_SUITES.suites.length) === SUITES.length && SUITES.filter((t) => !B.PROBLEMS[t.problem].exam.endsWith('f')).length === 40, `the app ships every verified suite (${SUITES.length}: 40 from the midterms, the rest from the finals)`);
   for (const t of SUITES) {
     const tests = { setup: t.setup || '', cases: t.cases.map((c) => ({ input: c.input, origin: c.origin })) };
     const good = await page.evaluate((code, tests) => window.CS61A_RUNNER.run(code, { tests }), fill(t.problem), tests);

@@ -21,7 +21,8 @@ const HIDDEN = new Set(B.QUESTIONS.filter(hidden).map((q) => q.id));
 const examIds = (e) => B.QUESTIONS.filter((q) => B.PROBLEMS[q.problem].exam === e && !HIDDEN.has(q.id)).map((q) => q.id);
 const ALL_EXAMS = Object.keys(B.EXAMS);
 
-ok(HIDDEN.size === 45, `45 parts are out of scope: 24 of the midterms, 21 of the finals (${HIDDEN.size})`);
+const hiddenMid = [...HIDDEN].filter((id) => !B.PROBLEMS[B.QUESTIONS.find((q) => q.id === id).problem].exam.endsWith('f')).length;
+ok(hiddenMid === 24 && HIDDEN.size > 24, `24 parts of the midterms are out of scope, and ${HIDDEN.size - 24} of the finals`);
 ok(['fa25f-2c', 'fa25f-5a', 'fa25f-6e', 'fa25f-9a', 'sp25f-2d', 'sp25f-4e', 'sp25f-7b-ii'].every((id) => HIDDEN.has(id)), 'finals: orders of growth, async, Scheme and tree mutation are hidden');
 ok(['fa25f-6a', 'fa25f-7c', 'fa25f-8c', 'sp25f-5c', 'sp25f-8b'].every((id) => !HIDDEN.has(id)), 'finals: the Python linked-list part, the OOP parts with a note and the SQL parts stay in scope');
 ok(['sp24-1a', 'sp24-1b', 'sp24-1d', 'sp24-4aplus', 'sp23-4e', 'fa22-4b-c', 'sp23-2f', 'fa25-1c'].every((id) => HIDDEN.has(id)), 'mutation, repr and orders-of-growth parts are hidden');

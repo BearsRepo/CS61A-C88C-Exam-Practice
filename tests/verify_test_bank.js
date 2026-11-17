@@ -35,20 +35,22 @@ const HARNESS = fs.readFileSync(path.join(ROOT, 'app', 'runner.js'), 'utf8').mat
 const EXCLUDED = ['fa25-1', 'sp25-1', 'fa25-2', 'sp25-2', 'sp25-2c', 'sp25-3b', 'fa24-1', 'fa24-2', 'sp24-1', 'sp24-2', 'sp24-4b',
   'fa23-1', 'fa23-2', 'fa23-4a', 'fa23-5aplus', 'sp23-1', 'sp23-2b', 'sp23-3a-iii',
   'fa25f-1', 'fa25f-2', 'fa25f-2c', 'fa25f-5', 'fa25f-6b', 'fa25f-6c', 'fa25f-9a', 'fa25f-8a', 'fa25f-8b',
-  'sp25f-1', 'sp25f-2', 'sp25f-2c', 'sp25f-4b', 'sp25f-7a', 'sp25f-7b', 'sp25f-8a', 'sp25f-8b'];
+  'sp25f-1', 'sp25f-2', 'sp25f-2c', 'sp25f-4b', 'sp25f-7a', 'sp25f-7b', 'sp25f-8a', 'sp25f-8b',
+  // fa24f-4b: MissDict's class body calls Counter() (part (a)), and Run Code runs the student's code alone first.
+  'fa24f-4b', 'fa24f-1', 'fa24f-2', 'fa24f-5c', 'fa24f-5c-v', 'fa24f-7a', 'fa24f-7b', 'fa24f-7b-iv', 'fa24f-7c', 'fa24f-8', 'fa24f-9a'];
 
 let problems = 0;
 const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };
 
 const partsOf = (pid) => B.QUESTIONS.filter((q) => q.problem === pid && q.blank);
-// Select-all blanks of the finals with several correct options are checked one option at a time (each correct option
+// Select-all blanks of the finals are checked one option at a time (each correct option
 // alone passes, each wrong one alone fails), the way Run Code tests each checked option of such a blank on its own.
 const perOption = (q) => B.PROBLEMS[q.problem].exam.endsWith('f');
 const officialAnswer = (q) => {
   const k = B.ANSWER_KEY[q.id];
   if (q.type === 'single_choice') return { choice: typeof k.correct === 'number' ? k.correct : k.correct[0] };
-  // A select-all blank with several correct options (a final's) is filled with one of them; see `perOption` below.
-  if (q.type === 'multi_select') return k.correct.length > 1 && perOption(q) ? { choice: k.correct[0] } : { choices: [...k.correct].sort((a, b) => a - b) };
+  // A final's select-all blank is filled with its first correct option; see `perOption` below.
+  if (q.type === 'multi_select') return perOption(q) ? { choice: k.correct[0] } : { choices: [...k.correct].sort((a, b) => a - b) };
   return { text: k.accepted[0] };
 };
 const textOf = (q, ans) => {

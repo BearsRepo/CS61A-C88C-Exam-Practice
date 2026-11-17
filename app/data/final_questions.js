@@ -1169,4 +1169,613 @@ def equal(digits, n):
   Object.assign(B.PROBLEMS, PROBLEMS);
   B.QUESTIONS.push(...QUESTIONS);
   Object.assign(B.ANSWER_KEY, ANSWER_KEY);
+
+  // Finals added later: each one is a self-contained add({ exam, problems, questions, answers }) block below.
+  function add(x) {
+    B.EXAMS[x.exam.id] = x.exam;
+    Object.assign(B.PROBLEMS, x.problems);
+    B.QUESTIONS.push(...x.questions);
+    Object.assign(B.ANSWER_KEY, x.answers);
+  }
+
+  // ───────────────────────────── Fall 2024 Final ─────────────────────────────
+
+  const FA24_TABLES = code(`
+who:
+| name         | region    | job        |
+|--------------|-----------|------------|
+| caitlyn      | piltover  | enforcer   |
+| vi           | zaun      | enforcer   |
+| jayce        | piltover  | scientist  |
+| victor       | piltover  | scientist  |
+| ekko         | zaun      | firelight  |
+| heimerdinger | piltover  | scientist  |
+| jinx         | zaun      | rebel      |
+| mel          | noxus     | councilor  |
+| ambessa      | noxus     | warlord    |
+| vander       | zaun      | barkeep    |
+| silco        | zaun      | chembaron  |
+
+gov:
+| place      | ruler       |
+|------------|-------------|
+| noxus      | triumvirate |
+| zaun       | council     |
+| piltover   | council     |
+| bilgewater | gangs       |
+
+expected result:
+| name   | job       |
+|--------|-----------|
+| vander | barkeep   |
+| silco  | chembaron |
+| ekko   | firelight |
+| jinx   | rebel     |
+`);
+  const FA24_SETUP = code(`
+CREATE TABLE who(name, region, job);
+INSERT INTO who VALUES ('caitlyn', 'piltover', 'enforcer'), ('vi', 'zaun', 'enforcer'), ('jayce', 'piltover', 'scientist'),
+  ('victor', 'piltover', 'scientist'), ('ekko', 'zaun', 'firelight'), ('heimerdinger', 'piltover', 'scientist'),
+  ('jinx', 'zaun', 'rebel'), ('mel', 'noxus', 'councilor'), ('ambessa', 'noxus', 'warlord'), ('vander', 'zaun', 'barkeep'),
+  ('silco', 'zaun', 'chembaron');
+CREATE TABLE gov(place, ruler);
+INSERT INTO gov VALUES ('noxus', 'triumvirate'), ('zaun', 'council'), ('piltover', 'council'), ('bilgewater', 'gangs');
+`);
+  add({
+    exam: { id: 'fa24f', label: 'Fall 2024 Final', kind: 'final', url: 'https://cs61a.org/resources/', complete: true },
+    problems: {
+      'fa24f-1': {
+        exam: 'fa24f', number: '1', title: 'What Would Python Display?', points: 6,
+        intro: 'Assume the following code has been executed.',
+        code: code(`
+def cut(s):
+    this = 1
+    for x in s:
+        if this:
+            this = x
+            yield this
+        else:
+            this = True
+
+def paste(n):
+    yield n
+    for x in paste(n + 1):
+        yield 2 * x
+    yield n
+
+def copy(t, k):
+    return [next(t) for x in range(k)]
+
+nums = [0, 2, 4, 6, 8]
+`),
+        outro: 'Write the output that would be displayed by printing the result of each expression. If an error occurs, write *ERROR*.',
+      },
+      'fa24f-2': {
+        exam: 'fa24f', number: '2', title: 'Line Diagram', points: 4,
+        intro: 'Complete the environment diagram to answer the following questions. Only the questions will be scored.',
+        figure: { src: 'assets/fa24-final-q2.png', width: 440, height: 402, alt: 'From the exam: the code with line numbers 1 to 16, and a blank environment diagram. The Global frame has five blank bindings. Frames f1 to f4 each have a blank name and blank parent, two blank bindings and a blank Return value.', slots: [[292, 18, 86], [389, 18, 44], [292, 35, 86], [389, 35, 43], [292, 53, 86], [389, 53, 44], [292, 70, 86], [389, 70, 44], [292, 89, 86], [389, 89, 44], [261, 111, 50], [363, 111, 50], [292, 127, 86], [389, 127, 44], [292, 146, 86], [389, 146, 44], [389, 165, 44], [261, 188, 50], [363, 188, 50], [292, 204, 86], [389, 204, 44], [292, 223, 86], [389, 223, 43], [389, 242, 44], [261, 265, 50], [363, 265, 50], [292, 280, 86], [389, 280, 43], [292, 299, 86], [389, 299, 43], [389, 319, 44], [261, 341, 50], [363, 341, 50], [293, 356, 84], [389, 356, 43], [292, 375, 86], [389, 375, 43], [389, 395, 44]] },
+        code: code(`
+b = 6
+log = []
+
+def make_line(a):
+    b = 1
+    list(log).append(a)
+    return lambda x: a * x + b
+
+def shift_line(f):
+    b = 3
+    log.append([b])
+    return lambda y: f(y) + b
+
+z = shift_line(make_line(2))(0)
+print(log)
+print(z)
+`),
+        lineNumbers: true,
+      },
+      'fa24f-3': {
+        exam: 'fa24f', number: '3', title: 'Make Tens', points: 5,
+        intro: 'A list of numbers is easier for a person to sum up if it can be split into groups that all sum to 10. Implement `tens`, which takes a list of positive numbers `s`. It returns `True` if, for every positive integer `i` where `10 * i <= sum(s)`, there is a positive `k` that satisfies `sum(s[0:k]) == 10 * i`. Otherwise, it returns `False`.',
+        code: code(`
+def tens(s):
+    """Return whether every multiple of 10 less than or equal to sum(s) appears as a prefix of s.
+    >>> tens([3, 2, 2, 3, 6, 2, 2, 4, 1, 5, 2])  # sum(s[:4])==10, sum(s[:7])==20, sum(s[:10])==30
+    True
+    >>> tens([3, 2, 2, 3, 6, 2, 6, 1, 5, 2])  # sum(s[:4])==10, but no slice starting at 0 sums to 20
+    False
+    """
+    t = 0
+    for x in s:
+        t += x
+        if ⟦g⟧:
+            return ⟦h⟧
+        if t == ⟦i⟧:
+            t = ⟦j⟧
+    return True
+`),
+      },
+      'fa24f-4a': {
+        exam: 'fa24f', number: '4(a)', title: 'Count Misses — Counter', points: 6,
+        intro: 'Implement the `Counter` class. A `Counter` has a `count` of the number of times `inc` has been invoked on itself or any of its offspring. Its offspring are the `Counter`s created by its `spawn` method or the `spawn` method of any of its offspring.',
+        code: code(`
+class Counter:
+    """Counts how many times inc has been invoked on itself or any of its offspring.
+
+    >>> total = Counter()
+    >>> odd, even = total.spawn(), total.spawn()  # these are offspring of total
+    >>> one, three = odd.spawn(), odd.spawn()     # these are offspring of odd and total
+    >>> for c in [one, even, three, even, odd, even]:
+    ...     c.inc()
+    >>> [c.count for c in [one, three, even, odd, total]]
+    [1, 1, 3, 3, 6]
+    """
+    def __init__(self, parent=None):
+        self.parent = parent
+        ⟦a⟧
+
+    def inc(self):
+        self.count += 1
+        ⟦b⟧:
+            ⟦c⟧
+
+    def spawn(self):
+        return ⟦d⟧
+`),
+      },
+      'fa24f-4b': {
+        exam: 'fa24f', number: '4(b)', title: 'Count Misses — MissDict', points: 7,
+        intro: 'Implement the `MissDict` class. A `MissDict` has a dictionary `d`. Its `get` method takes an iterable `keys`, returns a list of all values in `d` that correspond to those keys, and counts the number of keys that did not appear in `d` (called *misses*). Printing a `MissDict` displays a fraction in which:\n\n- The numerator is the number of misses during all calls to `get` for that particular `MissDict` instance.\n- The denominator is the number of misses during all calls to `get` for any `MissDict` instance.\n\nAssume `Counter` is implemented correctly.',
+        code: code(`
+class MissDict:
+    """Has a dict, gets a list of values for an iterable of keys,
+    and counts the number of keys that are not in the dict.
+
+    >>> double = MissDict({1: 2, 2: 4, 3: 6, 5: 10})
+    >>> half = MissDict({2: 1.0, 3: 1.5, 4: 2.0})
+    >>> double.get([1, 3, 5, 2, 4])  # No value for key 4 (1 miss)
+    [2, 6, 10, 4]
+    >>> double.get([5, 4, 3, 0, 4])  # No value for keys 4 or 0 or 4 (3 misses)
+    [10, 6]
+    >>> half.get([1, 3, 5, 2, 4])    # No value for keys 1 or 5 (2 misses)
+    [1.5, 1.0, 2.0]
+    >>> print(double)  # double had 4 misses & half had 2 misses
+    4 / 6 of the misses
+    """
+    misses = Counter()
+    def __init__(self, d):
+        assert isinstance(d, dict)
+        self.d = d
+        self.misses = ⟦e⟧
+    def get(self, keys):
+        result = []
+        for k in keys:
+            if k in self.d:
+                ⟦f⟧
+            else:
+                ⟦g⟧
+        return result
+
+    def __str__(self):
+        return f'⟦h⟧ of the misses'
+`),
+      },
+      'fa24f-5a': {
+        exam: 'fa24f', number: '5(a)', title: 'Promotion to CS 61B — promote', points: 4,
+        intro: '**Definition.** Given a sequence `s` and positions (indices) `i` and `j` in `s` with `i < j`, *promoting* an element to `i` from `j` means reordering `s` so that the element originally at position `j` is now at position `i`, all elements originally positioned between `i` and `j` increase their position (index) by one, and all other elements stay where they are. The beginning of `s` is position 0. For example, in the list `[30, 60, 90, 120, 150, 180]`, promoting to 2 from 4 would place the number 150 (original position 4) just before 90 (originally position 2) and increases the positions of both 90 and 120 by one, resulting in `[30, 60, 150, 90, 120, 180]`.\n\nImplement `promote`, which takes a list of numbers `s` and two non-negative integers `i` and `j`. It returns a new list promoting to `i` from `j` in `s`. Do not mutate `s`. **Hint:** For any list `s`, `s[len(s):]` evaluates to `[]`.',
+        code: code(`
+def promote(s, i, j):
+    """Return a list in which s[j] is at index i without mutating s.
+
+    >>> promote([3, 6, 9, 12, 15, 18], 2, 4)
+    [3, 6, 15, 9, 12, 18]
+    >>> promote([3, 6, 9, 12, 15, 18], 0, 4)
+    [15, 3, 6, 9, 12, 18]
+    """
+    assert i >= 0 and i < j and j < len(s)
+    return s[:i] + ⟦a⟧ + ⟦b⟧ + s[⟦c⟧:]
+`),
+      },
+      'fa24f-5b': {
+        exam: 'fa24f', number: '5(b)', title: 'Promotion to CS 61B — promotions', points: 4,
+        intro: 'Implement `promotions`, which takes two lists of numbers `s` and `t` that have the same elements, possibly in different orders. It returns the minimum number of promotions that must be applied to `s` so that it has the same order as `t`. Assume `promote` is implemented correctly.',
+        code: code(`
+def promotions(s, t):
+    """Return the minimum times promote must be called to start from s and return t.
+
+    >>> promotions([2, 4, 6, 8, 10, 12],
+    ...            [2, 6, 8, 4, 12, 10])  # promote (1, 2) then (2, 3) then (4, 5)
+    3
+    >>> promotions([6, 1, 6, 1, 6, 1],
+    ...            [1, 1, 6, 6, 1, 6])    # promote (0, 1) then (1, 5)
+    2
+    >>> promotions([1, 2, 3], [1, 2, 3])        # no promotions needed
+    0
+    >>> promotions([1, 2, 1, 2], [2, 1, 2, 1])  # promote (0, 3)
+    1
+    """
+    assert sorted(s) == sorted(t)  # Check that s & t have the same elements (disregarding order)
+    if len(s) == 0:
+        return 0
+    elif ⟦d⟧:
+        return promotions(s[1:], t[1:])
+    else:
+        return 1 + min([promotions(⟦e⟧, t[1:]) for j in range(1, len(s)) if ⟦f⟧])
+`),
+      },
+      'fa24f-5c': {
+        exam: 'fa24f', number: '5(c)', title: 'Promotion to CS 61B — promote_link', points: 6,
+        intro: 'Implement `promote_link`, which takes a `Link` instance `s` (a non-empty linked list) and two non-negative integers `i` and `j` with `i < j` and `j` less than the length of `s`. It mutates `s` by promoting to `i` from `j` and then returns `s`.\n\nThe `Link` class appears on Page 2 (left side) of the Midterm 2 Study Guide.',
+        code: code(`
+def promote_link(s, i, j):
+    """Mutate linked list s so that the item at index j is at index i.
+
+    >>> a = Link(3, Link(6, Link(9, Link(12, Link(15, Link(18))))))
+    >>> print(promote_link(a, 2, 4))
+    <3 6 15 9 12 18>
+    >>> print(promote_link(a, 0, 4))
+    <12 3 6 15 9 18>
+    >>> promote_link(a, 1, 3) is a
+    True
+    """
+    assert i >= 0 and i < j
+    if i > 0:
+        ⟦g⟧
+    else:
+        insert, tail = s.first, s.rest
+        while j > 0:
+            ⟦h⟧  # Hint: use multiple assignment: ___ , ___ = ___ , ___
+            tail, j = tail.rest, j-1
+        ⟦i⟧ = insert
+    return ⟦j⟧
+`),
+      },
+      'fa24f-5c-v': {
+        exam: 'fa24f', number: '5(c) v', title: 'Promotion to CS 61B — promote_link output', points: 2,
+        intro: 'Assume `promote_link` is implemented correctly.',
+        code: code(`
+odds = Link(3, Link(5, Link(7, Link(9))))
+for i in range(3):
+    promote_link(odds, 0, 3)
+
+print(odds)
+`),
+      },
+      'fa24f-6a': {
+        exam: 'fa24f', number: '6(a)', title: 'Fresh Produce — products', points: 5,
+        intro: 'Implement `products`, which takes a `Tree` instance `t` with positive integer labels and a positive integer `n`. It returns `True` if every path from the root of `t` to a leaf has labels that equal `n` when multiplied together.\n\nThe `Tree` class appears on Page 2 (left side) of the Midterm 2 Study Guide.',
+        code: code(`
+def products(t, n):
+    """Return whether the product of labels along every root-to-leaf path is n.
+
+    >>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(6)]), 6)
+    True
+    >>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(6)]), 12)
+    False
+    >>> products(Tree(1, [Tree(2, [Tree(3)]), Tree(5)]), 6)
+    False
+    >>> products(Tree(1, [Tree(5, [Tree(2)]), Tree(12)]), 12)
+    False
+    """
+    assert type(n) == int
+    if t.is_leaf():
+        return ⟦a⟧
+    if ⟦b⟧:
+        return False
+    return ⟦c⟧
+`),
+      },
+      'fa24f-6b': {
+        exam: 'fa24f', number: '6(b)', title: 'Fresh Produce — produce', points: 7,
+        intro: '**Definition.** An *increasing sequence* is a sequence of integers in which each element after the first is larger than the previous element.\n\nImplement `produce`, which takes a positive integer `n`. It returns a `Tree` of positive integers in which:\n\n- The product of the labels along every root-to-leaf path is `n`,\n- Every increasing sequence of integers starting with 1 that has product `n` is a root-to-leaf path, and\n- Every sequence of siblings (nodes with a common parent) is an increasing sequence.',
+        code: code(`
+def produce(n):
+    """Return the largest tree in which the labels for every root-to-label path
+    are increasing and have product n. Put all siblings in increasing order.
+
+    >>> produce(12)
+    Tree(1, [Tree(2, [Tree(6)]), Tree(3, [Tree(4)]), Tree(12)])
+    >>> print(produce(24))  # Paths are 1-2-3-4, 1-2-12, 1-3-8, 1-4-6, and 1-24
+    1
+      2
+        3
+          4
+        12
+      3
+        8
+      4
+        6
+      24
+    """
+    def grow(t, x):
+        for k in range(⟦d⟧, x + 1):
+            if ⟦e⟧ % k == 0:
+                branch = ⟦f⟧
+                if ⟦g⟧:
+                    t.branches.append(branch)
+        return t
+
+    return grow(Tree(1), n)
+`),
+      },
+      'fa24f-7a': {
+        exam: 'fa24f', number: '7(a)', title: 'A Pair of Schemes — all-pairs', points: 4,
+        intro: 'Implement the Scheme procedure `all-pairs`, which takes a procedure `f` and a list `s`. It returns `#t` if `(f x y)` is `#t` for every pair of adjacent elements `x` and `y` in `s`. Assume `f` always returns either `#t` or `#f`.',
+        code: code(`
+(define (inc x y) (= (+ x 1) y))        ; Whether x+1 equals y
+
+;;; Return #t if (f x y) is #t for every pair of adjacent values (x, y) in list s.
+;;;
+;;; scm> (all-pairs inc '(3 4 5 6 7 8))
+;;; #t
+;;; scm> (all-pairs inc '(3 4 5 8 7 8))
+;;; #f
+;;; scm> (all-pairs inc '(3))
+;;; #t
+(define (all-pairs f s)
+  (or (null? s) (null? (cdr s))
+      (and ⟦a⟧ (all-pairs f ⟦b⟧ ))))
+`),
+      },
+      'fa24f-7b': {
+        exam: 'fa24f', number: '7(b)', title: 'A Pair of Schemes — show-pairs', points: 5,
+        intro: 'Implement the Scheme procedure `show-pairs`, which takes a list `s` and returns a list of every pair of adjacent elements in `s`. A pair is a two-element list.',
+        code: code(`
+;;; Return a list of every pair of adjacent elements in list s.
+;;;
+;;; scm> (show-pairs '(3 5 7 9 11 13))
+;;; ((3 5) (5 7) (7 9) (9 11) (11 13))
+(define (show-pairs s)
+  (if (or (null? s) (null? (cdr s))) nil
+    ( ⟦a⟧ ⟦b⟧ (show-pairs ⟦c⟧ ))))
+`),
+      },
+      'fa24f-7b-iv': {
+        exam: 'fa24f', number: '7(b) iv', title: 'A Pair of Schemes — order of growth', points: 1,
+        intro: 'What order of growth describes the time it takes to execute `(unpair s)` in terms of the length of the input list `s`, assuming that `car`, `cdr`, `cons`, and `null?` are all constant-time operations?',
+        code: code(`
+(define (unpair s) (cond ((null? s) nil)
+                         ((null? (cdr s)) (car s))
+                         (else (cons (car (car s)) (unpair (cdr s))))))
+`),
+      },
+      'fa24f-7c': {
+        exam: 'fa24f', number: '7(c)', title: 'A Pair of Schemes — all-pairs-exp', points: 4,
+        intro: 'Implement the Scheme procedure `all-pairs-exp`, which takes a procedure name `proc-name` (a symbol) and a list `s`. It returns an `and` expression that calls the procedure named by `proc-name` on every adjacent pair of elements in `s`. Assume `show-pairs` is implemented correctly.',
+        code: code(`
+;;; Return an and expression that calls the procedure called proc-name on
+;;; every adjacent pair of elements in s.
+;;;
+;;; scm> (all-pairs-exp 'inc '(3 4 5 6 7 8))
+;;; (and (inc 3 4) (inc 4 5) (inc 5 6) (inc 6 7) (inc 7 8))
+;;; scm> (eval (all-pairs-exp 'inc '(3 4 5 6 7 8 )))
+;;; #t
+(define (all-pairs-exp proc-name s)
+  ( ⟦a⟧ (map ⟦b⟧ (show-pairs s))))
+`),
+      },
+      'fa24f-8': {
+        exam: 'fa24f', number: '8', title: 'Arcane Jobs', points: 5, lang: 'sql',
+        intro: 'The Council of Piltover wants a list of all the people living in regions it governs that have unique jobs. Create a table with columns labeled `name` and `job` that contains one row for each person living in a region governed by the `"council"` who is the only person with their job among everybody living in regions ruled by the council.\n\nThe `who` table has one row per person and columns for their `name` (string; each row has a unique value), the `region` (string) they live in, and their `job` (string). The `gov` table has one row per region and columns for its name called `place` (string; each row has a unique value) and the group that rules over it called `ruler` (string).\n\nHere’s an example of the contents of the `who` and `gov` tables and the expected result for a query based on these.\n\n```\n' + FA24_TABLES + '\n```',
+        sqlSetup: FA24_SETUP,
+        code: code(`
+SELECT name, job FROM ⟦a⟧ WHERE ⟦b⟧ AND ruler = "council" ⟦c⟧ ;
+`),
+      },
+      'fa24f-9a': {
+        exam: 'fa24f', number: '9(a)', title: 'Ape Pull Us — all-next (A+, Scheme)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nImplement `all-next`, a macro that takes an expression `x-expr` and a list of numbers. It returns `#t` if every element in `s` besides the first is equal to the value of `x-expr` when `x` is bound to the previous element in `s`. It returns `#f` otherwise. Assume `x-expr` does not contain the symbol `y`. You may call `all-pairs` from Q7. **Important:** The template has a quasiquote before the blank.',
+        code: code(`
+;;; Return whether every value in s that follows another value x is equal
+;;; to the x-expr evaluated when x is the previous value.
+;;;
+;;; scm> (all-next (+ x 2) '(3 5 7 9 11 13))
+;;; #t
+;;; scm> (all-next (* x 2) '(2 4 8 16 32 64))
+;;; #t
+;;; scm> (all-next (+ x 2) '(3 5 7 8 11 13))
+;;; #f
+;;; scm> (all-next (+ x 4) '(3 5 7 9 11 13))
+;;; #f
+(define-macro (all-next x-expr s) \` ⟦A+⟧ )
+`),
+      },
+      'fa24f-9b': {
+        exam: 'fa24f', number: '9(b)', title: 'Ape Pull Us — make_tens (A+)', points: 0,
+        intro: 'This A+ question is not worth any points.\n\nImplement `make_tens` by filling in the blank in `repromote`. The `make_tens` function takes a list of numbers `s`. It returns a list `t` of the same elements reordered so that `tens(t)` returns `True`. Return an order that requires the fewest promotions to reorder `s` into `t`. You may use `tens` from Q3 and `promote` from Q5.',
+        code: code(`
+def make_tens(s):
+    """Return a list t for which tens(t) is true and promotions(s, t) is as small as possible.
+    If there is no reordering t of s for which tens(t) is true, return None.
+    >>> make_tens([4, 2, 2, 2, 4, 6, 1, 3, 3, 2, 5])  # promote (6, 7), (7, 9), and (8, 10)
+    [4, 2, 2, 2, 4, 6, 3, 2, 5, 1, 3]
+    >>> make_tens([4, 2, 2, 2, 4, 5, 1, 4, 3, 4])  # promote (2, 4), (4, 7), (5, 9), and (8, 9)
+    [4, 2, 4, 2, 4, 4, 2, 5, 3, 1]
+    """
+    for t in promute(s):
+        if tens(t):
+            return t
+
+def promute(s):
+    for k in range(len(s)):
+        yield from repromote(s, k)
+
+def repromote(s, k):
+    if k == 0:
+        yield s
+    elif len(s) > 1:
+        for j in range(len(s)):
+            for rest in ⟦A+⟧:
+                yield [s[j]] + rest
+`),
+      },
+    },
+    questions: [
+      { id: 'fa24f-1a', problem: 'fa24f-1', label: '(a)', points: 2, topics: ['generators'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '`list(cut(nums))`',
+        choices: ['[0, 2, 4, 6, 8]', '[0, 4, 6, 8]', '[1, 0, 2, 4, 6, 8]', '[1, 0, 4, 6, 8]', '[1, 2, 4, 6, 8]', '[2, 4, 6, 8]'] },
+      { id: 'fa24f-1b', problem: 'fa24f-1', label: '(b)', points: 2, topics: ['generators', 'hof', 'iterators'], difficulty: 'hard',
+        type: 'short_answer', prompt: '`list(cut(map(lambda x: x - 4, cut(nums))))`' },
+      { id: 'fa24f-1c', problem: 'fa24f-1', label: '(c)', points: 2, topics: ['generators', 'recursion'], difficulty: 'hard',
+        type: 'short_answer', prompt: '`copy(paste(0), 3)`' },
+      { id: 'fa24f-2a', problem: 'fa24f-2', label: '(a)', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is displayed by `print(log)` on line 15?',
+        choices: ['[]', '[3]', '[[3]]', '[[[3]]]', '[2, 3]', '[2, [3]]', '[2, [[3]]]', '[[2], [3]]', '[[2], [[3]]]'] },
+      { id: 'fa24f-2b', problem: 'fa24f-2', label: '(b)', points: 2, topics: ['env', 'hof'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is displayed by `print(z)` on line 16?', choices: ['2', '4', '6', '7', '9', '12'] },
+      { id: 'fa24f-3g', problem: 'fa24f-3', label: '(a)', points: 1, topics: ['lists', 'fundamentals'], difficulty: 'easy', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (g).', choices: ['t == 10', 't != 10', 't > 10', 't < 10'] },
+      { id: 'fa24f-3h', problem: 'fa24f-3', label: '(b)', points: 2, topics: ['fundamentals'], difficulty: 'medium', blank: 'h',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (h). **Select all correct answers.**',
+        choices: ['False', 't % 10 == 0', 't % 10 != 0', 'sum(s) % 10 == 0', 'sum(s) % 10 != 0'] },
+      { id: 'fa24f-3i', problem: 'fa24f-3', label: '(c)', points: 1, topics: ['fundamentals'], difficulty: 'easy', blank: 'i',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (i).', choices: ['0', '10', 'x'] },
+      { id: 'fa24f-3j', problem: 'fa24f-3', label: '(d)', points: 1, topics: ['fundamentals'], difficulty: 'easy', blank: 'j',
+        type: 'short_answer', prompt: 'Fill in blank (j).' },
+      { id: 'fa24f-4a', problem: 'fa24f-4a', label: 'i.', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'fa24f-4b', problem: 'fa24f-4a', label: 'ii.', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['if parent is not None', 'if self.parent is not None', 'while parent is not None', 'while self.parent is not None', 'for p in parent', 'for p in self.parent'] },
+      { id: 'fa24f-4c', problem: 'fa24f-4a', label: 'iii.', points: 2, topics: ['oop', 'recursion'], difficulty: 'medium', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['p += 1', 'p.count += 1', 'p.inc()', 'p.count.inc()', 'parent += 1', 'parent.count += 1', 'parent.inc()', 'parent.count.inc()', 'self.parent += 1', 'self.parent.count += 1', 'self.parent.inc()', 'self.parent.count.inc()'] },
+      { id: 'fa24f-4d', problem: 'fa24f-4a', label: 'iv.', points: 2, topics: ['oop'], difficulty: 'medium', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).',
+        choices: ['self.parent', 'self.parent.spawn()', 'self.spawn()', 'Counter()', 'Counter().spawn()', 'Counter(self)', 'Counter(self.count)'] },
+      { id: 'fa24f-4e', problem: 'fa24f-4b', label: 'i.', points: 2, topics: ['oop'], difficulty: 'medium', blank: 'e',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (e). **Select all correct answers.**',
+        choices: ['MissDict.spawn()', 'MissDict.misses.spawn()', 'Counter()', 'Counter(MissDict)', 'Counter(MissDict.misses)'] },
+      { id: 'fa24f-4f', problem: 'fa24f-4b', label: 'ii.', points: 2, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'fa24f-4g', problem: 'fa24f-4b', label: 'iii.', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (g).',
+        choices: ['misses.inc()', 'misses.count += 1', 'self.misses.inc()', 'self.misses.count += 1', 'MissDict.misses.inc()', 'MissDict.misses.count += 1'] },
+      { id: 'fa24f-4h', problem: 'fa24f-4b', label: 'iv.', points: 2, topics: ['oop'], difficulty: 'medium', blank: 'h',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (h).',
+        choices: ['{misses.count / MissDict.misses.count}', '{misses.count} / {MissDict.misses.count}', '{misses.count / self.MissDict.misses.count}', '{misses.count} / {self.MissDict.misses.count}', '{self.misses.count / misses.count}', '{self.misses.count} / {misses.count}', '{self.misses.count / MissDict.misses.count}', '{self.misses.count} / {MissDict.misses.count}', '{self.misses.count / self.MissDict.misses.count}', '{self.misses.count} / {self.MissDict.misses.count}'] },
+      { id: 'fa24f-5a', problem: 'fa24f-5a', label: 'i.', points: 2, topics: ['lists'], difficulty: 'medium', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (a). **Select all correct answers.**',
+        choices: ['s[j]', '[s[j]]', 'list(s[j])', 's[j:j]', 's[j:j+1]'] },
+      { id: 'fa24f-5b', problem: 'fa24f-5a', label: 'ii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['s[i:j]', 's[i+1:j]', 's[i:j+1]', 's[i+1:j+1]'] },
+      { id: 'fa24f-5c', problem: 'fa24f-5a', label: 'iii.', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).', choices: ['i', 'i+1', 'j', 'j+1'] },
+      { id: 'fa24f-5d', problem: 'fa24f-5b', label: 'i.', points: 1, topics: ['recursion', 'lists'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).',
+        choices: ['s == t', 's != t', 's[0] == t[0]', 's[0] != t[0]', 'sorted(s) == t', 's == sorted(t)'] },
+      { id: 'fa24f-5e', problem: 'fa24f-5b', label: 'ii.', points: 2, topics: ['recursion', 'lists'], difficulty: 'hard', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'fa24f-5f', problem: 'fa24f-5b', label: 'iii.', points: 1, topics: ['recursion', 'lists'], difficulty: 'medium', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).', choices: ['s[0] == t[j]', 's[1] == t[j]', 's[j] == t[0]', 's[j] == t[1]'] },
+      { id: 'fa24f-5g', problem: 'fa24f-5c', label: 'i.', points: 2, topics: ['links', 'recursion'], difficulty: 'medium', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (g).',
+        choices: ['promote_link(s.rest, i-1, j)', 'return promote_link(s.rest, i-1, j)', 'promote_link(s.rest, i, j-1)', 'return promote_link(s.rest, i, j-1)', 'promote_link(s.rest, i-1, j-1)', 'return promote_link(s.rest, i-1, j-1)'] },
+      { id: 'fa24f-5h', problem: 'fa24f-5c', label: 'ii.', points: 2, topics: ['links'], difficulty: 'hard', blank: 'h',
+        type: 'short_answer', prompt: 'Fill in blank (h). **Hint:** Use multiple assignment: `___ , ___ = ___ , ___`' },
+      { id: 'fa24f-5i', problem: 'fa24f-5c', label: 'iii.', points: 1, topics: ['links'], difficulty: 'easy', blank: 'i',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (i).', choices: ['s.first', 's.rest.first', 'tail.first', 'tail.rest.first'] },
+      { id: 'fa24f-5j', problem: 'fa24f-5c', label: 'iv.', points: 1, topics: ['links'], difficulty: 'easy', blank: 'j',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (j).', choices: ['s', 'tail', 'Link(insert, tail.rest)', 'Link(s.first, tail.rest)'] },
+      { id: 'fa24f-5k', problem: 'fa24f-5c-v', label: 'v.', points: 2, topics: ['links'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is displayed by the call to `print` in this code?',
+        choices: ['<3 5 7 9>', '<3 9 7 5>', '<5 7 9 3>', '<5 9 7 3>', '<9 7 5 3>', '<9 3 5 7>'] },
+      { id: 'fa24f-6a', problem: 'fa24f-6a', label: 'i.', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['True', 'False', 'n == t.label', 'n % t.label == 0', 'n % t.label > 0'] },
+      { id: 'fa24f-6b', problem: 'fa24f-6a', label: 'ii.', points: 1, topics: ['trees'], difficulty: 'medium', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ['n != t.label', 'n < t.label', 'n > t.label', 'n % t.label > 0'] },
+      { id: 'fa24f-6c', problem: 'fa24f-6a', label: 'iii.', points: 3, topics: ['trees', 'recursion'], difficulty: 'hard', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c). **Important:** The second argument to a call to `products` must be an integer (`int`).' },
+      { id: 'fa24f-6d', problem: 'fa24f-6b', label: 'i.', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['0', '1', 'x', 't.label', 't.label + 1'] },
+      { id: 'fa24f-6e', problem: 'fa24f-6b', label: 'ii.', points: 1, topics: ['trees'], difficulty: 'medium', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).', choices: ['x', 'n', 't.label', '(t.label // x)', '(t.label // k)'] },
+      { id: 'fa24f-6f', problem: 'fa24f-6b', label: 'iii.', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).',
+        choices: ['Tree(k)', 'Tree(x)', 'grow(Tree(k), x)', 'grow(Tree(x), k)', 'grow(Tree(k), x // k)', 'grow(Tree(x), x // k)'] },
+      { id: 'fa24f-6g', problem: 'fa24f-6b', label: 'iv.', points: 3, topics: ['trees', 'recursion'], difficulty: 'hard', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank (g).' },
+      { id: 'fa24f-7a', problem: 'fa24f-7a', label: 'i.', points: 3, topics: ['scheme'], difficulty: 'medium', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (a). **Select all correct answers.**',
+        choices: ['(car s) (cdr s)', '(car s) (car (cdr s))', 'f (car s) (cdr s)', 'f (car s) (car (cdr s))', 'f((car s) (cdr s))', 'f((car s) (car (cdr s)))', '(f (car s) (cdr s))', '(f (car s) (car (cdr s)))', '(apply f (car s) (cdr s))', '(apply f (car s) (car (cdr s)))'] },
+      { id: 'fa24f-7b', problem: 'fa24f-7a', label: 'ii.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['s', '(cdr s)', '(cdr (cdr s))', '(cons (car s) (cdr s))', '(cons (car s) (cdr (cdr s)))'] },
+      { id: 'fa24f-7c', problem: 'fa24f-7b', label: 'i.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['car', 'cdr', 'cons', 'list', 'append'] },
+      { id: 'fa24f-7d', problem: 'fa24f-7b', label: 'ii.', points: 3, topics: ['scheme'], difficulty: 'hard', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa24f-7e', problem: 'fa24f-7b', label: 'iii.', points: 1, topics: ['scheme'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (c).',
+        choices: ['s', '(cdr s)', '(cdr (cdr s))', '(cons (car s) (cdr s))', '(cons (car s) (cdr (cdr s)))'] },
+      { id: 'fa24f-7f', problem: 'fa24f-7b-iv', label: 'iv.', points: 1, topics: ['efficiency', 'scheme'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'What order of growth describes the time it takes to execute `(unpair s)`?',
+        choices: ['constant', 'logarithmic', 'linear', 'quadratic', 'exponential'] },
+      { id: 'fa24f-7g', problem: 'fa24f-7c', label: 'i.', points: 1, topics: ['scheme'], difficulty: 'medium', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['and', "'and", 'cons and', "cons 'and"] },
+      { id: 'fa24f-7h', problem: 'fa24f-7c', label: 'ii.', points: 3, topics: ['scheme'], difficulty: 'hard', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'fa24f-8a', problem: 'fa24f-8', label: '(a)', points: 1, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['who', 'who AS a, who AS b', 'who, gov', 'who AS a, who AS b, gov'] },
+      { id: 'fa24f-8b', problem: 'fa24f-8', label: '(b)', points: 2, topics: ['sql-joins'], difficulty: 'medium', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).',
+        choices: ['COUNT(*) = 1', 'place = "council"', 'a.job = b.job', 'a.job != b.job', 'region = place', 'a.region = place', 'a.region = b.region AND a.region = place', 'a.job = b.job AND a.region = place'] },
+      { id: 'fa24f-8c', problem: 'fa24f-8', label: '(c)', points: 2, topics: ['sql-agg'], difficulty: 'hard', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c). You may write `AND` to continue the `WHERE` clause (but you don’t have to). You may also include other clauses such as `GROUP BY`, `ORDER BY`, `HAVING`, and `LIMIT` (but you don’t have to).' },
+      { id: 'fa24f-9a', problem: 'fa24f-9a', label: '(a)', points: 0, topics: ['scheme'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in the blank (after the quasiquote).' },
+      { id: 'fa24f-9b', problem: 'fa24f-9b', label: '(b)', points: 0, topics: ['recursion', 'generators', 'lists'], difficulty: 'hard', blank: 'A+',
+        type: 'code', prompt: 'Fill in the blank.' },
+    ],
+    answers: {
+      'fa24f-1a': { correct: 1, explanation: '`this` starts at 1 (truthy), so 0 is yielded and `this` becomes 0. Then 2 only sets `this` to `True` without yielding; 4, 6 and 8 are each yielded.' },
+      'fa24f-1b': { accepted: ['[-4, 0, 4]'], explanation: 'The inner `cut` gives 0, 4, 6, 8; minus 4 that is -4, 0, 2, 4. `cut` yields -4 (as `this` was 1), then 0, then 2 only resets `this` to `True` because 0 is falsy, and 4 is yielded.' },
+      'fa24f-1c': { accepted: ['[0, 2, 8]'], explanation: '`paste(0)` yields 0, then doubles everything `paste(1)` yields: `paste(1)` starts with 1 (→ 2), then doubles `paste(2)`, which starts with 2 (→ 4 → 8).' },
+      'fa24f-2a': { correct: 2, explanation: '`list(log).append(a)` appends to a copy, so only `log.append([b])` in `shift_line` changes `log`, adding `[3]`.' },
+      'fa24f-2b': { correct: 1, explanation: '`make_line(2)` returns `lambda x: 2 * x + 1` (its own `b` is 1). `shift_line` adds its own `b`, 3: `f(0) + 3` is `1 + 3`, which is 4.' },
+      'fa24f-3g': { correct: 2, explanation: 'Going past 10 before reaching it exactly means the next multiple of 10 can’t be a prefix sum.' },
+      'fa24f-3h': { correct: [0], explanation: 'At this point `t > 10`, so the answer is simply `False`. The other expressions are sometimes `True` (for example when `t` is 20).' },
+      'fa24f-3i': { correct: 1, explanation: 'Each time the running total reaches exactly 10, a group is complete.' },
+      'fa24f-3j': { accepted: ['0'], explanation: 'Start counting the next group from 0.' },
+      'fa24f-4a': { accepted: ['self.count = 0'], explanation: 'Every `Counter` starts at 0.' },
+      'fa24f-4b': { correct: 1, explanation: 'Only a counter with a parent passes the count up. `parent` alone isn’t a name inside `inc`.' },
+      'fa24f-4c': { correct: 10, explanation: 'Calling `inc` on the parent adds 1 to it and, recursively, to all of its ancestors.' },
+      'fa24f-4d': { correct: 5, explanation: 'A spawned counter is a new `Counter` whose parent is this one.' },
+      'fa24f-4e': { correct: [1, 4], explanation: 'Each `MissDict` gets its own counter whose parent is the class-wide `MissDict.misses`, so its misses are also counted for all instances. `spawn()` and `Counter(MissDict.misses)` both make that.' },
+      'fa24f-4f': { accepted: ['result.append(self.d[k])', 'result += [self.d[k]]', 'result.extend([self.d[k]])', 'result = result + [self.d[k]]'], explanation: 'A key in the dictionary adds its value to the result.' },
+      'fa24f-4g': { correct: 2, explanation: '`self.misses.inc()` counts the miss for this instance and, through its parent, for all instances.' },
+      'fa24f-4h': { correct: 7, explanation: 'The numerator is this instance’s count and the denominator the class-wide count, with a `/` between them as plain text.' },
+      'fa24f-5a': { correct: [1, 4], explanation: 'The element must be added as a one-element list: `[s[j]]`, or the slice `s[j:j+1]`.' },
+      'fa24f-5b': { correct: 0, explanation: 'After the promoted element come the elements that were at positions `i` to `j-1`.' },
+      'fa24f-5c': { correct: 3, explanation: 'Everything after position `j` stays where it was.' },
+      'fa24f-5d': { correct: 2, explanation: 'When the first elements already match, no promotion is needed for position 0.' },
+      'fa24f-5e': { accepted: ['promote(s, 0, j)[1:]', 's[:j] + s[j+1:]', 's[:j] + s[j + 1:]', 'promote(s, 0, j)[1: ]'], explanation: 'Promote the matching element `s[j]` to the front, then continue with the rest of the list, which is `s` without position `j`.' },
+      'fa24f-5f': { correct: 2, explanation: 'Only an element equal to `t[0]` is worth promoting to the front.' },
+      'fa24f-5g': { correct: 4, explanation: 'Promoting within `s.rest` shifts both positions by one; the function mutates and returns `s` at the end, so no `return` here.' },
+      'fa24f-5h': { accepted: ['insert, tail.first = tail.first, insert', 'tail.first, insert = insert, tail.first'], explanation: 'Each step swaps the carried value into the current node, so the values shift one place to the right.' },
+      'fa24f-5i': { correct: 0, explanation: 'After shifting, the value that was at position `j` goes into the first node.' },
+      'fa24f-5j': { correct: 0, explanation: 'The function mutates `s` and returns it.' },
+      'fa24f-5k': { correct: 2, explanation: 'Each call moves the element at index 3 to the front: `<9 3 5 7>`, then `<7 9 3 5>`, then `<5 7 9 3>`.' },
+      'fa24f-6a': { correct: 2, explanation: 'A leaf ends a path, so the remaining product must equal its label.' },
+      'fa24f-6b': { correct: 3, explanation: 'If `t.label` doesn’t divide `n`, no path through `t` can have product `n`.' },
+      'fa24f-6c': { accepted: ['all([products(b, n // t.label) for b in t.branches])', 'all(products(b, n // t.label) for b in t.branches)'], explanation: 'Every branch must have paths with product `n // t.label`. Use `//` so the argument stays an `int`.' },
+      'fa24f-6d': { correct: 4, explanation: 'Labels along a path must increase, so a child’s label starts above its parent’s.' },
+      'fa24f-6e': { correct: 0, explanation: '`x` is the product still needed below `t`, so `k` must divide it.' },
+      'fa24f-6f': { correct: 4, explanation: 'Grow the branch labeled `k`, which still needs a product of `x // k` below it.' },
+      'fa24f-6g': { accepted: ['not branch.is_leaf() or x == k', 'x == k or not branch.is_leaf()'], explanation: 'Keep a branch if it has children (a path continues) or if it is a leaf that finishes the product exactly (`k == x`).' },
+      'fa24f-7a': { correct: [7], explanation: 'Call `f` on the first two elements.' },
+      'fa24f-7b': { correct: 1, explanation: 'Move along by one element, so every adjacent pair is checked.' },
+      'fa24f-7c': { correct: 2, explanation: 'Build the list one pair at a time.' },
+      'fa24f-7d': { accepted: ['(list (car s) (car (cdr s)))', '(list (car s) (cadr s))'], explanation: 'A pair is a two-element list of the first two elements.' },
+      'fa24f-7e': { correct: 1, explanation: 'The next pair starts at the second element.' },
+      'fa24f-7f': { correct: 2, explanation: 'One recursive call per element: linear.' },
+      'fa24f-7g': { correct: 3, explanation: 'Put the symbol `and` in front of the list of calls.' },
+      'fa24f-7h': { accepted: ['(lambda (pair) (cons proc-name pair))', '(lambda (pair) (list proc-name (car pair) (car (cdr pair))))'], explanation: 'Turn each pair into a call expression by putting the procedure name in front of it.' },
+      'fa24f-8a': { correct: 2, explanation: 'Each person’s region is joined with its row in `gov` to know the ruler.' },
+      'fa24f-8b': { correct: 4, explanation: 'Match each person to their region’s row.' },
+      'fa24f-8c': { accepted: ['GROUP BY job HAVING COUNT(*) = 1', 'GROUP BY job HAVING COUNT(*) < 2', 'GROUP BY job HAVING COUNT(name) = 1', 'GROUP BY job HAVING COUNT(*) <= 1'], explanation: 'Group the council’s people by job and keep jobs held by exactly one person.' },
+      'fa24f-9a': { accepted: ['(all-pairs (lambda (x y) (= ,x-expr y)) ,s)'] },
+      'fa24f-9b': { accepted: ['repromote(s[:j] + s[j+1:], k - min(1, j))'] },
+    },
+  });
 })();

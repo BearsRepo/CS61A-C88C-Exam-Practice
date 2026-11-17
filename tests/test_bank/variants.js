@@ -629,4 +629,48 @@ module.exports = {
       { 'A+': 'next(filter(lambda x: eval(x) != n, f(digits)))' },
     ],
   },
+  'fa24f-3': {
+    wrong: [
+      { j: '10' },
+      { j: 't - 10 + x' },
+      { j: 'x' },
+    ],
+  },
+  'fa24f-4a': {
+    wrong: [
+      { a: 'self.count = 1' },
+      { a: 'count = 0' },
+    ],
+  },
+  'fa24f-5a': { wrong: [] },
+  'fa24f-5b': {
+    wrong: [
+      { e: 's[1:]' },
+      { e: 'promote(s, 0, j)' },
+      { e: 's[:j] + s[j:]' },
+      { e: 'promote(s, 0, j)[:-1]' },
+    ],
+  },
+  'fa24f-6a': {
+    wrong: [
+      { c: 'all([products(b, n / t.label) for b in t.branches])' },
+      { c: 'any([products(b, n // t.label) for b in t.branches])' },
+      { c: 'all([products(b, n) for b in t.branches])' },
+    ],
+  },
+  'fa24f-6b': {
+    wrong: [
+      { g: 'not branch.is_leaf()' },
+      { g: 'x == k' },
+      { g: 'True' },
+      { g: 'branch.is_leaf() or x == k' },
+    ],
+  },
+  'fa24f-9b': {
+    wrong: [
+      { 'A+': 'repromote(s[:j] + s[j+1:], k - 1)' },
+      { 'A+': 'repromote(s[1:], k - min(1, j))' },
+      { 'A+': 'repromote(s[:j] + s[j+1:], k)' },
+    ],
+  },
 };
