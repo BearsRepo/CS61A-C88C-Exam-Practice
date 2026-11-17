@@ -2739,7 +2739,9 @@
       <p class="hint">Numbers are questions (each may have several parts). Leave everything unchecked to include all topics.</p>`;
     // Python's exams are listed under Midterm 2 and Final, each with its own Select all / Clear.
     const sourceRows = (sec, list) => `<div class="dd-list">${list.map((e) => optRow('checkbox', sec.sourcesPref, e.id, e.label, sec.sources.includes(e.id))).join('')}</div>`;
-    const examsBody = v.sections.map((sec) => heading(sec) + (!sec.byKind ? sourceRows(sec, sec.sourceList)
+    // Other sections (SQL's exams, Gleam's sources) get one Select all / Clear row for the whole list.
+    const sourceTools = (sec) => `<div class="dd-tools"><button class="link" data-action="sources-all" data-pref="${sec.sourcesPref}" data-on="1" aria-label="Select all ${esc(sec.name)} ${sec.id === 'gleam' ? 'sources' : 'exams'}">Select all</button><button class="link" data-action="sources-all" data-pref="${sec.sourcesPref}" data-on="" aria-label="Clear ${esc(sec.name)} ${sec.id === 'gleam' ? 'sources' : 'exams'}">Clear</button></div>`;
+    const examsBody = v.sections.map((sec) => heading(sec) + (!sec.byKind ? sourceTools(sec) + sourceRows(sec, sec.sourceList)
       : EXAM_KINDS.map((k) => {
         const list = sec.sourceList.filter((e) => examKindOf(e.id) === k.id);
         return list.length ? `<div class="dd-sub"><span class="dd-sub-name">${esc(k.name)}</span>
@@ -3967,6 +3969,11 @@
         const ids = examsOfKind(btn.dataset.kind);
         const pref = btn.dataset.pref;
         p[pref] = btn.dataset.on ? Object.keys(EXAMS).filter((id) => p[pref].includes(id) || ids.includes(id)) : p[pref].filter((id) => !ids.includes(id));
+        break;
+      }
+      case 'sources-all': { // Exams/Sources menu: select or clear every source of one section (SQL or Gleam)
+        const sec = LANG_ORDER.map((id) => LANG_SECTIONS[id](p)).find((x) => x.sourcesPref === btn.dataset.pref);
+        if (sec) p[sec.sourcesPref] = btn.dataset.on ? sec.sourceList.map((e) => e.id) : [];
         break;
       }
       case 'size-step': {

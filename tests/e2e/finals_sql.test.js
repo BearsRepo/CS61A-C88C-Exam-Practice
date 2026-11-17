@@ -98,6 +98,37 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const sqlTopics = await page.$$eval('.dd-panel input[data-pref="sqlTopics"]', (e) => e.map((x) => x.value));
   ok(sqlTopics.join() === 'sql-joins,sql-agg' && !(await has('.dd-panel input[data-pref="topics"]')), `SQL lists only SQL topics (${sqlTopics.join(', ')})`);
   await click('[data-action="menu"][data-id="topics"]');
+
+  // the SQL Exams menu and the Gleam Sources menu each have one Select all / Clear row
+  const checked = (pref) => page.$$eval(`.dd-panel input[data-pref="${pref}"]`, (e) => e.filter((x) => x.checked).map((x) => x.value));
+  const boxes = (pref) => page.$$eval(`.dd-panel input[data-pref="${pref}"]`, (e) => e.map((x) => x.value));
+  await click('[data-action="menu"][data-id="exams"]');
+  const sqlAll = await boxes('sqlSources');
+  ok(await has('.dd-panel [data-action="sources-all"][data-pref="sqlSources"][data-on="1"]') && await has('.dd-panel [data-action="sources-all"][data-pref="sqlSources"][data-on=""]'), 'SQL Exams menu: a Select all / Clear row');
+  await page.click('.dd-panel [data-action="sources-all"][data-pref="sqlSources"][data-on=""]'); await wait(120);
+  ok((await st()).prefs.sqlSources.length === 0 && (await checked('sqlSources')).length === 0 && await has('.dd-panel'), 'SQL Exams → Clear unchecks every exam and keeps the menu open');
+  await page.click('.dd-panel input[data-pref="sqlSources"][value="fa24f"]'); await wait(120);
+  await page.click('.dd-panel [data-action="sources-all"][data-pref="sqlSources"][data-on="1"]'); await wait(120);
+  ok(JSON.stringify((await st()).prefs.sqlSources) === JSON.stringify(sqlAll) && (await checked('sqlSources')).length === sqlAll.length, `SQL Exams → Select all checks all ${sqlAll.length} exams`);
+  await click('[data-action="menu"][data-id="exams"]');
+  await click('#lang-gleam');
+  await click('[data-action="menu"][data-id="exams"]');
+  const glAll = await boxes('glSources');
+  await page.click('.dd-panel [data-action="sources-all"][data-pref="glSources"][data-on=""]'); await wait(120);
+  ok(glAll.length > 1 && (await st()).prefs.glSources.length === 0 && (await checked('glSources')).length === 0, `Gleam Sources → Clear unchecks all ${glAll.length} sources`);
+  await page.click('.dd-panel [data-action="sources-all"][data-pref="glSources"][data-on="1"]'); await wait(120);
+  ok(JSON.stringify((await st()).prefs.glSources) === JSON.stringify(glAll), 'Gleam Sources → Select all checks every source');
+  await click('[data-action="menu"][data-id="exams"]');
+  await click('#lang-all');
+  await click('[data-action="menu"][data-id="exams"]');
+  const pyExams = (await st()).prefs.exams.slice();
+  await page.click('.dd-panel [data-action="sources-all"][data-pref="sqlSources"][data-on=""]'); await wait(120);
+  P = (await st()).prefs;
+  ok(P.sqlSources.length === 0 && JSON.stringify(P.exams) === JSON.stringify(pyExams) && P.glSources.length === glAll.length && (await checked('exams')).length === pyExams.length,
+    'with All, SQL → Clear leaves the Python finals (same exam names) and Gleam sources checked');
+  await page.click('.dd-panel [data-action="sources-all"][data-pref="sqlSources"][data-on="1"]'); await wait(120);
+  await click('[data-action="menu"][data-id="exams"]');
+  await click('#lang-sql');
   await page.$eval('#set-size', (i) => { i.value = '200'; i.dispatchEvent(new Event('change', { bubbles: true })); }); await wait(100);
   await click('[data-action="start"]'); await page.waitForSelector('#problem-article');
   S = await st();
