@@ -262,7 +262,7 @@
   // A saved pick can be a question that is now wholly out of scope; drop it so it can't start an empty group.
   store.examPrefs.picked = [...new Set(store.examPrefs.picked)].filter((pid) => PMAP[pid] && EXAM_QUESTIONS.some((q) => q.problem === pid));
   // view: which session the question screen shows. 'practice' | 'exam' (in progress) | 'review' (a submitted attempt)
-  const ui = { screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
+  const ui = { screen: document.body.dataset.page === 'menu' ? 'home' : 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
   // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
@@ -3960,7 +3960,7 @@
       // landing & home
       case 'enter': ui.screen = 'home'; window.scrollTo(0, 0); break;
       case 'replay-tour': if (TOUR) TOUR.replay(); return;
-      case 'landing': ui.screen = 'landing'; ui.menu = null; break;
+      case 'landing': window.location.href = 'index.html'; return;
       case 'menu': ui.menu = ui.menu === btn.dataset.id ? null : btn.dataset.id; break;
       case 'topics-all': langView(p).sections.forEach((sec) => { p[sec.topicsPref] = sec.topicList.filter((t) => sec.questions.some((x) => x.topics.includes(t.id))).map((t) => t.id); }); break;
       case 'topics-none': langView(p).sections.forEach((sec) => { p[sec.topicsPref] = []; }); break;
