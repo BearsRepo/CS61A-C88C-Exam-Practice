@@ -264,6 +264,16 @@
   // view: which session the question screen shows. 'practice' | 'exam' (in progress) | 'review' (a submitted attempt)
   const ui = { screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
+  // iPad: Safari on iPadOS 13+ reports a Mac user agent by default, and a Mac never has a touch screen, so a "Mac"
+  // with more than one touch point is an iPad. Turns on Apple Pencil drawing over both panes during an exam.
+  const IS_IPAD = (() => {
+    try {
+      const n = navigator;
+      return /iPad/.test(n.userAgent) || ((n.platform === 'MacIntel' || /Macintosh/.test(n.userAgent)) && n.maxTouchPoints > 1);
+    } catch (e) { return false; }
+  })();
+  if (IS_IPAD) document.documentElement.classList.add('ipad');
+
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
   // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
   const trackedSession = (s) => (s && s.reviewOf ? attemptById(s.reviewOf) : s) || null;
@@ -643,7 +653,17 @@
   let leftPid = null;
   let leftObserver = null;
   let drawing = null; // in-progress pen stroke or eraser drag
+  // Pen colours (iPad exams only, from the quick switcher). Red is the default and is stored without a colour, so
+  // older strokes and every desktop stroke stay red; others are stored as { color: 'blue' | 'black' }.
+  const PEN_COLORS = { red: '#d62828', blue: '#1f5fd6', black: '#1b1b1b' };
+  let penColor = 'red';
+  const inkStyle = (c) => (c && c !== 'red' && PEN_COLORS[c] ? ` style="stroke:${PEN_COLORS[c]}"` : '');
+  const withColor = (c) => (c && c !== 'red' && PEN_COLORS[c] ? { color: c } : {});
 
+  // iPad exams: Apple Pencil strokes on the right (answer) pane, { id, kind: 'ink', pts } in the pane's scroll
+  // coordinates. Kept in memory only (not saved yet), but they share the question's Undo / Redo / Clear.
+  const rightInk = {}; // pid -> strokes
+  const rinks = (pid) => rightInk[pid] || (rightInk[pid] = []);
   const anns = (pid) => { const all = annotationsOf(); return all[pid] || (all[pid] = []); };
   const hist = (pid) => history[pid] || (history[pid] = { undo: [], redo: [] });
   const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -730,14 +750,15 @@
     svg.setAttribute('width', art.scrollWidth);
     svg.setAttribute('height', art.scrollHeight);
     const paths = anns(leftPid).filter((a) => a.kind === 'pen')
-      .map((a) => `<path d="${strokePath(absPoints(art, a))}" data-aid="${a.id}"/>`).join('');
-    const livePath = drawing && drawing.kind === 'pen' ? `<path class="live" d="${strokePath(drawing.pts)}"/>` : '';
+      .map((a) => `<path d="${strokePath(absPoints(art, a))}" data-aid="${a.id}"${inkStyle(a.color)}/>`).join('');
+    const livePath = drawing && drawing.kind === 'pen' && !drawing.right ? `<path class="live" d="${strokePath(drawing.pts)}"${inkStyle(drawing.color)}/>` : '';
     svg.innerHTML = paths + livePath;
     layoutNotes();
   }
 
   // Apply one annotation change to state and to whatever is on screen.
   function addAnn(pid, a) {
+    if (a.kind === 'ink') { rinks(pid).push(a); if (pid === leftPid) layoutRightInk(); return; }
     anns(pid).push(a.kind === 'note' ? normNote(cloneAnn(a)) : a); // notes are edited in place, so the list keeps its own copy
     if (a.kind === 'code') markCode(editors[pid], a);
     if (pid !== leftPid) return;
@@ -746,6 +767,12 @@
     if (a.kind === 'note') renderNotes();
   }
   function removeAnn(pid, id) {
+    const ri = rinks(pid).findIndex((x) => x.id === id);
+    if (ri >= 0) {
+      const [a] = rinks(pid).splice(ri, 1);
+      if (pid === leftPid) layoutRightInk();
+      return a;
+    }
     const list = anns(pid);
     const i = list.findIndex((x) => x.id === id);
     if (i < 0) return null;
@@ -831,6 +858,13 @@
   }
   function eraseAt(x, y, clientX, clientY) {
     const pid = leftPid;
+    leftHits(x, y, clientX, clientY).forEach((id) => {
+      const a = removeAnn(pid, id);
+      if (a) drawing.ops.push({ op: 'remove', ann: a });
+    });
+  }
+  function leftHits(x, y, clientX, clientY) { // ids of the marks the eraser touches at this point
+    const pid = leftPid;
     const art = article();
     const hits = new Set();
     anns(pid).filter((a) => a.kind === 'pen').forEach((a) => {
@@ -843,10 +877,7 @@
       const hl = el.closest && el.closest('mark.hl, .cm-hl');
       if (hl && hl.dataset.aid) hits.add(hl.dataset.aid);
     });
-    hits.forEach((id) => {
-      const a = removeAnn(pid, id);
-      if (a) drawing.ops.push({ op: 'remove', ann: a });
-    });
+    return hits;
   }
 
   function examSettingsHTML() {
@@ -893,8 +924,10 @@
     const art = article();
     if (art) art.dataset.mode = ui.annMode;
     updateToolbar();
+    syncPaper();
   }
   function updateToolbar() {
+    if (IS_IPAD) updatePenColor();
     const bar = document.getElementById('annot-bar');
     if (!bar || !leftPid) return;
     const h = hist(leftPid);
@@ -903,15 +936,16 @@
       if (['hl', 'pen', 'eraser'].includes(k)) b.setAttribute('aria-pressed', String(ui.annMode === k));
       if (k === 'undo') b.disabled = !h.undo.length;
       if (k === 'redo') b.disabled = !h.redo.length;
-      if (k === 'clear') b.disabled = !anns(leftPid).length;
+      if (k === 'clear') b.disabled = !anns(leftPid).length && !rinks(leftPid).length;
     });
     const hint = document.getElementById('annot-hint');
     if (hint) {
+      const pencil = pencilInk();
       hint.textContent = {
         none: '',
         hl: 'Select text or code to highlight it.',
-        pen: 'Draw with the mouse or trackpad. Scrolling still works.',
-        eraser: 'Click or drag over a mark to erase it.',
+        pen: pencil ? 'Draw with Apple Pencil on either side. Fingers still scroll and tap.' : 'Draw with the mouse or trackpad. Scrolling still works.',
+        eraser: pencil ? 'Touch a mark with Apple Pencil to erase it.' : 'Click or drag over a mark to erase it.',
       }[ui.annMode];
     }
   }
@@ -959,11 +993,206 @@
       if (bi < 0) bi = y0 < (bl[0] ? bl[0].offsetTop : 0) ? 0 : bl.length - 1;
       const b = bl[bi];
       const pts = d.pts.map(([x, y]) => [Math.round((x - b.offsetLeft) * 10) / 10, Math.round((y - b.offsetTop) * 10) / 10]);
-      commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'pen', block: bi, pts } }]);
+      commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'pen', block: bi, pts, ...withColor(d.color) } }]);
       layoutStrokes();
     } else {
       record(leftPid, d.ops);
     }
+  }
+
+  // ── iPad exams: Apple Pencil over both panes ──
+  // The red pen, eraser and highlighter above, with these differences: the Pencil (or a mouse / trackpad) draws on
+  // either pane, including over the code, the answer boxes and the environment diagram, which act like paper
+  // while a tool is on (see syncPaper); fingers keep scrolling and tapping (the left pane's overlay stops catching
+  // touches); the highlighter follows a Pencil drag over the text or code; and a Pencil tap on a control (an option,
+  // an Eliminate button, a link) is a tap, while a drag that starts there draws.
+  const pencilInk = () => IS_IPAD && ui.screen === 'practice' && examActive(cur());
+  const INK_SKIP = '#annot-bar, .note-layer, .p-header, .p-footer, .review-work'; // these keep their own handling
+  const INK_TAP = 'button, a[href], label, summary, select, input[type="radio"], input[type="checkbox"], [role="button"], [role="switch"], [data-action], .choice';
+  const paperOn = () => pencilInk() && ['pen', 'eraser', 'hl'].includes(ui.annMode);
+  // The toolbar on an iPad exam sits on the divider between the panes (styles.css), and its Pen gets a colour menu:
+  // the Pen button still turns the pen on and off with one tap; the small dot under it opens Red / Blue / Black,
+  // and picking one turns the pen on in that colour. Apple Pencil double tap and squeeze aren't available to web
+  // pages, so the toolbar is the way to switch.
+  const cap = (k) => k[0].toUpperCase() + k.slice(1);
+  function penColorHTML() {
+    return `<span class="pen-color-wrap">
+        <button class="ann-btn pen-color-btn" data-ann="pencolor" id="pen-color-btn" title="Pen colour" aria-label="Pen colour: ${cap(penColor)}" aria-haspopup="true" aria-expanded="false" aria-controls="pen-colors"><span class="pc-dot" aria-hidden="true"></span></button>
+        <span class="pen-colors" id="pen-colors" role="menu" aria-label="Pen colour" hidden>${Object.keys(PEN_COLORS).map((k) => `<button class="pc-item" role="menuitemradio" data-ann="color" data-color="${k}" aria-checked="${penColor === k}" style="--c:${PEN_COLORS[k]}"><span class="pc-dot" aria-hidden="true"></span>${cap(k)}</button>`).join('')}</span>
+      </span>`;
+  }
+  function setPenMenu(open) {
+    const m = document.getElementById('pen-colors');
+    const b = document.getElementById('pen-color-btn');
+    if (!m || !b) return;
+    m.hidden = !open;
+    b.setAttribute('aria-expanded', String(open));
+  }
+  function updatePenColor() {
+    const bar = document.getElementById('annot-bar');
+    if (!bar) return;
+    bar.style.setProperty('--pen', PEN_COLORS[penColor]);
+    const b = document.getElementById('pen-color-btn');
+    if (b) b.setAttribute('aria-label', `Pen colour: ${cap(penColor)}`);
+    const pen = b && bar.querySelector('[data-ann="pen"]');
+    if (pen) { pen.title = `${cap(penColor)} pen`; pen.setAttribute('aria-label', `${cap(penColor)} pen`); }
+    bar.querySelectorAll('[data-ann="color"]').forEach((x) => x.setAttribute('aria-checked', String(x.dataset.color === penColor)));
+    const f = document.getElementById('p-footer');
+    if (f) bar.style.setProperty('--fh', `${f.offsetHeight}px`); // narrow screens: the toolbar sits just above the bottom bar
+  }
+  // While a tool is on, the code editor and the typed-answer boxes are read-only, so iPadOS Scribble can't turn
+  // Pencil writing into text and the Pencil's marks stay ink. Turning the tool off makes them typeable again.
+  function syncPaper() {
+    if (!IS_IPAD) return;
+    const on = paperOn();
+    document.querySelectorAll('#pane-right textarea, #pane-right input:not([type="radio"]):not([type="checkbox"])').forEach((f) => {
+      if (on && !f.readOnly) { f.readOnly = true; f.dataset.paper = '1'; } else if (!on && f.dataset.paper) { f.readOnly = false; delete f.dataset.paper; }
+    });
+    const ed = leftPid && editors[leftPid];
+    if (ed && ed.cm) {
+      const ro = ed.cm.getOption('readOnly');
+      if (on && ro !== 'nocursor') { ed.paperRO = ro; ed.cm.setOption('readOnly', 'nocursor'); } else if (!on && ro === 'nocursor' && 'paperRO' in ed) { ed.cm.setOption('readOnly', ed.paperRO); delete ed.paperRO; }
+    }
+    const act = document.activeElement;
+    if (on && act && act.closest && act.closest('#pane-left, #pane-right') && act.matches('textarea, input:not([type="radio"]):not([type="checkbox"])')) act.blur();
+  }
+  let pencil = null; // { id, right, x0, y0, tap, started } while the Pencil is down on a pane
+  let swallow = null; // { el, until }: a stroke that started on a control must not also click it
+
+  function rightPoint(e) { // in the right pane's scroll coordinates, where its ink layer sits
+    const pane = document.getElementById('pane-right');
+    const r = pane.getBoundingClientRect();
+    return [r1(e.clientX - r.left - pane.clientLeft + pane.scrollLeft), r1(e.clientY - r.top - pane.clientTop + pane.scrollTop)];
+  }
+  function layoutRightInk() {
+    const svg = document.getElementById('ink-right');
+    const pane = document.getElementById('pane-right');
+    if (!svg || !pane) return;
+    svg.setAttribute('width', 0); // measure without the layer itself
+    svg.setAttribute('height', 0);
+    svg.setAttribute('width', pane.scrollWidth);
+    svg.setAttribute('height', pane.scrollHeight);
+    const list = leftPid ? rinks(leftPid) : [];
+    svg.innerHTML = list.map((a) => `<path d="${strokePath(a.pts)}" data-aid="${a.id}"${inkStyle(a.color)}/>`).join('')
+      + (drawing && drawing.right && drawing.kind === 'pen' ? `<path class="live" d="${strokePath(drawing.pts)}"${inkStyle(drawing.color)}/>` : '');
+  }
+  const rightHits = ([x, y]) => rinks(leftPid).filter((a) => (a.pts.length === 1 ? Math.hypot(x - a.pts[0][0], y - a.pts[0][1]) < 12
+    : a.pts.some((p, i) => i && distToSegment(x, y, a.pts[i - 1], p) < 12)));
+  function eraseRightAt(p) {
+    rightHits(p).forEach((a) => {
+      const gone = removeAnn(leftPid, a.id);
+      if (gone) drawing.ops.push({ op: 'remove', ann: gone });
+    });
+  }
+  // Highlighter with the Pencil: the drag selects from where it started to where it is (text, or code in the
+  // editor), and lifting the Pencil highlights the selection exactly as a mouse selection would.
+  function hlAnchor(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const ed = leftPid && editors[leftPid];
+    if (ed && ed.cm && el && el.closest('.CodeMirror')) return { cm: ed.cm, pos: ed.cm.coordsChar({ left: x, top: y }, 'window') };
+    const r = document.caretRangeFromPoint && document.caretRangeFromPoint(x, y);
+    return r && el && el.closest('#problem-article [data-annot]') ? { node: r.startContainer, offset: r.startOffset } : null;
+  }
+  function hlTo(x, y) {
+    const a = drawing.a;
+    if (!a) return;
+    if (a.cm) { a.cm.setSelection(a.pos, a.cm.coordsChar({ left: x, top: y }, 'window')); return; }
+    const r = document.caretRangeFromPoint(x, y);
+    if (r) window.getSelection().setBaseAndExtent(a.node, a.offset, r.startContainer, r.startOffset);
+  }
+  function startInk(e) {
+    pencil.started = true;
+    if (ui.annMode === 'hl') { drawing = { kind: 'hl', a: hlAnchor(e.clientX, e.clientY) }; return; }
+    if (!pencil.right) { // the left pane: exactly the red pen / eraser above
+      const [x, y] = overlayPoint(e);
+      if (ui.annMode === 'pen') { drawing = { kind: 'pen', pts: [[x, y]], color: penColor }; layoutStrokes(); } else { drawing = { kind: 'eraser', ops: [] }; eraseAt(x, y, e.clientX, e.clientY); }
+      return;
+    }
+    if (ui.annMode === 'pen') { drawing = { kind: 'pen', right: true, pts: [rightPoint(e)], color: penColor }; layoutRightInk(); } else { drawing = { kind: 'eraser', right: true, ops: [] }; eraseRightAt(rightPoint(e)); }
+  }
+  function onPencilDown(e) {
+    // A Pencil tap on the toolbar is clicked in onPencilUp like any control, with or without a tool on.
+    const qs = !pencil && e.pointerType === 'pen' && pencilInk() && e.target.closest && e.target.closest('#annot-bar button');
+    if (qs) { pencil = { id: e.pointerId, type: 'pen', x0: e.clientX, y0: e.clientY, tap: qs, started: false, switcher: true }; return; }
+    if (pencil || !paperOn()) return;
+    if (e.pointerType === 'touch' || e.button !== 0 || !e.target.closest || e.target.closest(INK_SKIP)) return;
+    if (ui.annMode === 'hl' && e.pointerType !== 'pen') return; // a mouse / trackpad selects text, as on a desktop
+    const side = e.target.closest('#pane-left, #pane-right');
+    if (!side) return;
+    const right = side.id === 'pane-right';
+    const tap = e.target.closest(INK_TAP);
+    if (ui.annMode === 'hl' && right && !tap) return; // nothing to highlight on the right
+    pencil = { id: e.pointerId, type: e.pointerType, right, x0: e.clientX, y0: e.clientY, tap, started: false };
+    if (pencil.tap && ui.annMode === 'eraser') { // the eraser on a mark erases it, even over a control
+      const hit = right ? rightHits(rightPoint(e)).length : leftHits(...overlayPoint(e), e.clientX, e.clientY).size;
+      if (hit) pencil.tap = null;
+    }
+    if (pencil.tap) return; // wait: a tap clicks the control, a drag draws
+    e.preventDefault(); // no text selection, focus or editor cursor
+    e.stopPropagation();
+    startInk(e);
+  }
+  function onPencilMove(e) {
+    if (!pencil || e.pointerId !== pencil.id || pencil.switcher) return; // a slip on the toolbar is still a tap
+    if (!pencil.started) {
+      if (Math.hypot(e.clientX - pencil.x0, e.clientY - pencil.y0) < 6) return;
+      swallow = { el: pencil.tap, until: Date.now() + 800 };
+      startInk({ clientX: pencil.x0, clientY: pencil.y0 });
+    }
+    if (!drawing) return;
+    if (drawing.kind === 'hl') { hlTo(e.clientX, e.clientY); return; }
+    if (!drawing.right) { onOverlayMove(e); return; }
+    const p = rightPoint(e);
+    if (drawing.kind === 'pen') {
+      const last = drawing.pts[drawing.pts.length - 1];
+      if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 1.5) return;
+      drawing.pts.push(p);
+      const lp = document.querySelector('#ink-right path.live');
+      if (lp) lp.setAttribute('d', strokePath(drawing.pts));
+    } else eraseRightAt(p);
+  }
+  function onPencilUp(e) {
+    if (!pencil || e.pointerId !== pencil.id) return;
+    const { started, tap, type } = pencil;
+    pencil = null;
+    if (!started) {
+      // A Pencil tap on a control: Safari drops the click once the Pencil's touches are cancelled, so click it here
+      // and let no native click follow (it would toggle an Eliminate button back). A mouse clicks by itself.
+      if (tap && type === 'pen') { tap.click(); swallow = { el: tap, until: Date.now() + 700 }; }
+      return;
+    }
+    if (!drawing) return;
+    if (drawing.kind === 'hl') { drawing = null; highlightSelection(); return; }
+    if (!drawing.right) { onOverlayUp(); return; }
+    const d = drawing;
+    drawing = null;
+    if (d.kind === 'pen') commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'ink', pts: d.pts, ...withColor(d.color) } }]);
+    else { record(leftPid, d.ops); layoutRightInk(); }
+  }
+  // Safari scrolls, selects text or starts Scribble under the Pencil unless its touches are cancelled. Only the
+  // Pencil's ("stylus") touches are, so fingers still scroll and tap; Pencil taps are clicked in onPencilUp.
+  const stylus = (e) => Array.from(e.changedTouches || []).some((t) => t.touchType === 'stylus');
+  function onPencilTouch(e) {
+    if (!pencil || !stylus(e)) return;
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation(); // the code editor's own touch handling stays out of it
+  }
+  if (IS_IPAD) {
+    document.addEventListener('pointerdown', onPencilDown, true);
+    document.addEventListener('pointermove', onPencilMove, true);
+    document.addEventListener('pointerup', onPencilUp, true);
+    document.addEventListener('pointercancel', onPencilUp, true);
+    ['touchstart', 'touchmove', 'touchend'].forEach((t) => document.addEventListener(t, onPencilTouch, { capture: true, passive: false }));
+    document.addEventListener('click', (e) => { // a tap anywhere else closes the colour menu
+      if (e.target.closest && !e.target.closest('.pen-color-wrap')) setPenMenu(false);
+    });
+    document.addEventListener('click', (e) => {
+      const w = swallow;
+      if (!w || Date.now() > w.until || !w.el.contains(e.target)) return;
+      swallow = null; // cancelling a label's click also stops it from checking its input
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
   }
 
   // ── Sticky notes ──
@@ -2519,6 +2748,7 @@
     detachEditors();
     Object.keys(editors).forEach((k) => delete editors[k]);
     Object.keys(history).forEach((k) => delete history[k]);
+    Object.keys(rightInk).forEach((k) => delete rightInk[k]);
     leftPid = null;
     cachedFor = null;
     ui.annMode = 'none';
@@ -2975,7 +3205,7 @@
     const review = isReview(cur());
     const bar = `<div class="annot-bar" id="annot-bar" role="toolbar" aria-label="Annotation tools">
         ${tool('hl', 'Highlighter (select text)', 'aria-pressed="false"')}
-        ${tool('pen', 'Red pen', 'aria-pressed="false"')}
+        ${tool('pen', 'Red pen', 'aria-pressed="false"')}${pencilInk() ? penColorHTML() : ''}
         ${tool('eraser', 'Eraser', 'aria-pressed="false"')}
         ${tool('note', 'New sticky note')}
         <span class="ann-sep" aria-hidden="true"></span>
@@ -3598,7 +3828,7 @@
       <div id="p-banner">${bannerHTML(s)}</div>
       <div class="p-main">
         <div class="pane pane-left" id="pane-left"></div>
-        <div class="pane pane-right" id="pane-right"><div id="diagram-slot"></div><div id="right-body"></div></div>
+        <div class="pane pane-right" id="pane-right"><div id="diagram-slot"></div><div id="right-body"></div>${IS_IPAD ? '<svg class="annot-layer ink-right" id="ink-right" aria-hidden="true"></svg>' : ''}</div>
         <div class="note-layer" id="note-layer"></div>
       </div>
       <footer class="p-footer${isExam(s) ? ' exam' : ''}" id="p-footer">${footerHTML(s)}</footer>
@@ -3871,6 +4101,18 @@
       right.dataset.group = g.pid;
       if (!sameGroup) right.scrollTop = 0;
       if (leftPid !== g.pid) buildLeft(g);
+      if (IS_IPAD) {
+        document.querySelector('.p-main').classList.toggle('pencil-ink', pencilInk());
+        syncPaper();
+        updatePenColor();
+        layoutRightInk();
+        if (!right.dataset.inkWatch) { // keep the layer as tall as the pane's content
+          right.dataset.inkWatch = '1';
+          const ro = new ResizeObserver(() => layoutRightInk());
+          ro.observe(document.getElementById('right-body'));
+          ro.observe(document.getElementById('diagram-slot'));
+        }
+      }
       const work = document.getElementById('review-work'); // review: the editable answers live under the problem
       if (work) work.innerHTML = renderReviewWork(g, s);
       fillBlanks(editors[g.pid]);
@@ -4164,6 +4406,13 @@
     if (k === 'hl') {
       if (highlightSelection()) { if (ui.annMode !== 'hl') setAnnMode('hl'); } else setAnnMode('hl');
     } else if (k === 'pen' || k === 'eraser') setAnnMode(k);
+    else if (k === 'pencolor') setPenMenu(document.getElementById('pen-colors').hidden);
+    else if (k === 'color') {
+      penColor = b.dataset.color;
+      setPenMenu(false);
+      if (ui.annMode !== 'pen') setAnnMode('pen'); else updateToolbar();
+      announce(`${cap(penColor)} pen`);
+    }
     else if (k === 'note') createNote();
     else if (k === 'settings') setSettingsOpen(document.getElementById('exam-settings').hidden);
     else if (k === 'autofill') toggleAutoFill();
@@ -4171,7 +4420,7 @@
     else if (k === 'redo') { flushNoteEdit(); redo(leftPid); }
     else if (k === 'clear') {
       flushNoteEdit();
-      const list = anns(leftPid);
+      const list = anns(leftPid).concat(rinks(leftPid)); // with an iPad exam's Pencil strokes on the right
       if (!list.length || !confirm('Clear all highlights, drawings and sticky notes for this question?')) return;
       commit(leftPid, list.slice().map((a) => ({ op: 'remove', ann: a })));
       announce('Annotations cleared. Use Undo to restore them.');
