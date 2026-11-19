@@ -200,13 +200,16 @@
     prefs: cleanPrefs(Object.assign({}, DEFAULT_PREFS, isObj(saved && saved.prefs) ? saved.prefs : {}), DEFAULT_PREFS,
       { topics: TOPICS_IN_SCOPE, exams: Object.keys(EXAMS), glTopics: GL.TOPICS.map((t) => t.id), glSources: Object.keys(GL.SOURCES), sqlTopics: SQL_TOPICS_IN_SCOPE, sqlSources: SQL_SOURCES, difficulties: DIFFS }),
     session: migrateSession(saved && saved.session), // the practice set; carries its own notes/annotations (see below)
-    // Practice history: every other practice set, finished or not (the open one is `session`). Newest last.
+    // My History's practice sets: every other practice set, finished or not (the open one is `session`). Newest last.
     practice: (Array.isArray(saved && saved.practice) ? saved.practice : []).map(migratePracticeSet).filter(Boolean),
     examPrefs: cleanPrefs(Object.assign({}, DEFAULT_EXAM_PREFS, isObj(saved && saved.examPrefs) ? saved.examPrefs : {}), DEFAULT_EXAM_PREFS,
       { topics: TOPICS_IN_SCOPE.concat(GLEAM_CHIP, SQL_CHIP), picked: EXAM_PIDS }),
     exam: migrateAttempt(saved && saved.exam),         // the exam in progress (never submitted), or null
     attempts: (Array.isArray(saved && saved.attempts) ? saved.attempts : []).map(migrateAttempt).filter(Boolean), // submitted exams, oldest first
     reviews: (saved && saved.reviews && typeof saved.reviews === 'object') ? saved.reviews : {}, // attemptId -> review workspace
+    // Topic Review exams started from My Progress, numbered per topic ("Recursion Review #2"). Never goes down, so a
+    // deleted exam's number is not reused.
+    autoCounts: isObj(saved && saved.autoCounts) ? saved.autoCounts : {},
   };
   // Scratch code and annotations belong to the session they were made in. Before v4, practice kept them in
   // store-wide maps keyed by problem, so they leaked into every later set with the same question. A saved
@@ -284,7 +287,7 @@
   // A saved pick can be a question that is now wholly out of scope; drop it so it can't start an empty group.
   store.examPrefs.picked = [...new Set(store.examPrefs.picked)].filter((pid) => PMAP[pid] && EXAM_QUESTIONS.some((q) => q.problem === pid));
   // view: which session the question screen shows. 'practice' | 'exam' (in progress) | 'review' (a submitted attempt)
-  const ui = { screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
+  const ui = { hFilter: { type: [], status: [], year: [] }, screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
   // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
@@ -2498,6 +2501,7 @@
     ui.screen = 'practice';
     const t = s.timer; // restart a timer that was paused when the set was left
     if (t && t.pausedByExit) { delete t.pausedByExit; if (t.remainingMs > 0) t.runningSince = Date.now(); }
+    if (ANALYTICS) ANALYTICS.activity(s); // continuing a set from My History counts as activity, like Resume
   }
   function newSession(ids, title) {
     const p = store.prefs;
@@ -2596,14 +2600,16 @@
     const parts = partsOf(pid);
     return parts.every(hasPoints) ? parts.reduce((t, q) => t + q.points, 0) : PMAP[pid].points;
   }
-  const kindLabel = (a) => (a.kind === 'full' ? 'Full past exam' : 'Topic-based exam');
+  const kindLabel = (a) => (a.kind === 'full' ? 'Full past exam' : a.auto ? 'Topic Review exam' : 'Topic-based exam');
 
-  function createExam(kind, examId, pids, minutes) {
+  // extra (optional): { title, auto } for a Topic Review exam started from My Progress; auto = { topic, n }.
+  function createExam(kind, examId, pids, minutes, extra) {
     const ids = pids.flatMap((pid) => partsOf(pid).map((q) => q.id)); // group order as given; parts in exam order
     const now = Date.now();
     store.exam = {
       id: `x${now.toString(36)}${Math.random().toString(36).slice(2, 6)}`, aid: newAid(), mode: 'exam', kind, examId: examId || null,
-      title: kind === 'full' ? EXAMS[examId].label : `Custom exam · ${pids.length} question${pids.length === 1 ? '' : 's'}`,
+      title: (extra && extra.title) || (kind === 'full' ? EXAMS[examId].label : `Custom exam · ${pids.length} question${pids.length === 1 ? '' : 's'}`),
+      auto: (extra && extra.auto) || null,
       ids, groups: groupIds(ids), index: 0, answers: {}, checked: {}, revealed: {}, selfGrade: {}, marked: {}, eliminated: {},
       notes: {}, annotations: {},
       timer: minutes ? { durationMs: minutes * 60000, remainingMs: minutes * 60000, runningSince: now, expired: false } : null,
@@ -2813,7 +2819,7 @@
     const mode = p.mode === 'exam' ? 'exam' : 'practice';
     const modeBtn = (m, title, sub) => `<button class="mode-opt" id="mode-${m}" data-action="mode" data-v="${m}" aria-pressed="${mode === m}"><b>${title}</b><span>${sub}</span></button>`;
     return `<main class="home">
-      <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div>${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div>
+      <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div><div class="home-actions"><button class="btn btn-sm btn-home btn-progress" data-action="progress">${icon('chart')}My Progress</button>${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div></div>
       ${storageWarningHTML()}
       ${examResumeHTML()}
       ${resume}
@@ -2823,7 +2829,7 @@
         ${modeBtn('exam', 'Exam Mode', 'Timed, no feedback until you submit')}
       </div>
 
-      ${mode === 'exam' ? renderExamSetup() + renderHistory() : `<section class="setup-card" aria-label="Practice setup">
+      ${mode === 'exam' ? renderExamSetup() : `<section class="setup-card" aria-label="Practice setup">
         ${langRow}
         <div class="dd-row">
           ${dropdown('topics', 'Topics', v.topics.length ? summarize(v.topics, v.topicList.map((t) => t.id), topicName, 'All topics') : 'All topics', topicsBody, true)}
@@ -2836,7 +2842,7 @@
           <div class="summary">${practiceSummaryHTML()}</div>
           <button class="btn btn-primary btn-lg" data-action="start" ${n && minutesOk ? '' : 'disabled'}>Start practice →</button>
         </div>
-      </section>${renderPracticeHistory()}`}
+      </section>`}
 
       <div class="feedback-row"><a class="btn btn-sm btn-home btn-feedback" href="${FEEDBACK_URL}" target="_blank" rel="noopener noreferrer">${icon('msg')}Give Feedback</a><span class="feedback-note">Your feedback can make this platform better!</span></div>
       <div class="notice">No account needed. Your answers, code notes and annotations are saved in <b>this browser on this device</b> and are gone if you clear site data.</div>
@@ -2977,40 +2983,156 @@
   function scoreText(sc) {
     return sc.auto ? `Auto-graded ${fmtPts(sc.earned)} / ${fmtPts(sc.possible)} pts` : 'No auto-graded points';
   }
-  // Practice history: every practice set, newest first, with a Finished / Unfinished tag and a Delete button.
-  function renderPracticeHistory() {
-    const sets = [store.session, ...store.practice].filter(Boolean).sort((a, b) => b.startedAt - a.startedAt);
-    if (!sets.length) return '';
-    const rows = sets.map((s) => {
-      const answered = s.ids.filter((id) => hasAnswer(s, id)).length;
-      const c = { correct: 0, incorrect: 0 };
-      s.ids.forEach((id) => { const st = statusOf(s, id); if (st in c) c[st]++; });
-      const detail = s.finished
-        ? `${when(s.finishedAt || s.startedAt)} · ${plural(s.groups.length, 'question')} · ${c.correct} correct · ${c.incorrect} incorrect · ${s.ids.length - answered} unanswered · ${fmt((s.finishedAt || Date.now()) - s.startedAt)} spent`
-        : `${when(s.startedAt)} · Question ${s.index + 1} of ${s.groups.length} · ${answered} of ${s.ids.length} parts answered${s.timer ? ` · ${fmt(timeLeft(s.timer))} left` : ''}`;
-      return `<div class="hist-item">
-        <button class="result-row hist-row" data-action="open-set" data-id="${s.id}" title="${s.finished ? 'See this set’s summary' : 'Continue this set'}">
-          <span class="t">${esc(s.title)}<small>${detail}</small></span>
-          <span class="badge ${s.finished ? 'set-done' : 'set-open'}">${s.finished ? 'Finished' : 'Unfinished'}</span></button>
-        <button class="hist-del" data-action="delete-set" data-id="${s.id}" aria-label="Delete ${esc(s.title)} from the practice history" title="Delete">✕</button>
+  // ───────────────────────────── My Progress ─────────────────────────────
+  // The summary and Topics to Review use Exam Mode only (submitted exams, full or topic-based): Practice Mode lets
+  // students check and change answers, so its results don't measure much. My History lists everything.
+  // A 0-point part (A+ questions, Fall 2022's optional drawing) never has to be answered for a set to be Completed.
+  const zeroPoint = (q) => (hasPoints(q) ? q.points === 0 : PMAP[q.problem].points === 0);
+  const allAnswered = (s) => s.ids.every((id) => !QMAP[id] || zeroPoint(QMAP[id]) || hasAnswer(s, id));
+  // 'completed' | 'incomplete' | 'progress'
+  function setStatus(s) {
+    if (isExam(s) ? !s.submitted : !s.finished) return 'progress';
+    return allAnswered(s) ? 'completed' : 'incomplete';
+  }
+  const STATUS = { completed: 'Completed', incomplete: 'Incomplete', progress: 'In Progress' };
+  // Submitted exams, oldest first (store.attempts is kept in submission order).
+  const doneExams = () => store.attempts.filter((a) => a.submitted);
+  function progressStats() {
+    const exams = doneExams();
+    const practiced = new Set();
+    const latest = {}; // part id -> its latest automatic grade ('correct' | 'incorrect'); a skipped part keeps its earlier one
+    exams.slice().sort((a, b) => a.finishedAt - b.finishedAt).forEach((a) => a.ids.forEach((id) => {
+      if (!QMAP[id]) return;
+      if (hasAnswer(a, id)) practiced.add(QMAP[id].problem);
+      const g = a.graded && a.graded[id];
+      if (g === 'correct' || g === 'incorrect') latest[id] = g;
+    }));
+    const graded = Object.values(latest);
+    const right = graded.filter((g) => g === 'correct').length;
+    const wrong = {}; // topic id -> parts whose latest result is incorrect
+    Object.entries(latest).forEach(([id, g]) => { if (g === 'incorrect') QMAP[id].topics.forEach((t) => { wrong[t] = (wrong[t] || 0) + 1; }); });
+    return {
+      exams: exams.length,
+      fullCompleted: exams.filter((a) => a.kind === 'full' && setStatus(a) === 'completed').length,
+      questions: practiced.size,
+      graded: graded.length,
+      accuracy: graded.length ? Math.round((right / graded.length) * 100) : null,
+      topics: Object.entries(wrong).filter(([t]) => topicById(t)).sort((a, b) => b[1] - a[1] || topicById(a[0]).name.localeCompare(topicById(b[0]).name)),
+    };
+  }
+  // Every set and exam for My History: { s, type, status, at }. type: practice | full | topic | review (Topic Review).
+  function historyItems() {
+    const items = [];
+    [store.session, ...store.practice].filter(Boolean).forEach((x) => items.push({ s: x, type: 'practice' }));
+    if (store.exam) items.push({ s: store.exam, type: store.exam.kind === 'full' ? 'full' : store.exam.auto ? 'review' : 'topic' });
+    store.attempts.forEach((a) => items.push({ s: a, type: a.kind === 'full' ? 'full' : a.auto ? 'review' : 'topic' }));
+    items.forEach((it) => { it.status = setStatus(it.s); it.at = it.s.finishedAt || it.s.startedAt; });
+    return items.sort((a, b) => b.at - a.at);
+  }
+  // The past exams' years a set has questions from (Gleam worksheet questions have none).
+  function setYears(s) {
+    const years = new Set();
+    s.groups.forEach((g) => { const e = PMAP[g.pid] && EXAMS[PMAP[g.pid].exam]; const y = e && /\b(20\d\d)\b/.exec(e.label); if (y) years.add(y[1]); });
+    return [...years];
+  }
+  const TYPE_FILTERS = [['practice', 'Practice'], ['exam', 'Exam'], ['review', 'Topic Review']];
+  const TYPE_LABEL_H = { practice: 'Practice', full: 'Full Exam', topic: 'Topic-based Exam', review: 'Topic Review Exam' };
+  function historyMatches(it) {
+    const f = ui.hFilter;
+    const t = it.type === 'practice' ? 'practice' : it.type === 'review' ? 'review' : 'exam';
+    return (!f.type.length || f.type.includes(t)) && (!f.status.length || f.status.includes(it.status))
+      && (!f.year.length || setYears(it.s).some((y) => f.year.includes(y)));
+  }
+  const dateOnly = (ts) => new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  function historyCard(it) {
+    const s = it.s;
+    const isAttempt = isExam(s) && s.submitted;
+    const live = store.exam === s;
+    const action = live ? ['resume-exam', '', 'Resume'] : isAttempt ? ['open-attempt', s.id, 'Review Exam']
+      : s.finished ? ['open-set', s.id, 'Review Set'] : ['open-set', s.id, 'Continue'];
+    const del = live ? 'discard-exam' : isAttempt ? 'delete-attempt' : 'delete-set';
+    const answered = s.ids.filter((id) => hasAnswer(s, id)).length;
+    const detail = [TYPE_LABEL_H[it.type], dateOnly(it.at), `${plural(s.groups.length, 'question')}`,
+      it.status === 'progress' ? `${answered} of ${s.ids.length} parts answered` : isAttempt ? scoreText(s.score) : null].filter(Boolean).join(' · ');
+    return `<li class="mh-card" data-type="${it.type}" data-status="${it.status}">
+        <div class="mh-main"><h3 class="mh-title">${esc(s.title)}${it.type === 'review' ? ' <span class="mh-auto">Auto-generated</span>' : ''}</h3>
+          <p class="mh-meta">${esc(detail)}</p></div>
+        <div class="mh-side"><span class="mh-status st-${it.status}">${STATUS[it.status]}</span>
+          <div class="mh-actions"><button class="link mh-open" data-action="${action[0]}" data-id="${action[1]}">${action[2]} →</button>
+          <button class="hist-del" data-action="${del}" data-id="${s.id}" aria-label="Delete ${esc(s.title)} from My History" title="Delete">✕</button></div></div>
+      </li>`;
+  }
+  function historyFilterHTML(items) {
+    const f = ui.hFilter;
+    const n = f.type.length + f.status.length + f.year.length;
+    const years = [...new Set(items.flatMap((it) => setYears(it.s)))].sort((a, b) => b - a);
+    const group = (key, title, opts) => `<div class="dd-group">${title}</div><div class="dd-list">${opts.map(([v, label]) =>
+      `<label class="dd-opt"><input type="checkbox" data-hf="${key}" value="${esc(v)}" ${f[key].includes(v) ? 'checked' : ''}><span class="dd-txt">${esc(label)}</span></label>`).join('')}</div>`;
+    const open = ui.menu === 'hfilter';
+    return `<div class="dd mh-filter${open ? ' open' : ''}">
+        <button class="btn btn-sm mh-filter-btn" data-action="menu" data-id="hfilter" aria-expanded="${open}" aria-haspopup="true">Filter${n ? ` · ${n}` : ''} <span aria-hidden="true">▾</span></button>
+        ${open ? `<div class="dd-panel" role="group" aria-label="Filter My History">
+          <div class="dd-tools"><button class="link" data-action="hfilter-clear">Clear filters</button></div>
+          ${group('type', 'Type', TYPE_FILTERS)}${group('status', 'Status', Object.entries(STATUS))}
+          ${years.length ? group('year', 'Exam year', years.map((y) => [y, y])) : ''}
+          <p class="hint">Exam year: the years of the past exams a set has questions from. Nothing checked in a group shows everything.</p></div>` : ''}
       </div>`;
-    }).join('');
-    return `<section class="history practice-history" aria-label="Practice history"><h2>Practice history</h2><div class="result-list">${rows}</div>
-      <p class="hint">Every practice set is kept, finished or not. Click a finished set to see its summary and review it, or an unfinished one to continue it.</p></section>`;
+  }
+  // Topic Review exam: up to 5 random question groups with this topic, from every past exam in this semester's scope.
+  function topicReviewPids(topic) {
+    const pool = EXAM_PIDS.filter((pid) => partsOf(pid).length && groupTopics(pid).includes(topic));
+    for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+    return pool.slice(0, 5);
+  }
+  function startTopicReview(topic) {
+    const t = topicById(topic);
+    const pids = t && topicReviewPids(topic);
+    if (!pids || !pids.length) return;
+    if (store.exam && !confirm(`You have an unfinished exam (${store.exam.title}). Starting a new exam discards it. Continue?`)) return;
+    const n = (store.autoCounts[topic] || 0) + 1;
+    store.autoCounts[topic] = n;
+    createExam('custom', null, pids, null, { title: `${t.name} Review #${n}`, auto: { topic, n } });
+  }
+  function renderProgress() {
+    const st = progressStats();
+    const items = historyItems();
+    const shown = items.filter(historyMatches);
+    const stat = (v, label) => `<div class="mp-stat"><b>${v}</b><span>${label}</span></div>`;
+    const topics = st.topics.map(([t, n]) => `<li class="mp-topic"><span class="mp-topic-name">${esc(topicById(t).name)}</span>
+        <span class="mp-topic-n">${n} incorrect</span>
+        <button class="btn btn-sm mp-topic-go" data-action="topic-exam" data-topic="${esc(t)}" aria-label="Start a 5-question ${esc(topicById(t).name)} exam">Start topic exam</button></li>`).join('');
+    return `<main class="home progress">
+      <div class="mp-top"><button class="btn btn-sm btn-home" data-action="go-home">${icon('home')}Home</button></div>
+      ${storageWarningHTML()}
+      <section class="mp-card" aria-labelledby="mp-h">
+        <h1 id="mp-h" class="mp-h1">My Progress</h1>
+        <p class="hint mp-sub">Your summary from Exam Mode: full past exams and topic-based exams you submitted.</p>
+        <div class="mp-stats">
+          ${stat(st.fullCompleted, 'Full Exams Completed')}
+          ${stat(st.exams ? st.questions : '—', 'Questions Practiced')}
+          ${stat(st.accuracy === null ? '—' : `${st.accuracy}%`, 'Automatic Accuracy')}
+        </div>
+        ${st.exams ? `<p class="hint">Questions are counted once, however many times you did them. Accuracy uses the latest result of each multiple-choice and short-answer part (${plural(st.graded, 'part')}); code-writing parts and skipped parts are not counted.</p>`
+          : '<p class="hint">Submit an exam in Exam Mode to see your numbers here.</p>'}
+      </section>
+      <section class="mp-card" aria-labelledby="mh-h">
+        <div class="mp-head"><h2 id="mh-h">My History</h2>${items.length ? historyFilterHTML(items) : ''}</div>
+        <p class="hint mp-sub">Your practice sets and exams, most recent first. Continue a set, or review one you finished.</p>
+        ${!items.length ? '<p class="mp-empty">Nothing here yet. Start a practice set or an exam from Home.</p>'
+          : shown.length ? `<ul class="mh-list">${shown.map(historyCard).join('')}</ul>` : '<p class="mp-empty">No sets match these filters.</p>'}
+      </section>
+      <section class="mp-card" aria-labelledby="mt-h">
+        <h2 id="mt-h">Topics to Review</h2>
+        <p class="hint mp-sub">Topics where the latest result of a part in Exam Mode is incorrect. A topic exam has 5 random questions on that topic from the past exams, including ones you have done.</p>
+        ${topics ? `<ul class="mp-topics">${topics}</ul>` : '<p class="mp-empty">Nothing to review yet. Take an exam to see your weak topics.</p>'}
+      </section>
+    </main>`;
   }
   function storageWarningHTML() {
     const pct = Math.round((storage.used / STORAGE_LIMIT) * 100);
-    if (storage.full) return `<div class="storage-warn" role="alert"><b>Storage is full.</b> Your latest work could not be saved in this browser. Delete old sets in Practice history or Exam history to make room.</div>`;
+    if (storage.full) return `<div class="storage-warn" role="alert"><b>Storage is full.</b> Your latest work could not be saved in this browser. Delete old sets in My History to make room.</div>`;
     if (pct < 90) return '';
-    return `<div class="storage-warn" role="note"><b>Storage almost full (${pct}%).</b> This browser keeps about 5 MB for this site. Delete old sets in Practice history or Exam history, or new work may not be saved.</div>`;
-  }
-  function renderHistory() {
-    if (!store.attempts.length) return '';
-    const rows = store.attempts.slice().reverse().map((a) => `<button class="result-row hist-row" data-action="open-attempt" data-id="${a.id}">
-        <span class="t">${esc(a.title)}<small>${kindLabel(a)} · ${when(a.finishedAt)} · ${fmt(activeMs(a))} spent${a.autoSubmitted ? ' · time ran out' : ''}</small></span>
-        <span class="badge ungraded">${scoreText(a.score)}</span></button>`).join('');
-    return `<section class="history" aria-label="Exam history"><h2>Exam history</h2><div class="result-list">${rows}</div>
-      <p class="hint">Every submitted attempt is kept, including retakes. Click one to see its results and review it.</p></section>`;
+    return `<div class="storage-warn" role="note"><b>Storage almost full (${pct}%).</b> This browser keeps about 5 MB for this site. Delete old sets in My History, or new work may not be saved.</div>`;
   }
 
   const ICONS = {
@@ -3030,6 +3152,7 @@
     play: '<rect class="yt-box" x="1.5" y="4.5" width="21" height="15" rx="4.5" /><path class="yt-tri" d="M10 8.6v6.8l5.8-3.4z" />', // YouTube-style play mark (monochrome)
     video: '<rect x="3" y="6" width="13" height="12" rx="2" /><path d="M16 10.5l5-3v9l-5-3z" />',
     chev: '<path d="M6 9l6 6 6-6" />',
+    chart: '<path d="M5 20V12M12 20V5M19 20v-9" />',
     msg: '<path d="M4 5h16v11H9l-5 4z" /><path d="M8 9h8M8 12h5" />',
     tour: '<circle cx="12" cy="12" r="9" /><path d="M10 8.5l5 3.5-5 3.5z" />',
     more: '<circle cx="12" cy="5.5" r="1.3" fill="currentColor" /><circle cx="12" cy="12" r="1.3" fill="currentColor" /><circle cx="12" cy="18.5" r="1.3" fill="currentColor" />',
@@ -3927,6 +4050,7 @@
     if (ui.screen === 'practice' && !cur()) { setView('practice'); ui.screen = 'home'; }
     if (ui.screen === 'results' && !store.session) ui.screen = 'home';
     if (ui.screen === 'exam-results' && !attemptById(ui.attemptId)) ui.screen = 'home';
+    if (ui.screen !== 'progress' && ui.menu === 'hfilter') ui.menu = null;
 
     if (ui.screen === 'practice') {
       const s = cur();
@@ -3962,10 +4086,10 @@
       const panel = app.querySelector('.dd.open .dd-panel');
       const menuScroll = panel ? { menu: ui.menu, top: panel.scrollTop } : null;
       app.innerHTML = ui.screen === 'results' ? renderResults() : ui.screen === 'exam-results' ? renderExamResults(attemptById(ui.attemptId))
-        : ui.screen === 'landing' ? renderLanding() : renderHome();
+        : ui.screen === 'landing' ? renderLanding() : ui.screen === 'progress' ? renderProgress() : renderHome();
       const reopened = menuScroll && menuScroll.menu === ui.menu && app.querySelector('.dd.open .dd-panel');
       if (reopened) reopened.scrollTop = menuScroll.top;
-      document.title = ui.screen === 'exam-results' ? 'Exam results · CS 61A & C88C Exam Practice' : 'CS 61A & C88C Exam Practice';
+      document.title = ui.screen === 'exam-results' ? 'Exam results · CS 61A & C88C Exam Practice' : ui.screen === 'progress' ? 'My Progress · CS 61A & C88C Exam Practice' : 'CS 61A & C88C Exam Practice';
     }
 
     if (activeId) {
@@ -4073,7 +4197,7 @@
       }
       // Results pages / review: back to the home page. Never starts, ends or changes a session or attempt.
       case 'go-home':
-        if (ui.screen === 'exam-results' || isReview(s)) p.mode = 'exam'; // so Exam History is right there
+        if (ui.screen === 'exam-results' || isReview(s)) p.mode = 'exam'; // Home opens on Exam Mode after an exam
         setView('practice'); ui.screen = 'home'; ui.navOpen = false; ui.dirOpen = false; window.scrollTo(0, 0); break;
       case 'toggle-walk': { // Practice Summary → Walkthrough Videos (expanded by default)
         ui.walkCollapsed = !ui.walkCollapsed;
@@ -4089,10 +4213,20 @@
         p.mode = 'practice'; setView('practice'); ui.screen = 'home'; window.scrollTo(0, 0); break;
       case 'discard': shelveSession(); break; // Start Over: the unfinished set moves to the practice history
       case 'open-set': openPracticeSet(btn.dataset.id); break;
+      case 'progress': ui.screen = 'progress'; ui.menu = null; window.scrollTo(0, 0); break;
+      case 'hfilter-clear': ui.hFilter = { type: [], status: [], year: [] }; break;
+      case 'topic-exam': startTopicReview(btn.dataset.topic); return;
+      case 'delete-attempt': {
+        const a = attemptById(btn.dataset.id);
+        if (!a || !confirm(`Delete "${a.title}" from My History? Its answers, results and review notes are removed for good.`)) return;
+        store.attempts = store.attempts.filter((x) => x !== a);
+        delete store.reviews[a.id];
+        break;
+      }
       case 'delete-set': {
         const id = btn.dataset.id;
         const set = store.session && store.session.id === id ? store.session : store.practice.find((x) => x.id === id);
-        if (!set || !confirm(`Delete "${set.title}" from your practice history? Its answers, code notes and annotations are removed for good.`)) return;
+        if (!set || !confirm(`Delete "${set.title}" from My History? Its answers, code notes and annotations are removed for good.`)) return;
         if (set === store.session) store.session = null; else store.practice = store.practice.filter((x) => x !== set);
         break;
       }
@@ -4108,7 +4242,7 @@
         startExamFromPrefs(); return;
       case 'resume-exam': resumeExam(); return;
       case 'discard-exam':
-        if (!confirm('Discard your unfinished exam? Its answers will be lost. Submitted attempts in your history are kept.')) return;
+        if (!confirm('Discard your unfinished exam? Its answers will be lost. Submitted exams in My History are kept.')) return;
         store.exam = null; break;
       case 'open-attempt': setView('review', btn.dataset.id); ui.screen = 'exam-results'; window.scrollTo(0, 0); break;
       // exam taking & results
@@ -4156,7 +4290,7 @@
       case 'retake': {
         const at = attemptById(ui.attemptId);
         if (store.exam && !confirm(`You have an unfinished exam (${store.exam.title}). Retaking discards it. Continue?`)) return;
-        createExam(at.kind, at.examId, at.groups.map((g) => g.pid), at.timer ? at.timer.durationMs / 60000 : null);
+        createExam(at.kind, at.examId, at.groups.map((g) => g.pid), at.timer ? at.timer.durationMs / 60000 : null, at.auto ? { title: at.title, auto: at.auto } : null);
         return;
       }
       // practice
@@ -4281,6 +4415,12 @@
       const v = Number(el.value);
       store.prefs.minutes = Number.isInteger(v) ? v : NaN;
       save(); render(); return;
+    }
+    const hf = el.dataset && el.dataset.hf;
+    if (hf) { // My History filter
+      const list = ui.hFilter[hf];
+      ui.hFilter[hf] = el.checked ? [...new Set([...list, el.value])] : list.filter((v) => v !== el.value);
+      render(); return;
     }
     const xpref = el.dataset && el.dataset.xpref;
     if (xpref) { // exam setup radios
