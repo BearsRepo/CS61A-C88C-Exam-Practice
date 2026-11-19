@@ -13,6 +13,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 global.window = {};
 require(path.join(__dirname, '..', '..', 'app', 'data', 'questions.js'));
+require(path.join(__dirname, '..', '..', 'app', 'data', 'final_questions.js'));
 require(path.join(__dirname, '..', '..', 'app', 'data', 'walkthroughs.js'));
 const B = window.CS61A_BANK;
 const W = window.CS61A_WALKTHROUGHS;
@@ -26,13 +27,23 @@ const URLS = {
   sp23: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZenSsdPn9cE8-OOM3nGcg5V',
   fa22: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcAajfg4WZT-DyuhXMlR_hJ',
   fa21: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcwZ1N5xCL2y48ca2U9dbw5',
+  // Finals (Fall 2020 Final has no playlist)
+  fa25f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZee1n-ukPBeLEhAfAUYXngC',
+  sp25f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZeyOevOODbw2tKFLlQGQ3NI',
+  fa24f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcwzHlkGBWsNm9ti2c7Q1O3',
+  sp24f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcmxfWmIQpkzFsT03tbUWct',
+  fa23f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZddSeGrdHHiRlHu07nXxgnT',
+  sp23f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcAyMGQiKmKotYDcjgXRnMx',
+  fa22f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcRqzzMB-kDTSH6FLx6uQ84',
+  fa21f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZdqzIVxJ_gTbtHchjBNaw9N',
 };
 
 // ── Playlist mapping (data only) ──
-ok(Object.entries(URLS).every(([e, u]) => W.getWalkthroughPlaylist(e) === u) && Object.keys(W.PLAYLISTS).length === 8, 'the eight provided exams map to their exact playlist URLs, and nothing else is listed');
+ok(Object.entries(URLS).every(([e, u]) => W.getWalkthroughPlaylist(e) === u) && Object.keys(W.PLAYLISTS).length === 16, 'the eight midterms and eight finals provided map to their exact playlist URLs, and nothing else is listed');
 ok(Object.keys(URLS).every((e) => B.EXAMS[e]), 'every mapped id is an exam id in the question bank');
 ok(['fa20', 'sp22', '', null, undefined, 'constructor', '__proto__', 'toString', 42].every((e) => W.getWalkthroughPlaylist(e) === null), 'unknown or odd exam ids → null');
 const byQ = (qid) => W.getWalkthroughPlaylist(B.PROBLEMS[B.QUESTIONS.find((q) => q.id === qid).problem].exam);
+ok(W.getWalkthroughPlaylist('fa20f') === null && byQ('fa25f-3a') === URLS.fa25f && byQ('fa25f-3a') !== URLS.fa25, 'Fall 2020 Final has no playlist; a final question opens its Final playlist, not the Midterm 2 one');
 ok(['fa25-1a', 'fa25-4c', 'fa25-6e'].map(byQ).every((u) => u === URLS.fa25), 'different questions from one exam resolve to the same playlist');
 const mixed = ['sp23-5a-a', 'fa25-3a', 'sp23-1a', 'fa24-5e', 'fa22-1a'].filter((id) => B.QUESTIONS.some((q) => q.id === id));
 ok(mixed.length >= 4 && mixed.every((id) => byQ(id) === URLS[B.PROBLEMS[B.QUESTIONS.find((q) => q.id === id).problem].exam]), `a mixed list resolves each question to its own exam (${mixed.join(', ')})`);
