@@ -700,7 +700,10 @@
   // diagram. Saved with the exam in progress as handwriting[pid] = [{ id, kind: 'ink', pts, color?, w }], pts in the
   // pane's scroll coordinates and w the pane's width when drawn. They share the question's Undo / Redo / Clear, and
   // are saved by the same save() as everything else. Nowhere else (desktop, practice, review) reads or writes them.
-  const inkMap = () => { const s = cur(); return IS_IPAD && examActive(s) ? s.handwriting || (s.handwriting = {}) : null; };
+  // In Review, the same field on the review workspace is the student's own review layer for the answer pane; the
+  // submitted attempt's handwriting is never read or written here.
+  const inkSession = (s) => examActive(s) || isReview(s);
+  const inkMap = () => { const s = cur(); return IS_IPAD && inkSession(s) ? s.handwriting || (s.handwriting = {}) : null; };
   const rinks = (pid) => { const m = inkMap(); return (m && m[pid]) || []; };
   const anns = (pid) => { const all = annotationsOf(); return all[pid] || (all[pid] = []); };
   const hist = (pid) => history[pid] || (history[pid] = { undo: [], redo: [] });
@@ -1051,8 +1054,9 @@
   // while a tool is on (see syncPaper); fingers keep scrolling and tapping (the left pane's overlay stops catching
   // touches); the highlighter follows a Pencil drag over the text or code; and a Pencil tap on a control (an option,
   // an Eliminate button, a link) is a tap, while a drag that starts there draws.
-  const pencilInk = () => IS_IPAD && ui.screen === 'practice' && examActive(cur());
-  const INK_SKIP = '#annot-bar, .note-layer, .p-header, .p-footer, .review-work'; // these keep their own handling
+  // Review uses all of it too: the strokes go to the review workspace (store.reviews), never to the submitted attempt.
+  const pencilInk = () => IS_IPAD && ui.screen === 'practice' && inkSession(cur());
+  const INK_SKIP = '#annot-bar, .note-layer, .p-header, .p-footer'; // these keep their own handling
   const INK_TAP = 'button, a[href], label, summary, select, input[type="radio"], input[type="checkbox"], [role="button"], [role="switch"], [data-action], .choice';
   const paperOn = () => pencilInk() && ['pen', 'eraser', 'hl'].includes(ui.annMode);
   // The toolbar on an iPad exam sits on the divider between the panes (styles.css), and its Pen gets a colour menu:
@@ -1090,7 +1094,7 @@
   function syncPaper() {
     if (!IS_IPAD) return;
     const on = paperOn();
-    document.querySelectorAll('#pane-right textarea, #pane-right input:not([type="radio"]):not([type="checkbox"])').forEach((f) => {
+    document.querySelectorAll(':is(#pane-right, #review-work) :is(textarea, input:not([type="radio"]):not([type="checkbox"]))').forEach((f) => {
       if (on && !f.readOnly) { f.readOnly = true; f.dataset.paper = '1'; } else if (!on && f.dataset.paper) { f.readOnly = false; delete f.dataset.paper; }
     });
     const ed = leftPid && editors[leftPid];
@@ -4161,7 +4165,7 @@
         }
       }
       const work = document.getElementById('review-work'); // review: the editable answers live under the problem
-      if (work) work.innerHTML = renderReviewWork(g, s);
+      if (work) { work.innerHTML = renderReviewWork(g, s); if (IS_IPAD) syncPaper(); } // re-rendered boxes stay paper
       fillBlanks(editors[g.pid]);
       document.title = `Q${s.index + 1} · ${isExam(s) ? (isReview(s) ? 'Exam review' : 'Exam') : 'CS 61A & C88C Exam Practice'}`;
     } else {
