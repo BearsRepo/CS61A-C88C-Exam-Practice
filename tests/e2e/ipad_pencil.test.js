@@ -114,7 +114,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   await P.stroke('pen', P.line(await P.rightBlank(), 120, 30));
   ok((await P.rightInk()) === 1, 'Pencil on the right pane draws a stroke');
   let S = await P.st();
-  ok(!JSON.stringify(S).includes('"ink"'), 'right-pane strokes are not written to storage');
+  ok(S.exam.handwriting['sp25-4b'].length === 1 && !JSON.stringify(S.exam.annotations).includes('"ink"'), 'right-pane strokes are saved with the exam (handwriting), not in the annotations (Phase 2A)');
   // Finger touches don't draw.
   await P.stroke('touch', P.line(await P.rightBlank(), 60, 200));
   await P.stroke('touch', P.line(art, 60, 60));

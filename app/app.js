@@ -103,9 +103,26 @@
   // If another tab writes the store, this tab's copy is out of date: saving it would overwrite the other tab's
   // work (e.g. erase an exam submitted there). Stop saving and ask for a reload instead (see the 'storage' listener).
   let staleTab = false;
+  // iPad exam handwriting (store.exam.handwriting) as last written to storage, and whether the user was told it
+  // no longer fits. If storage is full, everything else (answers, progress) is still saved, with the handwriting
+  // that was saved before, so new strokes can never cost the exam its answers. They stay on screen until reload.
+  let savedInk;
+  let inkFull = false;
+  const inkSnapshot = (hw) => hw && Object.fromEntries(Object.entries(hw).map(([k, v]) => [k, v.slice()]));
   function save() {
     if (staleTab) return;
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage unavailable: work lives in memory only */ }
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      savedInk = inkSnapshot(store.exam && store.exam.handwriting);
+    } catch (e) {
+      const ex = store.exam;
+      if (ex && ex.handwriting) {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(store, function (k, v) { return this === ex && k === 'handwriting' ? savedInk : v; }));
+          if (!inkFull) { inkFull = true; setTimeout(() => alert('Browser storage is full, so your latest handwriting on this exam can’t be saved. Your answers are still being saved.'), 0); }
+        } catch (e2) { /* storage unavailable: work lives in memory only */ }
+      } /* else storage unavailable: work lives in memory only */
+    }
     if (ANALYTICS) ANALYTICS.changed(); // usage tracking works out what changed, a moment later
   }
   let saveTimer = null;
@@ -175,7 +192,22 @@
     a.notes = migrateNotes(a.notes || {});
     a.annotations = a.annotations || {};
     a.eliminated = a.eliminated || {};
+    if ('handwriting' in a) a.handwriting = cleanHandwriting(a.handwriting, a.groups);
     return a;
+  }
+  // iPad exam handwriting: { pid: [{ id, kind: 'ink', pts: [[x, y], …], color?, w? }] }. A damaged record loses only
+  // the bad strokes; strokes for a question the attempt doesn't contain are dropped, so they can't show elsewhere.
+  function cleanHandwriting(hw, groups) {
+    if (!isObj(hw)) return {};
+    const own = new Set(groups.map((g) => g.pid));
+    const okPt = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+    const out = {};
+    Object.keys(hw).forEach((pid) => {
+      const list = Array.isArray(hw[pid]) && own.has(pid) ? hw[pid].filter((k) => isObj(k) && typeof k.id === 'string' && k.kind === 'ink'
+        && Array.isArray(k.pts) && k.pts.length && k.pts.every(okPt)) : [];
+      if (list.length) out[pid] = list;
+    });
+    return out;
   }
 
   const saved = load();
@@ -190,6 +222,7 @@
     attempts: (Array.isArray(saved && saved.attempts) ? saved.attempts : []).map(migrateAttempt).filter(Boolean), // submitted exams, oldest first
     reviews: (saved && saved.reviews && typeof saved.reviews === 'object') ? saved.reviews : {}, // attemptId -> review workspace
   };
+  savedInk = inkSnapshot(store.exam && store.exam.handwriting); // what storage holds now (see save)
   // Scratch code and annotations belong to the session they were made in. Before v4, practice kept them in
   // store-wide maps keyed by problem, so they leaked into every later set with the same question. A saved
   // practice set takes over the entries for its own problems; the rest belonged to finished sets and are dropped.
@@ -660,10 +693,12 @@
   const inkStyle = (c) => (c && c !== 'red' && PEN_COLORS[c] ? ` style="stroke:${PEN_COLORS[c]}"` : '');
   const withColor = (c) => (c && c !== 'red' && PEN_COLORS[c] ? { color: c } : {});
 
-  // iPad exams: Apple Pencil strokes on the right (answer) pane, { id, kind: 'ink', pts } in the pane's scroll
-  // coordinates. Kept in memory only (not saved yet), but they share the question's Undo / Redo / Clear.
-  const rightInk = {}; // pid -> strokes
-  const rinks = (pid) => rightInk[pid] || (rightInk[pid] = []);
+  // iPad exams: Apple Pencil strokes on the right (answer) pane, including over code, answer boxes and the paper
+  // diagram. Saved with the exam in progress as handwriting[pid] = [{ id, kind: 'ink', pts, color?, w }], pts in the
+  // pane's scroll coordinates and w the pane's width when drawn. They share the question's Undo / Redo / Clear, and
+  // are saved by the same save() as everything else. Nowhere else (desktop, practice, review) reads or writes them.
+  const inkMap = () => { const s = cur(); return IS_IPAD && examActive(s) ? s.handwriting || (s.handwriting = {}) : null; };
+  const rinks = (pid) => { const m = inkMap(); return (m && m[pid]) || []; };
   const anns = (pid) => { const all = annotationsOf(); return all[pid] || (all[pid] = []); };
   const hist = (pid) => history[pid] || (history[pid] = { undo: [], redo: [] });
   const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -758,7 +793,12 @@
 
   // Apply one annotation change to state and to whatever is on screen.
   function addAnn(pid, a) {
-    if (a.kind === 'ink') { rinks(pid).push(a); if (pid === leftPid) layoutRightInk(); return; }
+    if (a.kind === 'ink') {
+      const m = inkMap();
+      if (m) (m[pid] || (m[pid] = [])).push(a);
+      if (pid === leftPid) layoutRightInk();
+      return;
+    }
     anns(pid).push(a.kind === 'note' ? normNote(cloneAnn(a)) : a); // notes are edited in place, so the list keeps its own copy
     if (a.kind === 'code') markCode(editors[pid], a);
     if (pid !== leftPid) return;
@@ -769,7 +809,9 @@
   function removeAnn(pid, id) {
     const ri = rinks(pid).findIndex((x) => x.id === id);
     if (ri >= 0) {
-      const [a] = rinks(pid).splice(ri, 1);
+      const list = rinks(pid);
+      const [a] = list.splice(ri, 1);
+      if (!list.length) delete inkMap()[pid];
       if (pid === leftPid) layoutRightInk();
       return a;
     }
@@ -1166,7 +1208,7 @@
     if (!drawing.right) { onOverlayUp(); return; }
     const d = drawing;
     drawing = null;
-    if (d.kind === 'pen') commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'ink', pts: d.pts, ...withColor(d.color) } }]);
+    if (d.kind === 'pen') commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'ink', pts: d.pts, ...withColor(d.color), w: document.getElementById('pane-right').clientWidth } }]);
     else { record(leftPid, d.ops); layoutRightInk(); }
   }
   // Safari scrolls, selects text or starts Scribble under the Pencil unless its touches are cancelled. Only the
@@ -2748,7 +2790,6 @@
     detachEditors();
     Object.keys(editors).forEach((k) => delete editors[k]);
     Object.keys(history).forEach((k) => delete history[k]);
-    Object.keys(rightInk).forEach((k) => delete rightInk[k]);
     leftPid = null;
     cachedFor = null;
     ui.annMode = 'none';
