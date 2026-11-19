@@ -2790,6 +2790,7 @@
     detachEditors();
     Object.keys(editors).forEach((k) => delete editors[k]);
     Object.keys(history).forEach((k) => delete history[k]);
+    drawing = null; // a stroke still under the Pencil belongs to the session being left; lifting it later adds nothing
     leftPid = null;
     cachedFor = null;
     ui.annMode = 'none';
@@ -2847,6 +2848,7 @@
   }
   function saveAndLeave() {
     const s = store.exam;
+    if (s.timer && s.timer.runningSince && timeLeft(s.timer) <= 0) { submitExam(true); return; } // time ran out first
     pauseTimer(s.timer);
     stopActive(s);
     s.leftAt = Date.now();
@@ -2860,6 +2862,7 @@
   }
   function resumeExam() {
     const s = store.exam;
+    if (s.timer && !s.timer.runningSince && s.timer.remainingMs <= 0) { submitExam(true); return; } // left with no time on the clock
     s.leftAt = null;
     if (s.timer && s.timer.remainingMs > 0 && !s.timer.runningSince) s.timer.runningSince = Date.now();
     if (!s.activeSince) s.activeSince = Date.now();
@@ -4620,6 +4623,7 @@
     }
   });
   window.addEventListener('beforeunload', save);
+  window.addEventListener('pagehide', save); // iPad Safari closes or leaves the page without beforeunload
   // Another tab saved: this tab's copy is stale. Saving is already blocked (save()); cover the page so no
   // work is done here that can't be kept, and offer a reload, which picks up the other tab's state.
   window.addEventListener('storage', (e) => {
