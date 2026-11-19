@@ -103,22 +103,25 @@
   // If another tab writes the store, this tab's copy is out of date: saving it would overwrite the other tab's
   // work (e.g. erase an exam submitted there). Stop saving and ask for a reload instead (see the 'storage' listener).
   let staleTab = false;
-  // iPad exam handwriting (store.exam.handwriting) as last written to storage, and whether the user was told it
-  // no longer fits. If storage is full, everything else (answers, progress) is still saved, with the handwriting
-  // that was saved before, so new strokes can never cost the exam its answers. They stay on screen until reload.
-  let savedInk;
+  // iPad exam handwriting as last written to storage, per session whose newest strokes may not be on disk yet: the
+  // exam in progress, and the attempt it becomes when submitted (the same object) until a save gets through. If
+  // storage is full, everything else (answers, progress, the submission itself) is still saved, with the handwriting
+  // that was saved before, so new strokes can never cost the exam its answers or its submission. They stay on
+  // screen until reload. inkFull: the user was told once.
+  const savedInk = new Map(); // session -> its handwriting as last saved (undefined: none saved yet)
   let inkFull = false;
   const inkSnapshot = (hw) => hw && Object.fromEntries(Object.entries(hw).map(([k, v]) => [k, v.slice()]));
   function save() {
     if (staleTab) return;
     try {
       localStorage.setItem(STORE_KEY, JSON.stringify(store));
-      savedInk = inkSnapshot(store.exam && store.exam.handwriting);
+      savedInk.clear(); // all of it is on disk now
+      if (store.exam) savedInk.set(store.exam, inkSnapshot(store.exam.handwriting));
     } catch (e) {
-      const ex = store.exam;
-      if (ex && ex.handwriting) {
+      if (store.exam && !savedInk.has(store.exam)) savedInk.set(store.exam, undefined); // a new exam: none on disk yet
+      if ([...savedInk.keys()].some((x) => x.handwriting)) {
         try {
-          localStorage.setItem(STORE_KEY, JSON.stringify(store, function (k, v) { return this === ex && k === 'handwriting' ? savedInk : v; }));
+          localStorage.setItem(STORE_KEY, JSON.stringify(store, function (k, v) { return k === 'handwriting' && savedInk.has(this) ? savedInk.get(this) : v; }));
           if (!inkFull) { inkFull = true; setTimeout(() => alert('Browser storage is full, so your latest handwriting on this exam can’t be saved. Your answers are still being saved.'), 0); }
         } catch (e2) { /* storage unavailable: work lives in memory only */ }
       } /* else storage unavailable: work lives in memory only */
@@ -222,7 +225,7 @@
     attempts: (Array.isArray(saved && saved.attempts) ? saved.attempts : []).map(migrateAttempt).filter(Boolean), // submitted exams, oldest first
     reviews: (saved && saved.reviews && typeof saved.reviews === 'object') ? saved.reviews : {}, // attemptId -> review workspace
   };
-  savedInk = inkSnapshot(store.exam && store.exam.handwriting); // what storage holds now (see save)
+  if (store.exam) savedInk.set(store.exam, inkSnapshot(store.exam.handwriting)); // what storage holds now (see save)
   // Scratch code and annotations belong to the session they were made in. Before v4, practice kept them in
   // store-wide maps keyed by problem, so they leaked into every later set with the same question. A saved
   // practice set takes over the entries for its own problems; the rest belonged to finished sets and are dropped.
