@@ -636,6 +636,15 @@
     const ed = { pid, wrap, cm, blanks: [], hl: {}, current: null };
     buildBlanks(ed);
     anns(pid).filter((a) => a.kind === 'code').forEach((a) => markCode(ed, a));
+    if (IS_IPAD) { // pen strokes drawn on the code follow it when it scrolls sideways (see codeView)
+      let sl = 0;
+      cm.on('scroll', () => {
+        const x = cm.getScrollInfo().left;
+        if (x === sl) return;
+        sl = x;
+        if (pid === leftPid && anns(pid).some((a) => a.kind === 'pen' && typeof a.sx === 'number')) layoutStrokes();
+      });
+    }
     cm.on('change', (c, ch) => {
       notes[pid] = cm.getValue();
       if ([...ch.text, ...ch.removed].join('\n').includes('⟦')) buildBlanks(ed); // a token was pasted
@@ -775,10 +784,25 @@
     if (pts.length === 1) return `M${x0} ${y0}l0.01 0`;
     return `M${x0} ${y0}` + pts.slice(1).map(([x, y]) => `L${x} ${y}`).join('');
   }
-  function absPoints(art, a) {
+  // A stroke that starts on the code editor (iPad) keeps sx, the editor's horizontal scroll when it was drawn, and
+  // follows the code when the editor scrolls sideways: it moves by the scroll since then and is clipped to the
+  // editor, as the code is. Strokes without sx are drawn where they were drawn, as before.
+  function codeView(art) { // the left pane's editor: its scroll and visible code columns, in article pixels
+    const ed = leftPid && editors[leftPid];
+    if (!ed || !ed.cm || !art || !art.contains(ed.wrap)) return null;
+    const el = ed.cm.getWrapperElement();
+    const r = el.getBoundingClientRect();
+    const A = art.getBoundingClientRect();
+    const sl = ed.cm.getScrollInfo().left;
+    const gw = ed.cm.getGutterElement().offsetWidth;
+    return { el, sl, x0: r.left - A.left + Math.min(sl, gw), x1: r.right - A.left };
+  }
+  const codeShift = (a, v) => (typeof a.sx === 'number' && v ? a.sx - v.sl : 0);
+  const codeClipped = (a, v) => typeof a.sx === 'number' && v && (v.sl > 0 || codeShift(a, v) !== 0);
+  function absPoints(art, a, v = codeView(art)) {
     const bl = blocks(art);
     const b = bl[a.block] || bl[0];
-    const ox = b ? b.offsetLeft : 0;
+    const ox = (b ? b.offsetLeft : 0) + codeShift(a, v);
     const oy = b ? b.offsetTop : 0;
     return a.pts.map(([x, y]) => [x + ox, y + oy]);
   }
@@ -790,8 +814,11 @@
     svg.setAttribute('height', 0);
     svg.setAttribute('width', art.scrollWidth);
     svg.setAttribute('height', art.scrollHeight);
-    const paths = anns(leftPid).filter((a) => a.kind === 'pen')
-      .map((a) => `<path d="${strokePath(absPoints(art, a))}" data-aid="${a.id}"${inkStyle(a.color)}/>`).join('');
+    const v = codeView(art);
+    const pens = anns(leftPid).filter((a) => a.kind === 'pen');
+    const clip = v && pens.some((a) => codeClipped(a, v)) ? `<defs><clipPath id="code-ink-clip"><rect x="${v.x0}" y="0" width="${Math.max(0, v.x1 - v.x0)}" height="${art.scrollHeight}"/></clipPath></defs>` : '';
+    const paths = clip + pens
+      .map((a) => `<path d="${strokePath(absPoints(art, a, v))}" data-aid="${a.id}"${inkStyle(a.color)}${codeClipped(a, v) ? ' clip-path="url(#code-ink-clip)"' : ''}/>`).join('');
     const livePath = drawing && drawing.kind === 'pen' && !drawing.right ? `<path class="live" d="${strokePath(drawing.pts)}"${inkStyle(drawing.color)}/>` : '';
     svg.innerHTML = paths + livePath;
     layoutNotes();
@@ -915,8 +942,10 @@
     const pid = leftPid;
     const art = article();
     const hits = new Set();
+    const v = codeView(art);
     anns(pid).filter((a) => a.kind === 'pen').forEach((a) => {
-      const pts = absPoints(art, a);
+      if (codeClipped(a, v) && (x < v.x0 || x > v.x1)) return; // that part is hidden with the scrolled-out code
+      const pts = absPoints(art, a, v);
       const near = pts.length === 1 ? Math.hypot(x - pts[0][0], y - pts[0][1]) < 9
         : pts.some((p, i) => i && distToSegment(x, y, pts[i - 1], p) < 9);
       if (near) hits.add(a.id);
@@ -1041,7 +1070,12 @@
       if (bi < 0) bi = y0 < (bl[0] ? bl[0].offsetTop : 0) ? 0 : bl.length - 1;
       const b = bl[bi];
       const pts = d.pts.map(([x, y]) => [Math.round((x - b.offsetLeft) * 10) / 10, Math.round((y - b.offsetTop) * 10) / 10]);
-      commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'pen', block: bi, pts, ...withColor(d.color) } }]);
+      const v = IS_IPAD && codeView(art); // started on the code: it follows the code's horizontal scroll
+      const r = v && v.el.getBoundingClientRect();
+      const A = v && art.getBoundingClientRect();
+      const [x0, y0a] = d.pts[0];
+      const onCode = v && x0 >= r.left - A.left && x0 <= r.right - A.left && y0a >= r.top - A.top && y0a <= r.bottom - A.top;
+      commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'pen', block: bi, pts, ...withColor(d.color), ...(onCode ? { sx: Math.round(v.sl) } : {}) } }]);
       layoutStrokes();
     } else {
       record(leftPid, d.ops);
