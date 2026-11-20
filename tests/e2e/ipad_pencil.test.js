@@ -2,7 +2,7 @@
 // it is recognized by a Mac platform with touch points). During an exam the existing red pen and eraser draw on
 // both panes with the Pencil (or a mouse / trackpad); fingers still scroll and tap; a Pencil tap on an option still
 // selects it, and a drag that starts on one draws instead. Right-pane strokes share Undo / Redo / Clear and are not
-// saved. Desktop, practice and review are unchanged.
+// saved. Desktop is unchanged; iPad practice uses the same drawing (Task 5).
 // Real Pencil input can't be produced here, so pen strokes are synthetic PointerEvents with pointerType "pen";
 // mouse input (page.mouse) takes the same path.
 const puppeteer = require('puppeteer-core');
@@ -317,18 +317,19 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   if (conf) { await conf.click(); await wait(400); }
   ok(!(await pad.$('#pane-right .part')) || (await pad.$eval('.practice', (p) => p.dataset.view)) !== 'exam', 'Submit works');
 
-  // Practice on an iPad keeps the desktop behaviour.
+  // Practice on an iPad uses the same Pencil drawing and toolbar as an exam (Task 5).
   await pad.evaluate((k) => { const s = JSON.parse(localStorage.getItem(k)); s.prefs.mode = 'practice'; s.session = { ids: ['sp25-4d', 'sp25-4e', 'fa24-2a'], index: 0, title: 'x', answers: {}, timer: null, startedAt: Date.now(), finished: false, notes: {}, annotations: {} }; localStorage.setItem(k, JSON.stringify(s)); Storage.prototype.setItem = function () {}; }, KEY);
   await pad.goto(APP_URL); await wait(150);
   await P.click('[data-action="enter"]'); await P.click('.resume [data-action="resume"]'); await pad.waitForSelector('#pane-right .part');
-  ok(!(await pad.$eval('.p-main', (m) => m.classList.contains('pencil-ink'))), 'iPad practice: Pencil-on-both-panes stays off (unchanged)');
-  ok(!(await pad.$('#pen-colors')) && await pad.$eval('#annot-bar', (b) => getComputedStyle(b).position === 'sticky'), 'iPad practice: toolbar unchanged at the top, no colour menu');
+  ok(await pad.$eval('.p-main', (m) => m.classList.contains('pencil-ink')), 'iPad practice: Pencil-on-both-panes is on, as in an exam');
+  ok(!!(await pad.$('#pen-colors')) && await pad.$eval('#annot-bar', (b) => getComputedStyle(b).position === 'absolute' && getComputedStyle(b).flexDirection === 'column'), 'iPad practice: the same toolbar on the divider, with the colour menu');
+  ok(await pad.$eval('#annot-bar [data-ann="pen"]', (b) => b.getAttribute('aria-pressed') === 'true'), 'iPad practice: the set opens with the Pen on, as an exam does');
+  ok(await pad.evaluate(() => document.querySelector('#pane-right textarea').readOnly && document.querySelector('.CodeMirror').CodeMirror.getOption('readOnly') === 'nocursor'), 'iPad practice: with the pen on, code and answer boxes are paper, as in an exam');
   await P.click('[data-ann="pen"]');
-  ok(await pad.evaluate(() => !document.querySelector('#pane-right textarea').readOnly && document.querySelector('.CodeMirror').CodeMirror.getOption('readOnly') === false), 'iPad practice: code and answer boxes stay editable with the pen on');
-  await P.click('[data-ann="pen"]');
+  ok(await pad.evaluate(() => !document.querySelector('#pane-right textarea').readOnly && document.querySelector('.CodeMirror').CodeMirror.getOption('readOnly') === false), 'iPad practice: with no tool on they are editable again');
   await P.click('[data-action="next"]');
   await pad.waitForSelector('#dg-canvas');
-  ok(await pad.$eval('#dg-bar', (b) => b.offsetParent !== null) && await pad.$eval('#dg-canvas', (c) => getComputedStyle(c).pointerEvents !== 'none'), 'iPad practice: the interactive diagram and its toolkit are unchanged');
+  ok(await pad.$eval('#dg-bar', (b) => b.offsetParent === null) && await pad.$eval('#dg-canvas', (c) => getComputedStyle(c).pointerEvents === 'none'), 'iPad practice: the environment diagram is paper, as in an exam');
   ok(pad.errors.length === 0, `iPad: no console errors (${pad.errors.join(' | ')})`);
 
   await browser.close();

@@ -170,6 +170,7 @@
     if (t && !(isObj(t) && typeof t.durationMs === 'number' && typeof t.remainingMs === 'number' && (t.runningSince === null || typeof t.runningSince === 'number'))) s.timer = null;
     if (typeof s.title !== 'string') s.title = 'Practice set';
     if (typeof s.startedAt !== 'number') s.startedAt = Date.now();
+    if ('handwriting' in s) s.handwriting = cleanHandwriting(s.handwriting, s.groups); // iPad practice sets too
     return s;
   }
   // Keep only valid values in saved preference lists (they drive filtering on the home page).
@@ -708,10 +709,11 @@
   // iPad exams: Apple Pencil strokes on the right (answer) pane, including over code, answer boxes and the paper
   // diagram. Saved with the exam in progress as handwriting[pid] = [{ id, kind: 'ink', pts, color?, w }], pts in the
   // pane's scroll coordinates and w the pane's width when drawn. They share the question's Undo / Redo / Clear, and
-  // are saved by the same save() as everything else. Nowhere else (desktop, practice, review) reads or writes them.
-  // In Review, the same field on the review workspace is the student's own review layer for the answer pane; the
+  // are saved by the same save() as everything else. Desktop never reads or writes them. An iPad practice set keeps
+  // its own the same way (store.session.handwriting), with the same toolbar on the divider. In Review, the same field on the review workspace is the student's own review layer for the answer pane; the
   // submitted attempt's handwriting is never read or written here.
-  const inkSession = (s) => examActive(s) || isReview(s);
+  const inkSession = (s) => examActive(s) || isReview(s) || (!!s && !isExam(s)); // …and practice sets
+  const padWork = (s) => IS_IPAD && (examActive(s) || (!!s && !isExam(s))); // an iPad exam in progress or practice set
   const inkMap = () => { const s = cur(); return IS_IPAD && inkSession(s) ? s.handwriting || (s.handwriting = {}) : null; };
   const rinks = (pid) => { const m = inkMap(); return (m && m[pid]) || []; };
   const anns = (pid) => { const all = annotationsOf(); return all[pid] || (all[pid] = []); };
@@ -1152,6 +1154,33 @@
     const r = pane.getBoundingClientRect();
     return [r1(e.clientX - r.left - pane.clientLeft + pane.scrollLeft), r1(e.clientY - r.top - pane.clientTop + pane.scrollTop)];
   }
+  // iPad practice: Show Solution (and its feedback) opens at the end of a part and pushes the parts below it down.
+  // Answer-pane strokes are kept in pane coordinates, so before the answers are re-rendered the top of each part is
+  // noted, and afterwards each stroke moves by as much as the part whose band (its top to the next part's top) holds
+  // the stroke's middle. Only the points change; the stored format is the same.
+  function partTops() {
+    const pane = document.getElementById('pane-right');
+    const top = pane.getBoundingClientRect().top - pane.scrollTop;
+    return [...pane.querySelectorAll('#right-body .part[data-part]')].map((el) => [el.dataset.part, el.getBoundingClientRect().top - top]);
+  }
+  function followParts(s, pid, before) {
+    const list = (s.handwriting || {})[pid];
+    if (!list || !list.length || !before.length) return;
+    const after = new Map(partTops());
+    const delta = before.map(([id, y]) => [y, after.has(id) ? after.get(id) - y : 0]);
+    if (delta.every(([, d]) => Math.abs(d) < 0.5)) return;
+    let moved = false;
+    list.forEach((k) => {
+      const ys = k.pts.map((p) => p[1]);
+      const mid = (Math.min(...ys) + Math.max(...ys)) / 2;
+      let d = 0;
+      delta.forEach(([y, dy]) => { if (mid >= y) d = dy; }); // the last part starting above the stroke's middle
+      if (Math.abs(d) < 0.5) return;
+      k.pts.forEach((p) => { p[1] = r1(p[1] + d); });
+      moved = true;
+    });
+    if (moved) save();
+  }
   function layoutRightInk() {
     const svg = document.getElementById('ink-right');
     const pane = document.getElementById('pane-right');
@@ -1328,10 +1357,10 @@
   const noteEl = (id) => { const l = noteLayer(); return l ? l.querySelector(`.snote[data-aid="${id}"]`) : null; };
   const paneEl = (side) => document.getElementById(side === 'right' ? 'pane-right' : 'pane-left');
   const minMap = () => { const s = cur(); return s.noteMin || (s.noteMin = {}); };
-  // iPad exams: notes have no toolbar of their own; the main toolbar's Pen (with its colour), Highlighter and Eraser
+  // iPad exams and practice: notes have no toolbar of their own; the main toolbar's Pen (with its colour), Highlighter and Eraser
   // work in them too, Undo / Redo / Clear are the main ones (note changes are already steps in the question's history),
   // and with no tool on a note is for typing.
-  const noteUnified = () => pencilInk() && examActive(cur());
+  const noteUnified = () => pencilInk() && padWork(cur());
   const MAIN_NOTE_TOOL = { pen: 'pen', eraser: 'eraser', hl: 'hl' };
   const toolOf = (id) => (noteUnified() ? MAIN_NOTE_TOOL[ui.annMode] || 'select' : noteTool[id] || 'select');
   const nhist = (id) => noteHist[id] || (noteHist[id] = { undo: [], redo: [] });
@@ -3996,7 +4025,7 @@
           : q.type === 'code' ? '<p class="selfcheck-note">Self-check: code responses are saved but not auto-graded. Show the solution to compare.</p>' : '<p class="selfcheck-note">Checked against the official answer, ignoring spaces and quote style.</p>'}`;
     }
     const confirming = ui.confirmReveal === id;
-    const canCheck = q.type !== 'code' && !revealed;
+    const canCheck = q.type !== 'code' && !revealed && !IS_IPAD; // iPad practice: Show Solution only
     // Exams never offer Check Answer / Show Solution; feedback exists only in practice and in post-submit review.
     const actions = exam ? '' : `<div class="q-actions">
       ${canCheck ? `<button class="btn btn-primary" data-action="check" ${hasAnswer(s, id) ? '' : 'disabled'}>Check Answer</button>` : ''}
@@ -4397,7 +4426,7 @@
       if (cachedFor !== s) { // new/restarted set: nothing carried over
         dropLeftCaches();
         cachedFor = s;
-        if (IS_IPAD && examActive(s)) ui.annMode = 'pen'; // an iPad exam opens ready for the Pencil; questions keep the choice
+        if (padWork(s)) ui.annMode = 'pen'; // an iPad exam or practice set opens ready for the Pencil; questions keep the choice
       }
       const g = curGroup();
       const shell = `${ui.view}:${ui.attemptId || ''}`; // practice, exam and review each get a fresh shell
@@ -4413,7 +4442,9 @@
       }
       const right = document.getElementById('pane-right');
       const sameGroup = right.dataset.group === g.pid;
+      const tops = sameGroup && padWork(s) && !isExam(s) ? partTops() : null;
       document.getElementById('right-body').innerHTML = isReview(s) ? renderReviewRight(g, s) : renderRight(g, s); // the diagram beside it is left alone
+      if (tops) followParts(s, g.pid, tops);
       if (isReview(s)) mountOriginalInk(g, s);
       right.dataset.group = g.pid;
       if (!sameGroup) right.scrollTop = 0;
