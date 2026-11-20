@@ -4348,7 +4348,11 @@
 
     if (ui.screen === 'practice') {
       const s = cur();
-      if (cachedFor !== s) { dropLeftCaches(); cachedFor = s; } // new/restarted set: nothing carried over
+      if (cachedFor !== s) { // new/restarted set: nothing carried over
+        dropLeftCaches();
+        cachedFor = s;
+        if (IS_IPAD && examActive(s)) ui.annMode = 'pen'; // an iPad exam opens ready for the Pencil; questions keep the choice
+      }
       const g = curGroup();
       const shell = `${ui.view}:${ui.attemptId || ''}`; // practice, exam and review each get a fresh shell
       if (!document.getElementById('pane-left') || app.dataset.shell !== shell) {
