@@ -2819,10 +2819,11 @@
     const mode = p.mode === 'exam' ? 'exam' : 'practice';
     const modeBtn = (m, title, sub) => `<button class="mode-opt" id="mode-${m}" data-action="mode" data-v="${m}" aria-pressed="${mode === m}"><b>${title}</b><span>${sub}</span></button>`;
     return `<main class="home">
-      <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div><div class="home-actions"><button class="btn btn-sm btn-home btn-progress" data-action="progress">${icon('chart')}My Progress</button>${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div></div>
+      <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div><div class="home-actions">${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div></div>
       ${storageWarningHTML()}
       ${examResumeHTML()}
       ${resume}
+      ${progressCardHTML()}
 
       <div class="mode-switch" role="group" aria-label="Mode">
         ${modeBtn('practice', 'Practice Mode', 'Check answers and see solutions as you go')}
@@ -3055,7 +3056,7 @@
   ].map(([name, ids]) => [name, ids.filter((t) => TOPIC_POOL.some((q) => q.topics.includes(t)))]);
   // The summary, from everything done (each question counted once):
   //   Full Exams Completed: different full past exams with a Completed attempt, out of all full past exams
-  //   Questions Practiced: questions with a part Checked in Practice or answered in a submitted exam, out of all
+  //   Questions Practiced: questions with a part answered (or Checked) in Practice or answered in a submitted exam, out of all
   //     questions in this semester's scope
   //   Automatic Accuracy: each part's first try ever (Practice first Check or exam grade): correct ÷ tried
   const TOTAL_QUESTIONS = new Set(TOPIC_POOL.map((q) => q.problem)).size;
@@ -3063,7 +3064,7 @@
   function progressStats() {
     const practiced = new Set();
     [store.session, ...store.practice].filter(Boolean).forEach((s) => s.ids.forEach((id) => {
-      if (QMAP[id] && ((s.checked && s.checked[id]) || (s.firstCheck && s.firstCheck[id]))) practiced.add(QMAP[id].problem);
+      if (QMAP[id] && (hasAnswer(s, id) || (s.checked && s.checked[id]) || (s.firstCheck && s.firstCheck[id]))) practiced.add(QMAP[id].problem);
     }));
     doneExams().forEach((a) => a.ids.forEach((id) => { if (QMAP[id] && hasAnswer(a, id)) practiced.add(QMAP[id].problem); }));
     const fullDone = new Set(doneExams().filter((a) => a.kind === 'full' && setStatus(a) === 'completed').map((a) => a.examId));
@@ -3176,17 +3177,17 @@
     const scores = values.map((v, i) => {
       if (v === null) return '';
       const [x, y] = at(i, rad(v) + 13);
-      return `<text class="rd-score" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${v}</text>`;
+      return '';
     }).join('');
     const labels = axes.map((ax, i) => {
       const [x, y] = at(i, R + 28);
       const anchor = x > 6 ? 'start' : x < -6 ? 'end' : 'middle';
       const dy = y < -6 ? -2 : y > 6 ? 10 : 4;
-      return `<text class="rd-label${values[i] === null ? ' none' : ''}" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}">${esc(ax.label)}${values[i] === null ? ' —' : ''}</text>`;
+      return `<text class="rd-label${values[i] === null ? ' none' : ''}" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}">${esc(ax.label)}</text>`;
     }).join('');
     const desc = axes.map((a, i) => `${a.label}: ${values[i] === null ? 'not tried' : `${values[i]}% correct`}`).join('; ');
     return `<svg class="rd" viewBox="-230 -142 460 284" role="img" aria-label="First-try % correct by topic. ${esc(desc)}">${grid}${spokes}
-      <text class="rd-zero" x="0" y="3.5" text-anchor="middle">0%</text><g class="rd-shape">${shape}</g><g class="rd-scores">${scores}</g>${labels}</svg>`;
+      <g class="rd-shape">${shape}</g><g class="rd-scores">${scores}</g>${labels}</svg>`;
   }
   // Bars: one per row ({ label, value, key? }); a row with a key switches the language when clicked.
   function barsHTML(rows) {
@@ -3277,6 +3278,19 @@
       if (entries.some((x) => x.isIntersecting)) { trObserver.disconnect(); trObserver = null; start(); }
     }, { threshold: 0.3 });
     trObserver.observe(el);
+  }
+  // Home: a brief look at My Progress (questions done and accuracy); the whole card opens My Progress.
+  function progressCardHTML() {
+    const st = progressStats();
+    const done = Math.round((st.questions / TOTAL_QUESTIONS) * 100);
+    const doneRing = ringSVG('ring-done', st.questions / TOTAL_QUESTIONS, { text: `${done}%` }, '', 'done', `<b>${st.questions}</b>/${TOTAL_QUESTIONS} done`);
+    const accRing = ringSVG('ring-pct', (st.accuracy || 0) / 100, { text: st.accuracy === null ? '—' : `${st.accuracy}%` }, '', pctBand(st.accuracy), 'Accuracy');
+    return `<button class="mp-teaser" data-action="progress" aria-label="My Progress: ${st.questions} of ${TOTAL_QUESTIONS} questions done, accuracy ${st.accuracy === null ? 'not yet measured' : `${st.accuracy}%`}. Open My Progress">
+        <span class="mp-teaser-text"><span class="mp-teaser-h">${icon('chart')}My Progress</span>
+          <span class="mp-teaser-sub">${st.any ? 'Your questions done and accuracy so far.' : 'Start practicing to see your progress here.'}</span>
+          <span class="mp-teaser-go">See all →</span></span>
+        <span class="mp-teaser-rings">${doneRing}${accRing}</span>
+      </button>`;
   }
   function renderProgress() {
     const st = progressStats();

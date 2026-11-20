@@ -566,6 +566,26 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .btn-progress { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn-progress:hover:not(:disabled) { background: #00264a; }
 .mp-top { margin-bottom: 4px; }
+/* Home: the My Progress card above Practice Mode / Exam Mode (the whole card is one button) */
+.mp-teaser { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 18px; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
+  background: var(--paper); border: 1.5px solid var(--line-strong); border-radius: 14px; padding: 16px 22px; margin: 18px 0 14px; box-shadow: 0 4px 18px rgba(0,0,0,.05); transition: border-color .12s, box-shadow .12s; }
+.mp-teaser:hover { border-color: var(--accent); box-shadow: 0 6px 22px rgba(0,50,98,.12); }
+.mp-teaser-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mp-teaser-h { display: inline-flex; align-items: center; gap: 8px; font-family: var(--serif); font-size: 24px; font-weight: 700; color: var(--accent); }
+.mp-teaser-h svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.mp-teaser-sub { font-size: 14px; color: var(--muted); }
+.mp-teaser-go { font-size: 14px; font-weight: 700; color: var(--accent); margin-top: 4px; }
+.mp-teaser-rings { display: flex; gap: 22px; flex: 0 0 auto; }
+.mp-teaser .ring, .mp-teaser .ring svg { width: 96px; }
+.mp-teaser .ring svg, .mp-teaser .ring-mid { height: 96px; }
+.mp-teaser .ring-mid b { font-size: 21px; }
+.mp-teaser .ring figcaption { font-size: 12px; margin-top: 4px; }
+.mp-teaser .ring figcaption b { color: var(--ink); }
+.band-done .ring-arc { stroke: var(--accent); }
+@media (max-width: 560px) {
+  .mp-teaser { flex-direction: column; align-items: flex-start; }
+  .mp-teaser-rings { align-self: center; }
+}
 .mp-card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 16px 0; box-shadow: 0 4px 18px rgba(0,0,0,.05); }
 .mp-card h2 { font-family: var(--serif); color: var(--accent); font-size: 22px; margin: 0; }
 .progress .mp-h1 { font-size: 30px; }

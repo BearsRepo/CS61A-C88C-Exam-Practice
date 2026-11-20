@@ -55,7 +55,17 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
   // ── home: a My Progress button; no history sections in either mode ──
   await seed(null);
-  ok(await has('.home-head [data-action="progress"]') && /My Progress/.test(await text('.home-head [data-action="progress"]')), 'the home page header has a My Progress button');
+  ok(!(await has('.home-head [data-action="progress"]')), 'no My Progress button in the header any more');
+  const card = await page.evaluate(() => {
+    const c = document.querySelector('.mp-teaser'), m = document.querySelector('.mode-switch');
+    if (!c || !m) return null;
+    const a = c.getBoundingClientRect(), b = m.getBoundingClientRect();
+    return { tag: c.tagName, action: c.dataset.action, above: a.bottom <= b.top, wide: Math.abs(a.width - b.width) < 2, tall: a.height > b.height, rings: c.querySelectorAll('.ring').length,
+      done: c.querySelector('.ring-done .ring-mid b').textContent, acc: c.querySelector('.ring-pct .ring-mid b').textContent, cap: c.querySelector('.ring-done figcaption').textContent };
+  });
+  ok(card && card.tag === 'BUTTON' && card.action === 'progress', 'a My Progress card on the home page; the whole card is one button');
+  ok(card && card.above && card.wide && card.tall, `it sits right above Practice Mode / Exam Mode, as wide as both, and taller (${JSON.stringify(card && { above: card.above, wide: card.wide, tall: card.tall })})`);
+  ok(card && card.rings === 2 && card.done === '0%' && card.acc === '—' && card.cap.startsWith("0/") && card.cap.endsWith(" done"), `it shows questions done (${card && card.done}, ${card && card.cap}) and accuracy (${card && card.acc}) as rings`);
   ok(!(await has('.history')) && !(await has('.practice-history')), 'Practice Mode: no history at the bottom of the home page');
   await click('#mode-exam');
   ok(!(await has('.history')) && !(await has('.hist-row')), 'Exam Mode: no Exam history at the bottom of the home page');
@@ -85,7 +95,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     return { inCard: !!c.querySelector('.mh-open .mh-status'), links: c.querySelectorAll('a, .link').length, beside: del.left >= st.right && Math.abs((del.top + del.bottom) / 2 - (st.top + st.bottom) / 2) < 6, small: del.width <= 28 }; });
   ok(layout.inCard && layout.links === 0 && layout.beside && layout.small, `the whole card is one button (no Continue / Review link); a small Delete sits right of the status label (${JSON.stringify(layout)})`);
   ok(R[0].bg === GOLD, `In Progress is gold (${R[0].bg})`);
-  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent.split('/')[0]))).join() === '0,0,—', 'answers that were never Checked do not count toward the summary');
+  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent.split('/')[0]))).join() === '0,1,—', 'an answered part counts toward Questions Practiced (fill-in-the-blank too) but not accuracy until it is Checked');
 
   // ── set B: starting a new set keeps A, no warning dialog ──
   dialogs.length = 0;

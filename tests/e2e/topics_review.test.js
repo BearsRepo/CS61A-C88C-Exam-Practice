@@ -99,8 +99,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // ── Python: a radar with every Python topic ──
   const pyTopics = await page.$$eval('.rd-label', (l) => l.map((x) => x.textContent));
   ok(pyTopics.length === 10 && pyTopics.some((x) => x.startsWith('Trees')) && pyTopics.some((x) => x.startsWith('OOP')), `Python: one axis per Python topic (${pyTopics.length}: ${pyTopics.join(', ')})`);
-  const scores = await page.$$eval('.rd-score', (t) => t.map((x) => x.textContent));
-  ok(scores.includes('50') && pyTopics.filter((x) => x.endsWith(' —')).length === pyTopics.length - scores.length, `each tried topic shows its score beside its point (${scores.join(', ')}); untried topics show —`);
+  const plain = await page.evaluate(() => ({ nums: [...document.querySelectorAll('#tr-sec .rd text')].filter((t) => /[0-9]/.test(t.textContent)).length,
+    grey: [...document.querySelectorAll('.rd-label.none')].map((t) => getComputedStyle(t).fill), tried: document.querySelectorAll('.rd-label:not(.none)').length }));
+  ok(plain.nums === 0 && pyTopics.every((x) => !x.includes('—')), 'the radar shows no numbers, and no — marks');
+  ok(plain.grey.length === pyTopics.length - plain.tried && plain.grey.every((c) => c === 'rgb(154, 160, 170)'), `topics not tried yet are greyed out (${plain.grey.length})`);
   const look = await page.evaluate(() => {
     const area = getComputedStyle(document.querySelector('.rd-area'));
     const none = document.querySelector('.rd-dot.none');
