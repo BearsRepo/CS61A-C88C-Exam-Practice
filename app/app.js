@@ -1000,6 +1000,11 @@
     ui.annMode = ui.annMode === mode ? 'none' : mode;
     const art = article();
     if (art) art.dataset.mode = ui.annMode;
+    if (noteUnified()) { // the notes follow the main toolbar
+      if (['pen', 'eraser'].includes(ui.annMode)) flushNoteEdit();
+      const l = noteLayer();
+      if (l) l.querySelectorAll('.snote').forEach((el) => { el.dataset.tool = toolOf(el.dataset.aid); });
+    }
     updateToolbar();
     syncPaper();
   }
@@ -1301,7 +1306,7 @@
   // ({ type: 'text' | 'tree', text | tree }) are converted when shown (normNote). Note highlights are blue, so they
   // show on yellow.
   const NOTE_MIN = { w: 228, h: 110 };
-  const NOTE_NEW = { w: 260, h: 170 };
+  const NOTE_NEW = { w: 300, h: 210 };
   const NOTE_PAD = 8;  // space between the body's edge and what is in it
   const NOTE_GAP = 8;  // the smallest space between two items
   const GRIP = 12;     // the drag strip at the top of each item
@@ -1323,7 +1328,12 @@
   const noteEl = (id) => { const l = noteLayer(); return l ? l.querySelector(`.snote[data-aid="${id}"]`) : null; };
   const paneEl = (side) => document.getElementById(side === 'right' ? 'pane-right' : 'pane-left');
   const minMap = () => { const s = cur(); return s.noteMin || (s.noteMin = {}); };
-  const toolOf = (id) => noteTool[id] || 'select';
+  // iPad exams: notes have no toolbar of their own; the main toolbar's Pen (with its colour), Highlighter and Eraser
+  // work in them too, Undo / Redo / Clear are the main ones (note changes are already steps in the question's history),
+  // and with no tool on a note is for typing.
+  const noteUnified = () => pencilInk() && examActive(cur());
+  const MAIN_NOTE_TOOL = { pen: 'pen', eraser: 'eraser', hl: 'hl' };
+  const toolOf = (id) => (noteUnified() ? MAIN_NOTE_TOOL[ui.annMode] || 'select' : noteTool[id] || 'select');
   const nhist = (id) => noteHist[id] || (noteHist[id] = { undo: [], redo: [] });
   const ordinal = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
   const noteTime = (a) => a.t || parseInt(String(a.id).slice(1, 9), 36) || 0;
@@ -1479,7 +1489,7 @@
     const it = itemOf(a, k.item);
     return it ? k.pts.map(([x, y]) => [r1(x + it.x), r1(y + it.y)]) : null;
   }
-  const inkHTML = (a) => (a.ink || []).map((k) => { const p = strokeAbs(a, k); return p ? `<path d="${strokePath(p)}"/>` : ''; }).join('');
+  const inkHTML = (a) => (a.ink || []).map((k) => { const p = strokeAbs(a, k); return p ? `<path d="${strokePath(p)}"${inkStyle(k.color)}/>` : ''; }).join('');
   // The smallest size that shows everything in the note.
   function noteMinSize(el, a) {
     let w = 0;
@@ -1512,8 +1522,8 @@
     const btn = (k, label, extra) => `<button type="button" class="ann-btn" data-nt="${k}" title="${label}" aria-label="${label}" ${extra || ''}>${icon(k)}</button>`;
     return `<div class="snote" data-aid="${a.id}" data-tool="${tool}" role="group" aria-label="Sticky note ${n}">
         <div class="snote-bar" data-nd="move" title="Drag to move"><span class="snote-title">Note ${n}</span><span class="snote-btns"><button type="button" class="snote-hbtn" data-nd="min" title="Minimize" aria-label="Minimize note ${n}">–</button><button type="button" class="snote-hbtn snote-x" data-nd="delete" title="Delete this note" aria-label="Delete note ${n}">×</button></span></div>
-        <div class="snote-tools" role="toolbar" aria-label="Note ${n} tools">${NOTE_TOOLS.map(([k, label]) => btn(k, label, `aria-pressed="${tool === k}"`)).join('')}<span class="ann-sep" aria-hidden="true"></span>${btn('undo', 'Undo in this note', h.undo.length ? '' : 'disabled')}${btn('redo', 'Redo in this note', h.redo.length ? '' : 'disabled')}${btn('del', 'Delete selected', noteSel[a.id] ? '' : 'disabled')}${btn('clear', 'Clear this note', filled ? '' : 'disabled')}</div>
-        <div class="snote-body">${filled ? '' : '<p class="snote-empty">Type here, draw, or add a tree.</p>'}<div class="snote-canvas">${a.items.map((it) => itemHTML(a, it)).join('')}<svg class="snote-ink" aria-hidden="true">${inkHTML(a)}</svg></div></div>
+        ${noteUnified() ? '' : `<div class="snote-tools" role="toolbar" aria-label="Note ${n} tools">${NOTE_TOOLS.map(([k, label]) => btn(k, label, `aria-pressed="${tool === k}"`)).join('')}<span class="ann-sep" aria-hidden="true"></span>${btn('undo', 'Undo in this note', h.undo.length ? '' : 'disabled')}${btn('redo', 'Redo in this note', h.redo.length ? '' : 'disabled')}${btn('del', 'Delete selected', noteSel[a.id] ? '' : 'disabled')}${btn('clear', 'Clear this note', filled ? '' : 'disabled')}</div>`}
+        <div class="snote-body">${filled ? '' : `<p class="snote-empty">${noteUnified() ? 'Type here, or draw with the toolbar’s Pen.' : 'Type here, draw, or add a tree.'}</p>`}<div class="snote-canvas">${a.items.map((it) => itemHTML(a, it)).join('')}<svg class="snote-ink" aria-hidden="true">${inkHTML(a)}</svg></div></div>
         <div class="snote-size" data-nd="size" title="Drag to resize"></div>
       </div>`;
   }
@@ -1729,6 +1739,38 @@
     el.dataset.tool = noteTool[id];
     el.querySelectorAll('.snote-tools [aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.nt === noteTool[id])));
   }
+  // iPad: the toolbar sits on the divider in the middle of the work area, so a new note goes where it is wholly visible
+  // and clear of the toolbar (measured, in layer pixels): below it, else above it, else to its left or right, 20px
+  // away; stepping past another new note as above while it stays so. null when no such spot (or no toolbar) is found.
+  function clearOfToolbar(layer) {
+    const bar = document.getElementById('annot-bar');
+    const r = bar && bar.getBoundingClientRect();
+    if (!r || !r.width) return null;
+    const L = layer.getBoundingClientRect();
+    const t = { l: r.left - L.left, t: r.top - L.top, r: r.right - L.left, b: r.bottom - L.top };
+    const foot = document.querySelector('.p-footer');
+    const ft = foot ? foot.getBoundingClientRect().top : Infinity;
+    // the part of the layer on screen (in portrait the work area can run past the bottom of the window)
+    const V = { l: Math.max(0, -L.left), t: Math.max(0, -L.top), r: Math.min(layer.clientWidth, window.innerWidth - L.left), b: Math.min(layer.clientHeight, window.innerHeight - L.top, (ft > 0 ? ft : Infinity) - L.top) };
+    const { w, h } = NOTE_NEW;
+    const G = 20;
+    const ok = (x, y) => x >= V.l && y >= V.t && x + w <= V.r && y + h <= V.b && (x + w <= t.l || x >= t.r || y + h <= t.t || y >= t.b);
+    const taken = (x, y) => [...layer.querySelectorAll('.snote')].some((n) => Math.abs(n.offsetLeft - x) < 12 && Math.abs(n.offsetTop - y) < 12);
+    const cx = Math.round((V.l + V.r - w) / 2);
+    const cy = Math.round((V.t + V.b - h) / 2);
+    const tries = [[cx, Math.round(t.b + G)], [cx, Math.round(t.t - G - h)], [Math.round(t.l - G - w), cy], [Math.round(t.r + G), cy]];
+    for (const [x0, y0] of tries) {
+      if (!ok(x0, y0)) continue;
+      if (!taken(x0, y0)) return [x0, y0];
+      for (const [dx, dy] of [[28, 28], [-28, 28], [28, -28], [-28, -28]]) { // past another new note, staying clear
+        let [x, y] = [x0, y0];
+        for (let i = 0; i < 12 && taken(x, y) && ok(x + dx, y + dy); i++) { x += dx; y += dy; }
+        if (!taken(x, y)) return [x, y];
+      }
+      return [x0, y0];
+    }
+    return null;
+  }
   // The note button makes a note right away, in the middle of the work area (both panes). If another note already
   // starts there, the new one steps down and to the right so it doesn't hide it.
   function createNote() {
@@ -1737,15 +1779,19 @@
     flushNoteEdit();
     let px = Math.round((layer.clientWidth - NOTE_NEW.w) / 2);
     let py = Math.round((layer.clientHeight - NOTE_NEW.h) / 2);
-    const taken = () => [...layer.querySelectorAll('.snote')].some((n) => Math.abs(n.offsetLeft - px) < 12 && Math.abs(n.offsetTop - py) < 12);
-    for (let i = 0; i < 12 && taken(); i++) { px += 28; py += 28; }
-    px = Math.max(0, Math.min(px, layer.clientWidth - NOTE_NEW.w));
-    py = Math.max(0, Math.min(py, layer.clientHeight - NOTE_NEW.h));
+    const takenAt = (x, y) => [...layer.querySelectorAll('.snote')].some((n) => Math.abs(n.offsetLeft - x) < 12 && Math.abs(n.offsetTop - y) < 12);
+    const spot = pencilInk() && clearOfToolbar(layer);
+    if (spot) [px, py] = spot;
+    else {
+      for (let i = 0; i < 12 && takenAt(px, py); i++) { px += 28; py += 28; }
+      px = Math.max(0, Math.min(px, layer.clientWidth - NOTE_NEW.w));
+      py = Math.max(0, Math.min(py, layer.clientHeight - NOTE_NEW.h));
+    }
     const a = Object.assign({ id: newId(), kind: 'note' }, anchorAt(px, py), NOTE_NEW, { t: Date.now(), items: [] });
     if (['pen', 'eraser'].includes(ui.annMode)) setAnnMode('none'); // type in the new note, not draw on the page
     commit(leftPid, [{ op: 'add', ann: a }]);
     startText(a.id, [0, GRIP]);
-    announce('Note added. Type, or use its toolbar to highlight, draw or add a tree.');
+    announce(noteUnified() ? 'Note added. Type, or use the toolbar to draw, highlight or erase in it.' : 'Note added. Type, or use its toolbar to highlight, draw or add a tree.');
   }
 
   // ── Minimizing: a note is pulled into its numbered icon in the bottom-left corner, and pushed back out of it ──
@@ -2073,7 +2119,7 @@
           const rects = rectsOf(a, sizes);
           const on = a.items.find((it) => { const r = rects[it.id]; return x0 >= r.x && x0 <= r.x + r.w && y0 >= r.y && y0 <= r.y + r.h; });
           const pts = on ? k.pts.map(([x, y]) => [r1(x - on.x), r1(y - on.y)]) : k.pts;
-          a.ink = [...(a.ink || []), Object.assign({ id: newId(), pts }, on ? { item: on.id } : {})];
+          a.ink = [...(a.ink || []), Object.assign({ id: newId(), pts }, on ? { item: on.id } : {}, noteUnified() ? withColor(penColor) : {})];
         });
       } else if (k.changed) { recordNote(leftPid, k.before, cloneAnn(live)); renderNotes(); }
       return;

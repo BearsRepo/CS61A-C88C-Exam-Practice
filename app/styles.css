@@ -212,7 +212,6 @@ mark.hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0; }
   .p-main.pencil-ink #annot-bar .exam-settings, .p-main.pencil-ink .pen-colors { top: auto; bottom: calc(100% + 8px); left: auto; right: 0; }
   .p-main.pencil-ink #annot-bar .exam-settings { right: -4px; }
 }
-}
 
 /* Sticky notes: a layer over both panes. Only its notes take clicks. */
 .note-layer { position: absolute; inset: 0; z-index: 15; overflow: hidden; pointer-events: none; font-family: var(--sans); }
