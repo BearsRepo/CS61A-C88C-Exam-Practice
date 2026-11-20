@@ -114,7 +114,7 @@ const pick = (s) => JSON.stringify(FIELDS.map((k) => s[k]));
   const W = S.reviews[id1];
   ok(W && W.answers['sp25-4d'] === 'edited in review' && !(W.annotations['sp25-4b'] || []).length, 'the Review workspace took the edits (new answer, drawing, then Clear)');
   ok(JSON.stringify(S.attempts.find((a) => a.id === id1)) === snap1, 'editing the Review workspace leaves the original submission unchanged');
-  ok(!('handwriting' in W), 'the workspace carries no copy of the handwriting (Review display is Phase 2D)');
+  ok(!Object.values(W.handwriting || {}).some((l) => l.length), 'the workspace carries no copy of the original handwriting (its own Review layer starts empty)');
 
   // ── A new attempt of the same questions, then the timer's auto-submit ──
   await P.toHome();

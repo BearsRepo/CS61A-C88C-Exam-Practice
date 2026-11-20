@@ -893,3 +893,25 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .policy li { margin: 4px 0; }
 .policy-summary { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 18px 8px; margin: 18px 0; }
 .policy-summary h2 { font-size: 18px; margin-top: 14px; }
+
+/* Review: the original handwriting over a read-only copy of the exam's answer pane (iPad Phase 2D-2). The copy
+   rebuilds the exam pane exactly (same width, the iPad exam's CSS, the body's font), then is scaled to fit. */
+.orig-ctx { display: block; position: absolute; left: 0; top: 0; transform-origin: 0 0; font-family: var(--sans); font-size: 15px; line-height: 1.5; color: var(--ink); background: var(--paper); text-align: left; pointer-events: none; }
+.orig-measure { position: absolute; left: -100000px; top: 0; visibility: hidden; }
+.orig-ctx .orig-pane { position: relative; overflow: visible; min-height: 0; padding: 24px 36px 40px; border: 0; }
+.orig-ctx .question .q-head { margin: 0 0 12px; } /* not the review panel's tighter heading */
+.orig-ctx :is(.choices, .answer-box, .q-actions, .feedback, .selfcheck-note) { margin-left: 22px; }
+.orig-ctx .choices { padding-left: 22px; margin-left: 0; }
+.orig-ctx.orig-narrow .orig-pane { padding: 18px 16px 24px; } /* the exam was one column of panes */
+.orig-ctx.orig-narrow :is(.choices, .answer-box, .q-actions, .feedback, .selfcheck-note) { margin-left: 0; padding-left: 0; }
+.orig-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 1; }
+.orig-svg path { fill: none; stroke: #d62828; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.orig-slot:empty { display: block; height: 0; }
+.orig-ink { margin: 8px 0 4px; padding: 0; border: 1px dashed #9aa3ad; border-radius: 6px; background: #f7f7f4; overflow: hidden; }
+.orig-tag { font: 600 11px/1.4 var(--sans); letter-spacing: .04em; text-transform: uppercase; color: #5d6670; padding: 4px 8px; border-bottom: 1px dashed #c9ced4; background: #eef0f2; }
+.orig-clip { position: relative; overflow: hidden; }
+.orig-h { font: 700 13px/1.4 var(--sans); margin: 14px 0 4px; color: var(--ink); }
+.orig-note { font-family: var(--sans); font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.review-work #diagram-slot { margin: 6px 0 14px; } /* Review: the editable (blank) diagram above part (a) */
+.q-bar .hw-q { margin-left: 4px; }
+.rv-block .rv-note { font-size: 13px; color: var(--muted); margin: 6px 0 0; } /* Review: the grade's note, with the submitted answer */

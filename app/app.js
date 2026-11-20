@@ -332,7 +332,7 @@
       store.reviews[id] = {
         reviewOf: id, mode: 'exam', title: a.title, kind: a.kind, examId: a.examId,
         ids: a.ids.slice(), groups: copy(a.groups), index: 0,
-        answers: copy(a.answers), eliminated: copy(a.eliminated), notes: copy(a.notes), annotations: copy(a.annotations), diagrams: copy(a.diagrams),
+        answers: copy(a.answers), eliminated: copy(a.eliminated), notes: copy(a.notes), annotations: copy(a.annotations), diagrams: {}, // the diagram starts blank to redraw; the submitted one is shown read-only
         marked: {}, checked: {}, revealed: {}, selfGrade: {}, timer: null, startedAt: Date.now(),
       };
     }
@@ -1169,7 +1169,7 @@
     const side = e.target.closest('#pane-left, #pane-right');
     if (!side) return;
     const right = side.id === 'pane-right';
-    const tap = e.target.closest(INK_TAP);
+    const tap = e.target.closest('.orig-ink') ? null : e.target.closest(INK_TAP); // the original's copy is only a picture
     if (ui.annMode === 'hl' && right && !tap) return; // nothing to highlight on the right
     pencil = { id: e.pointerId, type: e.pointerType, right, x0: e.clientX, y0: e.clientY, tap, started: false };
     if (pencil.tap && ui.annMode === 'eraser') { // the eraser on a mark erases it, even over a control
@@ -3285,7 +3285,7 @@
         <div class="annot-text" data-annot="outro"></div>
         <svg class="annot-layer" aria-hidden="true"></svg>
       </article>
-      ${review ? '<section class="review-work" id="review-work" aria-label="Review workspace"></section>' : ''}`;
+      ${review ? `<section class="review-work" id="review-work" aria-label="Review workspace">${reviewHeadHTML()}<div id="diagram-slot"></div><div id="review-parts"></div></section>` : ''}`;
   }
   // ── Run Code (Phase 6A): runs the problem's scratch code with Python in the browser (runner.js) ──
   // Phase 6B: when a verified suite exists for the problem (data/test_suites.js), the same click also runs it.
@@ -3617,19 +3617,21 @@
     return `<ul class="choices ${q.mono ? 'mono' : ''}" role="${multi ? 'group' : 'radiogroup'}" aria-label="Answer choices for part ${esc(q.label)}">${items}</ul>`;
   }
 
-  function officialAnswerHTML(q) {
+  // heading: Review's card always has one (practice keeps its own, shown only with a solution).
+  function officialAnswerHTML(q, heading) {
     const key = ANSWER_KEY[q.id];
-    if (!key) return '<p>Solution not yet available.</p>';
+    const none = `${heading ? `<div class="title">${heading}</div>` : ''}<p>Solution not yet available.</p>`;
+    if (!key) return none;
     let ans;
     if (isMC(q)) ans = (Array.isArray(key.correct) ? key.correct : [key.correct]).map((i) => q.choices[i]).join('\n');
     else if (key.accepted && key.accepted.length) ans = key.accepted[0];
-    else return '<p>Solution not yet available.</p>';
+    else return none;
     const alts = !isMC(q) && key.accepted.length > 1
       ? `<div class="alts">Also accepted: ${key.accepted.slice(1).map((x) => `<code>${esc(x)}</code>`).join(', ')}</div>` : '';
     const expl = key.explanation
       ? `<div class="expl-label">Explanation <span>written for this site, not official</span></div><div class="rich">${rich(key.explanation)}</div>`
       : '<div class="alts">Explanation not yet available.</div>';
-    return `<div class="title">Official answer</div><pre>${esc(ans)}</pre>${alts}${expl}`;
+    return `<div class="title">${heading || 'Official answer'}</div><pre>${esc(ans)}</pre>${alts}${expl}`;
   }
 
   function renderFeedback(q, s) {
@@ -3655,8 +3657,8 @@
   }
 
   // ── Review (right pane): submitted answer, current review answer, official answer ──
-  const STATUS_LABEL = { correct: 'Correct', incorrect: 'Incorrect', skipped: 'Unanswered', staff: 'Graded by Course Staff' };
-  const badgeCls = (st) => (st === 'skipped' ? 'skipped' : st === 'staff' ? 'ungraded' : st);
+  const STATUS_LABEL = { correct: 'Correct', incorrect: 'Incorrect', skipped: 'Unanswered', staff: 'Graded by Course Staff', handwritten: 'Handwritten · not graded' };
+  const badgeCls = (st) => (st === 'skipped' ? 'skipped' : st === 'staff' || st === 'handwritten' ? 'ungraded' : st);
   function sameAnswer(x, y) {
     const blank = (v) => v === undefined || v === null || (Array.isArray(v) ? !v.length : String(v).trim() === '');
     if (blank(x) || blank(y)) return blank(x) && blank(y);
@@ -3682,46 +3684,222 @@
     return v ? String(v) : '';
   }
   function renderReviewPanel(q, a, w) {
-    const st = statusIn(a, q.id);
+    const st = shownStatus(a, q.id);
     const pts = hasPoints(q) ? `${fmtPts(q.points)} pt` : 'points not published';
+    // A typed answer, and/or the handwriting (mounted into the slot below); "No answer submitted" only with neither.
     const sub = isMC(q) ? submittedChoicesHTML(q, a)
-      : hasAnswer(a, q.id) ? `<pre class="rv-pre">${esc(a.answers[q.id])}</pre>` : '<p class="rv-none">No answer submitted.</p>';
-    const changed = !sameAnswer(w.answers[q.id], a.answers[q.id]);
-    const now = answerText(q, w.answers[q.id]);
-    // Learning feedback on the review answer only; it never changes the stored grade.
-    const match = changed && now && autoGradable(q) ? (examStatus(w, q.id) === 'correct' ? ' · matches the official answer' : ' · doesn’t match the official answer') : '';
-    const current = changed
-      ? `<div class="rv-block rv-current"><div class="rv-k">Current review answer <span>(not scored${match})</span></div>
-          ${now ? `<pre class="rv-pre">${esc(now)}</pre>` : '<p class="rv-none">Cleared.</p>'}
-          <button class="btn btn-sm" data-action="reset-answer" data-q="${q.id}">Reset to submitted answer</button></div>`
-      : '<p class="rv-same">Your review answer is the same as what you submitted.</p>';
-    const verdict = {
-      correct: '<div class="verdict">✓ Correct</div>',
-      incorrect: '<div class="verdict">✗ Incorrect</div>',
-      skipped: '<div class="verdict">Unanswered</div>',
-      staff: '<div class="verdict">Graded by Course Staff</div><p class="staff-note">This question requires manual grading and will not be graded on this platform.</p>',
-    }[st];
+      : hasAnswer(a, q.id) ? `<pre class="rv-pre">${esc(a.answers[q.id])}</pre>` : st === 'handwritten' ? '' : '<p class="rv-none">No answer submitted.</p>';
+    // The right pane only compares: the submitted answer and the official one. The editable review answer is on the left.
+    // The grade stays with the submitted answer (the badge, and these notes); the official card is the same for all.
+    const note = {
+      staff: '<p class="staff-note rv-note">This question requires manual grading and will not be graded on this platform.</p>',
+      handwritten: '<p class="staff-note rv-note">You answered this part in handwriting. It isn’t graded on this platform: compare it with the official answer.</p>',
+    }[st] || '';
     return `<div class="rv-part" id="rv-${q.id}">
       <p class="q-head"><span class="lbl">${esc(q.label)}</span>${promptParts(q.prompt).head}
         <span class="part-meta">${pts} · <span class="badge ${badgeCls(st)}">${STATUS_LABEL[st]}</span></span></p>${promptParts(q.prompt).below}
-      <div class="rv-block"><div class="rv-k">Your submitted answer</div>${sub}</div>
-      ${current}
-      <div class="feedback ${{ correct: 'good', incorrect: 'bad', skipped: 'info', staff: 'info' }[st]}">${verdict}${officialAnswerHTML(q)}</div>
+      <div class="rv-block"><div class="rv-k">Your submitted answer</div>${sub}${origInk(a, q.problem).length ? `<div class="orig-slot" data-orig="part" data-q="${q.id}"></div>` : ''}${note}</div>
+      <div class="feedback info rv-official">${officialAnswerHTML(q, 'Official Answer')}</div>
     </div>`;
   }
   function renderReviewRight(g, w) {
     const a = attemptById(w.reviewOf);
     return `<section class="question review-right" aria-label="Question ${w.index + 1}: submitted and official answers">
-      <div class="q-bar"><span class="q-num">${w.index + 1}</span><span class="rv-title">Submitted &amp; official answers</span>
+      <div class="q-bar"><span class="q-num">${w.index + 1}</span><span class="rv-title">Submitted &amp; official answers</span>${handwrittenIn(a, g).loose ? '<span class="badge ungraded hw-q" title="Handwriting on this question that isn’t inside one part’s answer: see Other Submitted Handwriting">Handwritten work</span>' : ''}
         <span class="qtype">${g.ids.length > 1 ? `${g.ids.length} parts` : TYPE_LABEL[QMAP[g.ids[0]].type]}</span></div>
+      ${origInk(a, g.pid).length ? '<div class="orig-slot" data-orig="full"></div>' : ''}${PMAP[g.pid].figure ? '<div class="orig-slot" data-orig="diagram"></div>' : ''}
       ${g.ids.map((id) => renderReviewPanel(QMAP[id], a, w)).join('<hr class="part-sep">')}
+      ${origInk(a, g.pid).length ? '<div class="orig-slot" data-orig="other"></div>' : ''}
     </section>`;
   }
+
+  // ── Review: the original handwriting (iPad Phase 2D-2) ──
+  // The submitted attempt's answer-pane strokes (attempt.handwriting[pid], Phase 2A) were drawn over the exam's right
+  // pane, in its coordinates at width w. Review lays that pane out differently, so the strokes are shown over a
+  // read-only copy of the exam pane rebuilt from the attempt (the same render functions, same width, same CSS), and
+  // both are scaled together to fit. Each stroke that lies wholly within one part goes in that part's "Your submitted
+  // answer" (a slice of the copy); within the diagram, in "Original Diagram Work"; anything else (the question bar,
+  // across parts) in "Other Submitted Handwriting". When the copy can't be trusted to match (strokes drawn at
+  // different widths, or outside the rebuilt pane), the whole pane is shown once instead, as submitted.
+  // Reads only: nothing here writes to the attempt, and the copy is inert, without ids, names or actions.
+  const origInk = (a, pid) => { const hw = a && isObj(a.handwriting) ? a.handwriting[pid] : null; return Array.isArray(hw) ? hw : []; };
+  const origLayouts = new Map(); // `${attempt id}|${pid}|${w}` -> measured copy (layouts are deterministic)
+  const ORIG_STRIP = ['id', 'for', 'name', 'data-action', 'data-qid', 'data-blank', 'data-i', 'data-pid', 'data-ann', 'data-dg', 'data-dgl', 'data-did', 'data-slot',
+    'aria-controls', 'aria-labelledby', 'aria-describedby', 'aria-pressed', 'aria-current', 'tabindex'];
+  function origCopyHTML(a, g) {
+    const fig = PMAP[g.pid].figure;
+    const keep = ui.activeBlank;
+    ui.activeBlank = null; // no part highlighted in the copy
+    let html;
+    try { html = `<div class="o-dg">${fig ? renderDiagram(fig) : ''}</div><div class="o-body">${renderRight(g, a)}</div>`; } finally { ui.activeBlank = keep; }
+    return origClean(html);
+  }
+  function origClean(html) {
+    const t = document.createElement('template');
+    t.innerHTML = html;
+    t.content.querySelectorAll('*').forEach((el) => {
+      if (el.dataset && el.dataset.part) { el.dataset.opart = el.dataset.part; delete el.dataset.part; }
+      ORIG_STRIP.forEach((k) => el.removeAttribute(k));
+      if (el.matches('input, textarea, button, select')) { el.setAttribute('disabled', ''); el.setAttribute('tabindex', '-1'); }
+    });
+    return t.innerHTML;
+  }
+  // The submitted diagram's labels, lists, arrows and strokes (attempt.diagrams), drawn by the diagram's own code into
+  // the copy's canvas. Arrow layout writes into the items it lays out, so it gets a copy of them, never the attempt's;
+  // it also shares one geometry cache with the live diagram, which is laid out again afterwards.
+  function origDrawDiagram(canvas, pid, a) {
+    const fig = PMAP[pid].figure;
+    const list = JSON.parse(JSON.stringify((isObj(a.diagrams) && a.diagrams[pid]) || []));
+    if (!list.length) return 0;
+    const keep = { canvas: dg.canvas, list: dg.list, slots: dg.slots, selected: dg.selected, drag: dg.drag };
+    Object.assign(dg, { canvas, list, slots: fig.slots || [], selected: null, drag: null });
+    try { drawDiagram(); } finally {
+      Object.assign(dg, keep);
+      if (dg.canvas && dg.canvas.isConnected && dg.list) drawInk();
+    }
+    return list.length;
+  }
+  // The exam's pane at width w: one column of panes (portrait, narrow padding) when w is a whole iPad's width.
+  const origNarrow = (w) => w > 690 && w <= 822;
+  const origCtx = (w) => `p-main pencil-ink orig-ctx${origNarrow(w) ? ' orig-narrow' : ''}`;
+  function origLayout(a, g, w) {
+    const key = `${a.id}|${g.pid}|${w}`;
+    if (origLayouts.has(key)) return origLayouts.get(key);
+    const html = origCopyHTML(a, g);
+    const host = document.createElement('div');
+    host.className = `${origCtx(w)} orig-measure`;
+    host.setAttribute('aria-hidden', 'true');
+    host.inert = true;
+    host.innerHTML = `<div class="pane pane-right orig-pane" style="width:${w}px">${html}</div>`;
+    document.body.appendChild(host);
+    const pane = host.firstChild;
+    const canvas = pane.querySelector('.dg-canvas');
+    const dgItems = canvas ? origDrawDiagram(canvas, g.pid, a) : 0; // drawn here, unscaled, so arrows land right
+    const top0 = pane.getBoundingClientRect().top + pane.clientTop;
+    const left0 = pane.getBoundingClientRect().left + pane.clientLeft;
+    const h = pane.scrollHeight;
+    const dgEl = pane.querySelector('.o-dg > .dg');
+    const dgBox = dgEl && dgEl.getBoundingClientRect();
+    const els = Array.from(pane.querySelectorAll('[data-opart]'));
+    const tops = els.map((el) => el.getBoundingClientRect().top - top0);
+    const ansBox = (el) => { const b = el.querySelector('.answer-box'); const r = b && b.getBoundingClientRect(); return r ? [r.top - top0, r.bottom - top0, r.left - left0, r.right - left0] : null; };
+    const layout = {
+      html: dgItems ? origClean(pane.innerHTML) : html, w, h, dgItems,
+      dg: dgBox ? [dgBox.top - top0, dgBox.bottom - top0] : null,
+      parts: els.map((el, i) => ({ id: el.dataset.opart, top: tops[i], bottom: i + 1 < tops.length ? tops[i + 1] : h, ans: ansBox(el) })),
+    };
+    host.remove();
+    origLayouts.set(key, layout);
+    return layout;
+  }
+  const origList = (a, pid) => origInk(a, pid).filter((k) => isObj(k) && Array.isArray(k.pts) && k.pts.length);
+  function origWidth(list) { // the width most of it was drawn at (else this pane's)
+    const counts = {};
+    list.forEach((k) => { if (k.w > 0) counts[k.w] = (counts[k.w] || 0) + 1; });
+    const ws = Object.keys(counts).sort((x, y) => counts[y] - counts[x]);
+    const pane = document.getElementById('pane-right');
+    return ws.length ? Number(ws[0]) : (pane && pane.clientWidth) || 590;
+  }
+  // Handwritten answers (shown as submitted, never scored): a written part (not a choice) counts as answered in
+  // handwriting when a stroke sorted to that part (wholly inside it, see origSort) crosses its answer box and is
+  // more than a dot. Strokes elsewhere in a part are notes on the question; strokes that couldn't be sorted to one
+  // part (or a whole-pane fallback) only mark the question ("Handwritten work"), never a part.
+  const handCache = new Map(); // `${attempt id}|${pid}` -> { parts: Set, loose }
+  function handwrittenIn(a, g) {
+    const key = `${a.id}|${g.pid}`;
+    if (handCache.has(key)) return handCache.get(key);
+    const out = { parts: new Set(), loose: false };
+    const list = origList(a, g.pid);
+    if (list.length) {
+      const L = origLayout(a, g, origWidth(list));
+      const sorted = origSort(list, L);
+      const real = (k) => k.pts.reduce((t, p, i) => t + (i ? Math.hypot(p[0] - k.pts[i - 1][0], p[1] - k.pts[i - 1][1]) : 0), 0) >= 12;
+      const crosses = (k, [t, b, l, r]) => k.pts.some(([x, y]) => x >= l - 4 && x <= r + 4 && y >= t - 4 && y <= b + 4);
+      if (sorted.full) out.loose = list.some(real);
+      else {
+        Object.entries(sorted.parts).forEach(([id, ks]) => {
+          const p = L.parts.find((x) => x.id === id);
+          if (!isMC(QMAP[id]) && p && p.ans && ks.some((k) => real(k) && crosses(k, p.ans))) out.parts.add(id);
+        });
+        out.loose = sorted.other.some(real);
+      }
+    }
+    handCache.set(key, out);
+    return out;
+  }
+  // A part's status as shown: its frozen grade, except that a written part left blank but answered in handwriting
+  // shows as a handwritten answer (not graded). The attempt's grades and score never change.
+  function shownStatus(a, id) {
+    const st = statusIn(a, id);
+    if (st !== 'skipped' || isMC(QMAP[id])) return st;
+    const g = a.groups.find((x) => x.ids.includes(id));
+    return g && handwrittenIn(a, g).parts.has(id) ? 'handwritten' : st;
+  }
+  const origBox = (k) => { const ys = k.pts.map((p) => p[1]); return [Math.min(...ys), Math.max(...ys)]; };
+  // Sort the strokes: { full: [...] } when the copy can't be trusted, else { parts: { id: [...] }, diagram, other }.
+  function origSort(list, L) {
+    const T = 6;
+    const fits = list.every((k) => k.w === L.w && k.pts.every(([x, y]) => x >= -12 && x <= L.w + 12 && y >= -12 && y <= L.h + 24));
+    if (!fits) return { full: list };
+    const out = { parts: {}, diagram: [], other: [] };
+    list.forEach((k) => {
+      const [y0, y1] = origBox(k);
+      const inside = L.parts.filter((p) => y0 >= p.top - T && y1 <= p.bottom + T);
+      const mid = (y0 + y1) / 2;
+      const part = inside.length === 1 ? inside[0] : inside.find((p) => mid >= p.top && mid < p.bottom);
+      if (part) (out.parts[part.id] || (out.parts[part.id] = [])).push(k);
+      else if (L.dg && y0 >= L.dg[0] - T && y1 <= L.dg[1] + T) out.diagram.push(k);
+      else out.other.push(k);
+    });
+    return out;
+  }
+  // One read-only view: the copy, cut to [y0, y1) and scaled to the slot's width, with these strokes over it.
+  function origView(slot, L, strokes, y0, y1, label, tag = 'Original handwriting · as submitted · read-only') {
+    const k = Math.min(1, (slot.clientWidth || L.w) / L.w);
+    const top = Math.max(0, y0), bottom = Math.min(L.h, y1);
+    const paths = strokes.map((s) => `<path d="${strokePath(s.pts)}"${inkStyle(s.color)}/>`).join('');
+    return `<figure class="orig-ink" role="img" aria-label="${esc(label)}">
+      <figcaption class="orig-tag">${tag}</figcaption>
+      <div class="orig-clip" style="height:${Math.ceil((bottom - top) * k)}px">
+        <div class="${origCtx(L.w)}" inert aria-hidden="true" style="width:${L.w}px;transform:scale(${k}) translateY(${-top}px)">
+          <div class="pane pane-right orig-pane" style="width:${L.w}px">${L.html}<svg class="orig-svg" width="${L.w}" height="${L.h}">${paths}</svg></div>
+        </div>
+      </div></figure>`;
+  }
+  function mountOriginalInk(g, w) {
+    const body = document.getElementById('right-body');
+    const slots = body ? body.querySelectorAll('[data-orig]') : [];
+    if (!slots.length) return;
+    const a = attemptById(w.reviewOf);
+    const list = origList(a, g.pid);
+    const L = origLayout(a, g, origWidth(list));
+    const sorted = list.length ? origSort(list, L) : { parts: {}, diagram: [], other: [] };
+    const pad = 8; // a little room around a slice, so stroke ends aren't cut
+    slots.forEach((slot) => {
+      const kind = slot.dataset.orig;
+      let html = '';
+      if (kind === 'full' && sorted.full) {
+        html = `<h4 class="orig-h">Original answer pane</h4><p class="orig-note">Your handwriting is shown over the whole answer pane as you saw it, because it couldn’t be matched to single parts.</p>${origView(slot, L, sorted.full, 0, L.h, 'Your original handwriting over the answer pane')}`;
+      } else if (kind === 'part' && sorted.parts && sorted.parts[slot.dataset.q]) {
+        const p = L.parts.find((x) => x.id === slot.dataset.q);
+        html = origView(slot, L, sorted.parts[p.id], p.top - pad, p.bottom + pad, `Your original handwriting for part ${QMAP[p.id].label}`);
+      } else if (kind === 'diagram' && L.dg) {
+        const ink = sorted.full ? [] : sorted.diagram; // with the whole pane shown, its strokes are there
+        const none = !ink.length && !L.dgItems && !sorted.full ? '<p class="orig-note">Nothing was drawn or typed on this diagram.</p>' : '';
+        html = `<h4 class="orig-h">Original Diagram Work</h4>${none}${origView(slot, L, ink, L.dg[0] - pad, L.dg[1] + pad, 'Your submitted environment diagram', 'Submitted diagram · read-only')}`;
+      } else if (kind === 'other' && sorted.other && sorted.other.length) {
+        const ys = sorted.other.flatMap(origBox);
+        html = `<h4 class="orig-h">Other Submitted Handwriting</h4>${origView(slot, L, sorted.other, Math.min(...ys) - 40, Math.max(...ys) + 40, 'Your other original handwriting on this question')}`;
+      }
+      slot.innerHTML = html;
+    });
+  }
   // The editable copy (left pane, under the problem): the normal part renderer, without feedback.
+  // Its heading and editable diagram are built with the left pane (the diagram once per problem); the parts re-render.
+  const reviewHeadHTML = () => `<div class="rw-head"><h3>Your review workspace</h3>
+        <p class="hint">Try the question again here. Changes are saved separately; your submitted answers and score don’t change.</p></div>`;
   function renderReviewWork(g, w) {
-    return `<div class="rw-head"><h3>Your review workspace</h3>
-        <p class="hint">Try the question again here. Changes are saved separately; your submitted answers and score don’t change.</p></div>
-      ${g.ids.map((id) => renderPart(QMAP[id], w)).join('<hr class="part-sep">')}`;
+    return g.ids.map((id) => renderPart(QMAP[id], w)).join('<hr class="part-sep">');
   }
 
   function renderPart(q, s) {
@@ -3879,7 +4057,7 @@
       <div id="p-banner">${bannerHTML(s)}</div>
       <div class="p-main">
         <div class="pane pane-left" id="pane-left"></div>
-        <div class="pane pane-right" id="pane-right"><div id="diagram-slot"></div><div id="right-body"></div>${IS_IPAD ? '<svg class="annot-layer ink-right" id="ink-right" aria-hidden="true"></svg>' : ''}</div>
+        <div class="pane pane-right" id="pane-right">${isReview(s) ? '' : '<div id="diagram-slot"></div>'}<div id="right-body"></div>${IS_IPAD ? '<svg class="annot-layer ink-right" id="ink-right" aria-hidden="true"></svg>' : ''}</div>
         <div class="note-layer" id="note-layer"></div>
       </div>
       <footer class="p-footer${isExam(s) ? ' exam' : ''}" id="p-footer">${footerHTML(s)}</footer>
@@ -3978,7 +4156,7 @@
     });
     const order = Object.fromEntries(ALL_TOPICS.map((t, i) => [t.id, i]));
     const topics = Object.values(tally).sort((x, y) => y.parts.length - x.parts.length || order[x.id] - order[y.id]);
-    const unanswered = a.ids.filter((id) => statusIn(a, id) === 'skipped').length;
+    const unanswered = a.ids.filter((id) => shownStatus(a, id) === 'skipped').length;
     return { missed, topics, unanswered, staff: a.ids.filter((id) => statusIn(a, id) === 'staff').length };
   }
   // Up to `n` existing question groups tagged with the topic. Groups outside this attempt come first; ranking is
@@ -4053,10 +4231,11 @@
   // Results for a submitted attempt, read from the grades and score frozen at submission.
   function renderExamResults(a) {
     const sc = a.score;
+    const hand = a.ids.filter((id) => shownStatus(a, id) === 'handwritten').length; // shown only; the frozen score is unchanged
     const rowsFor = (g, gi) => g.ids.map((id) => {
       const q = QMAP[id];
-      const st = statusIn(a, id);
-      const pts = !autoGradable(q) ? '—' : hasPoints(q) ? `${fmtPts(st === 'correct' ? q.points : 0)} / ${fmtPts(q.points)} pts` : 'points n/a';
+      const st = shownStatus(a, id);
+      const pts = !autoGradable(q) || st === 'handwritten' ? '—' : hasPoints(q) ? `${fmtPts(st === 'correct' ? q.points : 0)} / ${fmtPts(q.points)} pts` : 'points n/a';
       return `<li class="part-row">
         <span class="pr-lbl">${esc(q.label)}</span>
         <span class="pr-topics">${q.topics.map((t) => esc(topicLabel(t))).join(', ')}</span>
@@ -4068,9 +4247,10 @@
     const full = a.kind === 'full'; // a full past exam gets one Walkthrough link, beside the Questions heading
     const groups = a.groups.map((g, gi) => {
       const pr = PMAP[g.pid];
-      const c = { correct: 0, incorrect: 0, skipped: 0, staff: 0 };
-      g.ids.forEach((id) => { c[statusIn(a, id)]++; });
-      const summary = ['correct', 'incorrect', 'skipped', 'staff'].filter((k) => c[k]).map((k) => `${c[k]} ${STATUS_LABEL[k].toLowerCase()}`).join(' · ');
+      const c = { correct: 0, incorrect: 0, skipped: 0, staff: 0, handwritten: 0 };
+      g.ids.forEach((id) => { c[shownStatus(a, id)]++; });
+      const summary = ['correct', 'incorrect', 'skipped', 'staff', 'handwritten'].filter((k) => c[k]).map((k) => `${c[k]} ${STATUS_LABEL[k].toLowerCase()}`)
+        .concat(handwrittenIn(a, g).loose ? ['handwritten work'] : []).join(' · ');
       const walk = full ? '' : walkLinkHTML(pr.exam); // topic-based: each group links its own exam's playlist
       return `<details class="rq-group${walk ? ' has-walk' : ''}"${c.incorrect ? ' open' : ''}>
         <summary><span class="rq-n">${gi + 1}</span><span class="rq-title">${esc(pr.title)}<small>${esc(SRC[pr.exam].label)} · Q${esc(pr.number)} · ${g.ids.length} part${g.ids.length === 1 ? '' : 's'}</small></span><span class="rq-sum">${summary}</span>${walk ? `<span class="rq-walk">${walk}</span>` : ''}</summary>
@@ -4092,8 +4272,9 @@
         <div class="stats">
           <div class="stat good"><div class="v">${sc.counts.correct}</div><div class="k">Correct parts</div></div>
           <div class="stat bad"><div class="v">${sc.counts.incorrect}</div><div class="k">Incorrect parts</div></div>
-          <div class="stat"><div class="v">${sc.counts.skipped}</div><div class="k">Unanswered parts</div></div>
+          <div class="stat"><div class="v">${sc.counts.skipped - hand}</div><div class="k">Unanswered parts</div></div>
           <div class="stat"><div class="v">${sc.counts.staff}</div><div class="k">Graded by Course Staff</div></div>
+          ${hand ? `<div class="stat"><div class="v">${hand}</div><div class="k">Handwritten · not graded</div></div>` : ''}
         </div>
       </section>
       <p class="disclaimer-strong">All grades on this platform are for practice purposes only and do not predict your actual exam scores.</p>
@@ -4149,6 +4330,7 @@
       const right = document.getElementById('pane-right');
       const sameGroup = right.dataset.group === g.pid;
       document.getElementById('right-body').innerHTML = isReview(s) ? renderReviewRight(g, s) : renderRight(g, s); // the diagram beside it is left alone
+      if (isReview(s)) mountOriginalInk(g, s);
       right.dataset.group = g.pid;
       if (!sameGroup) right.scrollTop = 0;
       if (leftPid !== g.pid) buildLeft(g);
@@ -4164,7 +4346,7 @@
           ro.observe(document.getElementById('diagram-slot'));
         }
       }
-      const work = document.getElementById('review-work'); // review: the editable answers live under the problem
+      const work = document.getElementById('review-parts'); // review: the editable answers live under the problem
       if (work) { work.innerHTML = renderReviewWork(g, s); if (IS_IPAD) syncPaper(); } // re-rendered boxes stay paper
       fillBlanks(editors[g.pid]);
       document.title = `Q${s.index + 1} · ${isExam(s) ? (isReview(s) ? 'Exam review' : 'Exam') : 'CS 61A & C88C Exam Practice'}`;
@@ -4630,7 +4812,11 @@
     }
   });
   window.addEventListener('beforeunload', save);
-  window.addEventListener('pagehide', save); // iPad Safari closes or leaves the page without beforeunload
+  window.addEventListener('pagehide', save);
+  window.addEventListener('resize', () => { // the original handwriting (Review) is scaled to its slot's width
+    const s = ui.screen === 'practice' && cur();
+    if (s && isReview(s) && document.getElementById('right-body')) mountOriginalInk(curGroup(), s);
+  }); // iPad Safari closes or leaves the page without beforeunload
   // Another tab saved: this tab's copy is stale. Saving is already blocked (save()); cover the page so no
   // work is done here that can't be kept, and offer a reload, which picks up the other tab's state.
   window.addEventListener('storage', (e) => {
