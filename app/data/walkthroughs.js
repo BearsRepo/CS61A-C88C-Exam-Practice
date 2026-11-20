@@ -9,7 +9,8 @@
 // Exam History) and Practice Summary. Nothing links to a playlist during an exam in progress.
 window.CS61A_WALKTHROUGHS = (() => {
   const PLAYLISTS = {
-    fa25: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZdHLeNazq9I_9fq7RNi88_3', // Fall 2025 Midterm 2
+    // ── Midterm 2 ──
+    fa25:'https://www.youtube.com/playlist?list=PLx38hZJ5RLZdHLeNazq9I_9fq7RNi88_3', // Fall 2025 Midterm 2
     sp25: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZdplR_nWuFysBTGb6vS1lPf', // Spring 2025 Midterm 2
     fa24: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZdLRCSh96VduetN63u1RzEC', // Fall 2024 Midterm 2
     sp24: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZfbmnkOylwvn2E3G6mhAIYj', // Spring 2024 Midterm 2
@@ -17,6 +18,15 @@ window.CS61A_WALKTHROUGHS = (() => {
     sp23: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZenSsdPn9cE8-OOM3nGcg5V', // Spring 2023 Midterm 2
     fa22: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcAajfg4WZT-DyuhXMlR_hJ', // Fall 2022 Midterm 2
     fa21: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcwZ1N5xCL2y48ca2U9dbw5', // Fall 2021 Midterm 2
+    // ── Final ── (Fall 2020 Final has no walkthrough playlist)
+    fa25f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZee1n-ukPBeLEhAfAUYXngC', // Fall 2025 Final
+    sp25f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZeyOevOODbw2tKFLlQGQ3NI', // Spring 2025 Final
+    fa24f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcwzHlkGBWsNm9ti2c7Q1O3', // Fall 2024 Final
+    sp24f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcmxfWmIQpkzFsT03tbUWct', // Spring 2024 Final
+    fa23f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZddSeGrdHHiRlHu07nXxgnT', // Fall 2023 Final
+    sp23f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcAyMGQiKmKotYDcjgXRnMx', // Spring 2023 Final
+    fa22f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZcRqzzMB-kDTSH6FLx6uQ84', // Fall 2022 Final
+    fa21f: 'https://www.youtube.com/playlist?list=PLx38hZJ5RLZdqzIVxJ_gTbtHchjBNaw9N', // Fall 2021 Final
   };
   const VALID = /^https:\/\/www\.youtube\.com\/playlist\?list=[A-Za-z0-9_-]+$/;
   // The playlist URL for an exam id, or null when there is none (unknown exam, or a malformed entry).

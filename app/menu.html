@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#003262">
+  <link rel="icon" type="image/svg+xml" href="assets/site-icon.svg">
+  <link rel="manifest" href="site.webmanifest">
+  <title>CS 61A &amp; C88C Exam Practice</title>
+  <link rel="stylesheet" href="vendor/codemirror/codemirror.min.css">
+  <link rel="stylesheet" href="vendor/codemirror/monokai.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="menu">
+  <div id="app"></div>
+  <div id="sr-live" class="sr-only" aria-live="assertive"></div>
+  <script src="vendor/codemirror/codemirror.min.js"></script>
+  <script src="vendor/codemirror/python.min.js"></script>
+  <script src="vendor/codemirror/sql.min.js"></script>
+  <script src="vendor/codemirror/matchbrackets.min.js"></script>
+  <script src="vendor/codemirror/closebrackets.min.js"></script>
+  <script src="vendor/codemirror/comment.min.js"></script>
+  <script src="gleam_mode.js"></script>
+  <script src="data/questions.js"></script>
+  <script src="data/final_questions.js"></script>
+  <script src="data/gleam_questions.js"></script>
+  <script src="data/in_scope.js"></script>
+  <script src="data/study_guides.js"></script>
+  <script src="data/test_suites.js"></script>
+  <script src="data/sql_tests.js"></script>
+  <script src="data/walkthroughs.js"></script>
+  <script src="tutor.js"></script>
+  <script src="runner.js"></script>
+  <script src="gleam_runner.js"></script>
+  <script src="sql_runner.js"></script>
+  <script src="tour.js"></script>
+  <script src="config.js"></script>
+  <script src="auth.js"></script>
+  <script src="analytics.js"></script>
+  <script src="app.js"></script>
+  <!-- Cloudflare Web Analytics: aggregate visits/page views only. Added only on the published site, so local copies
+       and the test suite send nothing (Cloudflare rejects other origins and logs console errors). -->
+  <script>
+    if (location.hostname === 'jacobkao-cal.github.io') {
+      const cf = document.createElement('script');
+      cf.type = 'module';
+      cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+      cf.setAttribute('data-cf-beacon', '{"token": "629fadce777742a0838d877beeb3f5d5"}');
+      document.body.appendChild(cf);
+    }
+  </script>
+  <p style="display: none; visibility: hidden;">
+    CS 61A Past Exam Practice, Full Exam Practice, Topic-based Exam Questions, Practice Model, Exam Solutions
+    An all in one comprehensive exam practice suite for Berkeley CS61A. View and review previous exam problems and take guided or full length practice exams. Focus on particular topics or take entire exams. 
+    Uses a bluebook-style digital practice exam designed exclusively for making evaluating and inspecting code as convenient as possible. Includes features like a notepad with a graph creator, evironment diagram editing, optional doctests.
+    Supports python and gleam. Allows you to run the python tutor. Designed by current CS61A students to fulfill all your practice exam needs. The goal is to increase your exam performance with real past exam problems.
+  </p>
+  <!-- End Cloudflare Web Analytics -->
+</body>
+</html>
