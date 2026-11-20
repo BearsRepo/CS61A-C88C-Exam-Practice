@@ -579,19 +579,22 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .mh-filter .dd-panel { left: auto; right: 0; min-width: 240px; }
 .mh-filter-btn { white-space: nowrap; }
 .mh-list, .mp-topics { list-style: none; margin: 0; padding: 0; }
-.mh-card { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
-.mh-main { min-width: 0; }
-.mh-title { font-size: 16.5px; margin: 0; overflow-wrap: anywhere; }
+.mh-card { position: relative; margin-top: 10px; }
+/* the whole card is one button that opens the set; Delete sits on top of it, right of the status label */
+.mh-open { width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; text-align: left; font: inherit; color: inherit; background: var(--paper);
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 52px 12px 14px; cursor: pointer; transition: border-color .12s, background .12s; }
+.mh-open:hover { border-color: var(--accent); background: #f6f8fb; }
+.mh-main { min-width: 0; display: flex; flex-direction: column; }
+.mh-title { font-size: 16.5px; font-weight: 700; overflow-wrap: anywhere; }
+.mh-del { position: absolute; top: 12px; right: 14px; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--paper); color: var(--muted); font-size: 12px; line-height: 1; cursor: pointer; }
+.mh-del:hover { background: var(--bad-soft); color: var(--bad); border-color: #f0b8b2; }
 .mh-auto { display: inline-block; vertical-align: 2px; font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--accent); background: #e8eef6; border-radius: 999px; padding: 1px 8px; margin-left: 4px; }
 .mh-meta { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
-.mh-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
-.mh-status { font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.mh-status { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
 .mh-status.st-completed { background: var(--good-soft); color: var(--good); }
 .mh-status.st-incomplete { background: var(--bad-soft); color: var(--bad); }
 .mh-status.st-progress { background: var(--warn-soft); color: #7a5600; }
-.mh-actions { display: flex; align-items: center; gap: 6px; }
-.mh-open { font-weight: 600; white-space: nowrap; }
-.mh-actions .hist-del { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; }
 .mp-topic { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .mp-topic:first-child { border-top: 0; }
 .mp-topic-name { font-size: 15.5px; }
@@ -599,8 +602,8 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .mp-empty { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
 @media (max-width: 640px) {
   .mp-stats { grid-template-columns: 1fr; }
-  .mh-card { flex-direction: column; }
-  .mh-side { flex-direction: row; align-items: center; justify-content: space-between; width: 100%; }
+  .mh-open { flex-direction: column; gap: 8px; padding-right: 14px; }
+  .mh-del { top: auto; bottom: 12px; }
   .mp-topic { grid-template-columns: minmax(0, 1fr) auto; }
   .mp-topic-go { grid-column: 1 / -1; justify-self: start; }
 }

@@ -3048,18 +3048,18 @@
     const s = it.s;
     const isAttempt = isExam(s) && s.submitted;
     const live = store.exam === s;
-    const action = live ? ['resume-exam', '', 'Resume'] : isAttempt ? ['open-attempt', s.id, 'Review Exam']
-      : s.finished ? ['open-set', s.id, 'Review Set'] : ['open-set', s.id, 'Continue'];
+    const action = live ? ['resume-exam', '', 'Resume'] : isAttempt ? ['open-attempt', s.id, 'Review']
+      : s.finished ? ['open-set', s.id, 'Review'] : ['open-set', s.id, 'Continue'];
     const del = live ? 'discard-exam' : isAttempt ? 'delete-attempt' : 'delete-set';
     const answered = s.ids.filter((id) => hasAnswer(s, id)).length;
     const detail = [TYPE_LABEL_H[it.type], dateOnly(it.at), `${plural(s.groups.length, 'question')}`,
       it.status === 'progress' ? `${answered} of ${s.ids.length} parts answered` : isAttempt ? scoreText(s.score) : null].filter(Boolean).join(' · ');
     return `<li class="mh-card" data-type="${it.type}" data-status="${it.status}">
-        <div class="mh-main"><h3 class="mh-title">${esc(s.title)}${it.type === 'review' ? ' <span class="mh-auto">Auto-generated</span>' : ''}</h3>
-          <p class="mh-meta">${esc(detail)}</p></div>
-        <div class="mh-side"><span class="mh-status st-${it.status}">${STATUS[it.status]}</span>
-          <div class="mh-actions"><button class="link mh-open" data-action="${action[0]}" data-id="${action[1]}">${action[2]} →</button>
-          <button class="hist-del" data-action="${del}" data-id="${s.id}" aria-label="Delete ${esc(s.title)} from My History" title="Delete">✕</button></div></div>
+        <button class="mh-open" data-action="${action[0]}" data-id="${action[1]}" aria-label="${action[2]} ${esc(s.title)}">
+          <span class="mh-main"><span class="mh-title">${esc(s.title)}${it.type === 'review' ? ' <span class="mh-auto">Auto-generated</span>' : ''}</span>
+            <span class="mh-meta">${esc(detail)}</span></span>
+          <span class="mh-status st-${it.status}">${STATUS[it.status]}</span></button>
+        <button class="mh-del" data-action="${del}" data-id="${s.id}" aria-label="Delete ${esc(s.title)} from My History" title="Delete">✕</button>
       </li>`;
   }
   function historyFilterHTML(items) {
@@ -3074,8 +3074,7 @@
         ${open ? `<div class="dd-panel" role="group" aria-label="Filter My History">
           <div class="dd-tools"><button class="link" data-action="hfilter-clear">Clear filters</button></div>
           ${group('type', 'Type', TYPE_FILTERS)}${group('status', 'Status', Object.entries(STATUS))}
-          ${years.length ? group('year', 'Exam year', years.map((y) => [y, y])) : ''}
-          <p class="hint">Exam year: the years of the past exams a set has questions from. Nothing checked in a group shows everything.</p></div>` : ''}
+          ${years.length ? group('year', 'Exam year', years.map((y) => [y, y])) : ''}</div>` : ''}
       </div>`;
   }
   // Topic Review exam: up to 5 random question groups with this topic, from every past exam in this semester's scope.
@@ -3106,24 +3105,22 @@
       ${storageWarningHTML()}
       <section class="mp-card" aria-labelledby="mp-h">
         <h1 id="mp-h" class="mp-h1">My Progress</h1>
-        <p class="hint mp-sub">Your summary from Exam Mode: full past exams and topic-based exams you submitted.</p>
+        <p class="hint mp-sub">Summary from your Completed Exams</p>
         <div class="mp-stats">
           ${stat(st.fullCompleted, 'Full Exams Completed')}
           ${stat(st.exams ? st.questions : '—', 'Questions Practiced')}
           ${stat(st.accuracy === null ? '—' : `${st.accuracy}%`, 'Automatic Accuracy')}
         </div>
-        ${st.exams ? `<p class="hint">Questions are counted once, however many times you did them. Accuracy uses the latest result of each multiple-choice and short-answer part (${plural(st.graded, 'part')}); code-writing parts and skipped parts are not counted.</p>`
-          : '<p class="hint">Submit an exam in Exam Mode to see your numbers here.</p>'}
+        ${st.exams ? '' : '<p class="hint">Submit an exam in Exam Mode to see your numbers here.</p>'}
       </section>
       <section class="mp-card" aria-labelledby="mh-h">
         <div class="mp-head"><h2 id="mh-h">My History</h2>${items.length ? historyFilterHTML(items) : ''}</div>
-        <p class="hint mp-sub">Your practice sets and exams, most recent first. Continue a set, or review one you finished.</p>
+        <p class="hint mp-sub">Your practice sets and exams.</p>
         ${!items.length ? '<p class="mp-empty">Nothing here yet. Start a practice set or an exam from Home.</p>'
           : shown.length ? `<ul class="mh-list">${shown.map(historyCard).join('')}</ul>` : '<p class="mp-empty">No sets match these filters.</p>'}
       </section>
       <section class="mp-card" aria-labelledby="mt-h">
         <h2 id="mt-h">Topics to Review</h2>
-        <p class="hint mp-sub">Topics where the latest result of a part in Exam Mode is incorrect. A topic exam has 5 random questions on that topic from the past exams, including ones you have done.</p>
         ${topics ? `<ul class="mp-topics">${topics}</ul>` : '<p class="mp-empty">Nothing to review yet. Take an exam to see your weak topics.</p>'}
       </section>
     </main>`;

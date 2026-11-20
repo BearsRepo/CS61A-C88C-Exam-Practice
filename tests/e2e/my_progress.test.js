@@ -41,14 +41,14 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const toHome = async () => { if (await has('.progress')) await click('.progress [data-action="go-home"]'); await page.waitForSelector('.home .mode-switch'); };
   // My History cards (all, or one type)
   const cards = async (type) => { await toProgress(); return page.$$eval('.mh-card', (items, t) => items.filter((i) => !t || i.dataset.type === t).map((i) => ({
-    id: (i.querySelector('.mh-open').dataset.id || i.querySelector('.hist-del').dataset.id),
+    id: (i.querySelector('.mh-open').dataset.id || i.querySelector('.mh-del').dataset.id),
     type: i.dataset.type, status: i.dataset.status,
     title: i.querySelector('.mh-title').firstChild.textContent.trim(),
     auto: !!i.querySelector('.mh-auto'),
     meta: i.querySelector('.mh-meta').textContent,
     tag: i.querySelector('.mh-status').textContent,
     bg: getComputedStyle(i.querySelector('.mh-status')).backgroundColor,
-    action: i.querySelector('.mh-open').textContent.trim(),
+    action: i.querySelector('.mh-open').dataset.action,
   })), type); };
   const setSize = async (n) => { await toHome(); await page.$eval('#set-size', (i, n) => { i.value = String(n); i.dispatchEvent(new Event('change', { bubbles: true })); }, n); await wait(100); };
   const GREEN = 'rgb(230, 244, 234)', RED = 'rgb(251, 233, 231)', GOLD = 'rgb(255, 246, 220)';
@@ -61,7 +61,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(!(await has('.history')) && !(await has('.hist-row')), 'Exam Mode: no Exam history at the bottom of the home page');
   await click('#mode-practice');
   await toProgress();
-  ok(/My Progress/.test(await text('.progress h1')) && /Your summary from Exam Mode/.test(await text('.mp-sub')), 'My Progress page: heading and "Your summary from Exam Mode"');
+  ok(/My Progress/.test(await text('.progress h1')) && (await text('.mp-sub')) === 'Summary from your Completed Exams', 'My Progress page: heading and "Summary from your Completed Exams"');
   ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'nothing done yet: 0 full exams, — questions, — accuracy');
   ok(/Nothing here yet/.test(await text('#mh-h ~ .mp-empty, .mp-card:nth-of-type(2) .mp-empty')) && !(await has('.mh-filter')), 'empty My History: a hint and no Filter button');
   ok(/Nothing to review yet/.test(await text('.mp-card:last-child .mp-empty')), 'empty Topics to Review: a hint');
@@ -78,7 +78,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(typeof A.id === 'string' && A.index === 1, 'a new set gets an id');
   await click('[data-action="home"]');
   let R = await cards('practice');
-  ok(R.length === 1 && R[0].id === A.id && R[0].tag === 'In Progress' && R[0].action === 'Continue →' && /Practice · .* · 2 questions · \d+ of \d+ parts answered/.test(R[0].meta), `the unfinished set is In Progress with Continue (${R[0] && R[0].meta})`);
+  ok(R.length === 1 && R[0].id === A.id && R[0].tag === 'In Progress' && R[0].action === 'open-set' && /Practice · .* · 2 questions · \d+ of \d+ parts answered/.test(R[0].meta), `the unfinished set is In Progress; its card continues it (${R[0] && R[0].meta})`);
+  const layout = await page.$eval('.mh-card', (c) => { const st = c.querySelector('.mh-status').getBoundingClientRect(), del = c.querySelector('.mh-del').getBoundingClientRect();
+    return { inCard: !!c.querySelector('.mh-open .mh-status'), links: c.querySelectorAll('a, .link').length, beside: del.left >= st.right && Math.abs((del.top + del.bottom) / 2 - (st.top + st.bottom) / 2) < 6, small: del.width <= 28 }; });
+  ok(layout.inCard && layout.links === 0 && layout.beside && layout.small, `the whole card is one button (no Continue / Review link); a small Delete sits right of the status label (${JSON.stringify(layout)})`);
   ok(R[0].bg === GOLD, `In Progress is gold (${R[0].bg})`);
   ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'practice work does not count toward the summary');
 
@@ -112,12 +115,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const Bs = (await st()).session;
   const bDone = Bs.ids.every((id) => Bs.answers[id] !== undefined && Bs.answers[id] !== '' && !(Array.isArray(Bs.answers[id]) && !Bs.answers[id].length));
   ok(R.length === 2 && R[0].id === B.id && R[1].id === A.id && R[1].tag === 'In Progress', `My History lists B above A: ${R.map((r) => r.tag).join(', ')}`);
-  ok(R[0].tag === (bDone ? 'Completed' : 'Incomplete') && R[0].bg === (bDone ? GREEN : RED) && R[0].action === 'Review Set →', `a finished set: ${R[0].tag} (${Object.keys(Bs.answers).length} of ${Bs.ids.length} parts answered), with Review Set`);
+  ok(R[0].tag === (bDone ? 'Completed' : 'Incomplete') && R[0].bg === (bDone ? GREEN : RED) && R[0].action === 'open-set', `a finished set: ${R[0].tag} (${Object.keys(Bs.answers).length} of ${Bs.ids.length} parts answered), opened by its card`);
 
   // ── open A: it continues where it was left, B goes to My History ──
   await click(`.mh-card [data-action="open-set"][data-id="${A.id}"]`); await page.waitForSelector('#pane-right .part');
   S = await st();
-  ok(S.session.id === A.id && S.session.index === 1 && Object.keys(S.session.answers).length >= 1 && S.practice.some((x) => x.id === B.id), 'Continue opens the unfinished set where it was left (answers kept)');
+  ok(S.session.id === A.id && S.session.index === 1 && Object.keys(S.session.answers).length >= 1 && S.practice.some((x) => x.id === B.id), 'clicking an unfinished set’s card continues it where it was left (answers kept)');
   // finish A with parts unanswered: Incomplete
   await click('[data-action="finish"]'); await page.waitForSelector('.results');
   await click('.results [data-action="go-home"]');
@@ -125,7 +128,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(R.find((r) => r.id === A.id).tag === 'Incomplete' && R.find((r) => r.id === A.id).bg === RED, 'a finished set with unanswered parts is Incomplete (red)');
   // ── open B: its summary ──
   await click(`.mh-card [data-action="open-set"][data-id="${B.id}"]`); await page.waitForSelector('.results');
-  ok((await st()).session.id === B.id, 'Review Set opens a finished set’s summary');
+  ok((await st()).session.id === B.id, 'clicking a finished set’s card opens its summary');
   await click('.results [data-action="go-home"]');
 
   // ── delete (cancel, then confirm) ──
@@ -194,9 +197,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(stats[0] === '1', `Full Exams Completed counts only full exams with every part answered (A+ excepted): ${stats[0]}`);
   ok(stats[1] === String(problems.size), `Questions Practiced counts each question once across retakes (${stats[1]} of ${problems.size})`);
   ok(stats[2] === '67%', `Automatic Accuracy uses each part's latest result (a skipped retake keeps the earlier one; practice is left out): ${stats[2]}`);
-  ok(/3 parts/.test(await text('.mp-card .hint:not(.mp-sub)')), 'the summary says how many parts the accuracy covers');
   R = await cards();
-  ok(R.find((r) => r.id === 'xa1').tag === 'Completed' && R.find((r) => r.id === 'xa2').tag === 'Incomplete' && R.find((r) => r.id === 'xa1').action === 'Review Exam →', 'exams: Completed (A+ unanswered is fine) / Incomplete (a part left unanswered), with Review Exam');
+  ok(R.find((r) => r.id === 'xa1').tag === 'Completed' && R.find((r) => r.id === 'xa2').tag === 'Incomplete' && R.find((r) => r.id === 'xa1').action === 'open-attempt', 'exams: Completed (A+ unanswered is fine) / Incomplete (a part left unanswered), opened by their cards');
   ok(R.find((r) => r.id === 'xa1').meta.startsWith('Full Exam · ') && R.find((r) => r.id === 'xa3').meta.startsWith('Topic-based Exam · '), 'cards show the type: Full Exam / Topic-based Exam');
   ok(R.map((r) => r.id).join() === 'pw,xa3,xa2,xa1', `newest first (${R.map((r) => r.id).join(', ')})`);
   const topics = await page.$$eval('.mp-topic', (t) => t.map((x) => [x.querySelector('[data-topic]').dataset.topic, x.querySelector('.mp-topic-n').textContent]));
@@ -210,7 +212,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const years = await page.$$eval('.mh-filter input[data-hf="year"]', (i) => i.map((x) => x.value));
   ok(years.join() === '2025,2024', `exam years come from the sets' past exams, newest first (${years.join(', ')})`);
   const pick = async (key, v) => { await page.click(`.mh-filter input[data-hf="${key}"][value="${v}"]`); await wait(150); };
-  const ids = () => page.$$eval('.mh-card', (c) => c.map((x) => (x.querySelector('.mh-open').dataset.id || x.querySelector('.hist-del').dataset.id)));
+  const ids = () => page.$$eval('.mh-card', (c) => c.map((x) => (x.querySelector('.mh-open').dataset.id || x.querySelector('.mh-del').dataset.id)));
   await pick('type', 'exam');
   ok((await ids()).join() === 'xa3,xa2,xa1' && /Filter · 1/.test(await text('.mh-filter-btn')) && await has('.mh-filter .dd-panel'), 'Type Exam: only exams; the button shows 1 filter; the menu stays open');
   await pick('status', 'incomplete');
@@ -240,7 +242,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await click('[data-action="save-leave"]');
   R = await cards();
   const live = R.find((r) => r.type === 'review');
-  ok(live && live.auto && live.tag === 'In Progress' && live.action === 'Resume →' && live.meta.startsWith('Topic Review Exam · '), 'in My History: Auto-generated, Topic Review Exam, In Progress, Resume');
+  ok(live && live.auto && live.tag === 'In Progress' && live.action === 'resume-exam' && live.meta.startsWith('Topic Review Exam · '), 'in My History: Auto-generated, Topic Review Exam, In Progress, its card resumes it');
   // a second one: confirms discarding the unfinished exam, and is #2
   dialogs.length = 0;
   await click(`.mp-topic-go[data-topic="${topic}"]`); await page.waitForSelector('#pane-right .part');
