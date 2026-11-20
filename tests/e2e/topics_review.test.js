@@ -110,7 +110,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   });
   const alpha = Number((/rgba\([^)]*,\s*([\d.]+)\)/.exec(look.fill) || [])[1]);
   ok(alpha >= 0.3, `the radar is a filled blue area (${look.fill})`);
-  ok(look.r !== null && look.r < 0.5, `no inner circle: a topic not tried yet sits at the centre (radius ${look.r && look.r.toFixed(1)})`);
+  ok(look.r !== null && Math.abs(look.r - 18) < 0.5, `0% sits on a small inner circle, not the centre (radius ${look.r && look.r.toFixed(1)})`);
   rw = await rows();
   const pyOnly = await page.evaluate((ids) => ids.every((t) => !/^(gl|sql)-/.test(t)), rw.map((r) => r.topic));
   ok(rw.length && pyOnly, 'Python: the list shows only Python topics');
