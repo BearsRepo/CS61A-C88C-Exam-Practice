@@ -3161,14 +3161,14 @@
   const langTopics = (lang) => (PROGRESS_TOPICS.find(([name]) => name.toLowerCase() === lang) || [null, []])[1];
   const isPyTopic = (t) => !isGleamTopic(t) && !isSqlTopic(t);
   const LANG_HAS = { all: () => true, python: (q) => q.topics.some(isPyTopic), gleam: (q) => q.topics.some(isGleamTopic), sql: (q) => q.topics.some(isSqlTopic) };
-  // Radar: 0% sits on a small inner circle (not the very centre), so the shape stays a filled area even with 0% topics.
+  // Radar: 0% at the centre, 100% at the outer edge.
   function radarSVG(axes, values) {
-    const R = 100, R0 = 18, n = axes.length;
+    const R = 100, R0 = 0, n = axes.length;
     const at = (i, r) => { const a = (-90 + (i * 360) / n) * (Math.PI / 180); return [r * Math.cos(a), r * Math.sin(a)]; };
     const rad = (v) => R0 + ((R - R0) * (v || 0)) / 100;
     const fmt = (p) => p.map((v) => v.toFixed(1)).join(',');
     const poly = (r) => axes.map((_, i) => fmt(at(i, r))).join(' ');
-    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => `<polygon class="rd-grid${f === 1 ? ' outer' : ''}" points="${poly(R0 + (R - R0) * f)}"/>`).join('');
+    const grid = [0.25, 0.5, 0.75, 1].map((f) => `<polygon class="rd-grid${f === 1 ? ' outer' : ''}" points="${poly(R0 + (R - R0) * f)}"/>`).join('');
     const spokes = axes.map((_, i) => { const [x0, y0] = at(i, R0), [x, y] = at(i, R); return `<line class="rd-spoke" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
     const pts = values.map((v, i) => at(i, rad(v)));
     const shape = `<polygon class="rd-area" points="${pts.map(fmt).join(' ')}"/>`
