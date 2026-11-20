@@ -106,15 +106,18 @@
   // Browsers give a site about 5 million characters of localStorage (Chrome measured 5.2 million). The home page and
   // My Progress warn from 90% on, and when a save fails because storage is full (new work would otherwise be lost silently).
   const STORAGE_LIMIT = 5000000;
+  // full: false | true (the last save failed) | 'ink' (saved, but without the newest iPad handwriting)
   const storage = { used: 0, full: false };
-  // iPad exam handwriting as last written to storage, per session whose newest strokes may not be on disk yet: the
-  // exam in progress, and the attempt it becomes when submitted (the same object) until a save gets through. If
-  // storage is full, everything else (answers, progress, the submission itself) is still saved, with the handwriting
-  // that was saved before, so new strokes can never cost the exam its answers or its submission. They stay on
-  // screen until reload. inkFull: the user was told once.
+  // iPad handwriting as last written to storage, for everything that can be written on: the exam in progress (and the
+  // attempt it becomes when submitted: the same object, until a save gets through), practice sets (the open one and
+  // those waiting in My History) and review workspaces. If storage is full, everything else (answers, progress, the
+  // submission itself) is still saved, with the handwriting that was saved before, so new strokes can never cost the
+  // answers or a submission. They stay on screen until reload. inkFull: the user was told once.
   const savedInk = new Map(); // session -> its handwriting as last saved (undefined: none saved yet)
   let inkFull = false;
   const inkSnapshot = (hw) => hw && Object.fromEntries(Object.entries(hw).map(([k, v]) => [k, v.slice()]));
+  const inkOwners = () => [store.exam, store.session, ...(store.practice || []), ...Object.values(store.reviews || {})].filter(isObj);
+  const snapshotInk = () => { savedInk.clear(); inkOwners().forEach((o) => savedInk.set(o, inkSnapshot(o.handwriting))); };
   function save() {
     if (staleTab) return;
     const json = JSON.stringify(store);
@@ -122,18 +125,18 @@
     try {
       localStorage.setItem(STORE_KEY, json);
       storage.full = false;
-      savedInk.clear(); // all of it is on disk now
-      if (store.exam) savedInk.set(store.exam, inkSnapshot(store.exam.handwriting));
+      snapshotInk(); // all of it is on disk now
     } catch (e) {
       // a quota error means storage is full (the warning shows); otherwise storage is unavailable (e.g. blocked)
       if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) storage.full = true;
-      if (store.exam && !savedInk.has(store.exam)) savedInk.set(store.exam, undefined); // a new exam: none on disk yet
+      inkOwners().forEach((o) => { if (!savedInk.has(o)) savedInk.set(o, undefined); }); // new since the last save: none on disk yet
       if ([...savedInk.keys()].some((x) => x.handwriting)) {
         try {
           const slim = JSON.stringify(store, function (k, v) { return k === 'handwriting' && savedInk.has(this) ? savedInk.get(this) : v; });
           localStorage.setItem(STORE_KEY, slim);
           storage.used = slim.length;
-          if (!inkFull) { inkFull = true; setTimeout(() => alert('Browser storage is full, so your latest handwriting on this exam can’t be saved. Your answers are still being saved.'), 0); }
+          if (storage.full) storage.full = 'ink';
+          if (!inkFull) { inkFull = true; setTimeout(() => alert('Browser storage is full, so your latest handwriting can’t be saved. Your answers are still being saved.'), 0); }
         } catch (e2) { /* storage unavailable: work lives in memory only */ }
       } /* else storage unavailable: work lives in memory only */
     }
@@ -249,7 +252,7 @@
     // deleted exam's number is not reused.
     autoCounts: isObj(saved && saved.autoCounts) ? saved.autoCounts : {},
   };
-  if (store.exam) savedInk.set(store.exam, inkSnapshot(store.exam.handwriting)); // what storage holds now (see save)
+  snapshotInk(); // what storage holds now (see save)
   // Scratch code and annotations belong to the session they were made in. Before v4, practice kept them in
   // store-wide maps keyed by problem, so they leaked into every later set with the same question. A saved
   // practice set takes over the entries for its own problems; the rest belonged to finished sets and are dropped.
@@ -3684,6 +3687,7 @@
   }
   function storageWarningHTML() {
     const pct = Math.round((storage.used / STORAGE_LIMIT) * 100);
+    if (storage.full === 'ink') return `<div class="storage-warn" role="alert"><b>Storage is full.</b> Your answers are still being saved, but your newest handwriting isn’t. Delete old sets in My History to make room.</div>`;
     if (storage.full) return `<div class="storage-warn" role="alert"><b>Storage is full.</b> Your latest work could not be saved in this browser. Delete old sets in My History to make room.</div>`;
     if (pct < 90) return '';
     return `<div class="storage-warn" role="note"><b>Storage almost full (${pct}%).</b> This browser keeps about 5 MB for this site. Delete old sets in My History, or new work may not be saved.</div>`;

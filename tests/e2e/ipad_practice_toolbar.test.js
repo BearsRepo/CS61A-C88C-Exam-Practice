@@ -215,6 +215,33 @@ const PID = 'sp25-4b';
   await pad.setViewport({ width: 820, height: 1180 }); await wait(300);
   ok(await pad.$eval('#annot-bar', (b) => getComputedStyle(b).position === 'fixed' && getComputedStyle(b).flexDirection === 'row'), 'portrait: the toolbar becomes the row above the bottom bar, as in an exam');
   await pad.setViewport({ width: 1180, height: 820 }); await wait(300);
+
+  // ── Storage full: practice answers keep saving, without the newest handwriting (as in an exam) ──
+  const told = [];
+  pad.on('dialog', (d) => told.push(d.message()));
+  const inkBefore = ((await P.st()).session.handwriting[PID] || []).length;
+  await pad.evaluate((pid, n) => {
+    const real = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (k, v) {
+      const hw = (JSON.parse(v).session || {}).handwriting || {};
+      if ((hw[pid] || []).length > n) throw new DOMException('full', 'QuotaExceededError');
+      return real.call(this, k, v);
+    };
+  }, PID, inkBefore);
+  if (await pad.$eval('[data-ann="pen"]', (b) => b.getAttribute('aria-pressed')) !== 'true') await P.click('[data-ann="pen"]');
+  await pad.$eval('#pane-right', (p) => { p.scrollTop = 0; }); await wait(150);
+  const spot = await P.freeRight();
+  await P.stroke(P.line(spot, 100, 0));
+  ok((await P.rightInk()) === inkBefore + 1, 'storage full: the new stroke still shows');
+  await P.click('[data-ann="pen"]');
+  await pad.$eval('label[for="c-sp25-4e-2"]', (l) => l.scrollIntoView({ block: 'center' }));
+  await P.click('label[for="c-sp25-4e-2"]'); await wait(500);
+  S = await P.st();
+  ok(S.session.answers['sp25-4e'] === 2 && (S.session.handwriting[PID] || []).length === inkBefore, `storage full: the practice answer still saves, with the handwriting saved before (${(S.session.handwriting[PID] || []).length} of ${inkBefore + 1} strokes)`);
+  ok(told.filter((m) => /storage is full/i.test(m)).length === 1, 'the student is told once that new handwriting can’t be saved');
+  await P.click('[data-action="home"]'); await wait(200);
+  const warn = await pad.$eval('.storage-warn', (w) => w.textContent).catch(() => '');
+  ok(/answers are still being saved, but your newest handwriting isn’t/.test(warn) && /My History/.test(warn), `the home page warning says what was kept and how to make room ("${warn.slice(0, 70)}…")`);
   ok(pad.errors.length === 0, `iPad: no console errors (${pad.errors.join(' | ')})`);
   await pad.close();
 
