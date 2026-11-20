@@ -3207,6 +3207,7 @@
       .map(([t, x]) => topicRow(t, x)).join('');
     return `<section class="mp-card" aria-labelledby="mt-h" id="tr-sec">
         <h2 id="mt-h">Topics to Review</h2>
+        <p class="hint mp-sub tr-desc">The bars and Correctness show the percentage of questions you got right on the first try. Incorrect shows how many questions you still have wrong.</p>
         <div class="tr-grid">
           <div class="tr-charts${anim ? ' anim' : ''}" data-key="${lang}">
             <div class="tr-chart tr-chart-bars">${chart}</div>
