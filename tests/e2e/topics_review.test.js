@@ -79,7 +79,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   let R = await rings();
   ok(R[0].text === '50%' && R[0].band === 'band-mid', `left ring: 50% correct on the first try, yellow (${R[0].text}, ${R[0].band})`);
   ok(R[0].cap === 'Correctness' && R[1].cap === 'Incorrect', 'the rings are labelled Correctness and Incorrect');
-  ok(/percentage of questions you got right on the first try/.test(await text('#tr-sec .tr-desc')) && /how many questions you still have wrong/.test(await text('#tr-sec .tr-desc')), 'a short description under the heading explains the percentage and the incorrect count');
+  ok((await text('#tr-sec .tr-desc')) === 'See your correctness in each topic and how many questions are still incorrect.', 'a short description under the heading');
   ok(R[1].text === '1' && R[1].small === '/4' && R[1].band === 'band-good', `right ring: 1/4 still incorrect (a: wrong again in the later exam; b: fixed in practice), green (${R[1].text} ${R[1].small}, ${R[1].band})`);
   ok(Math.abs(R[1].off - R[1].c * 0.75) < 1 && Math.abs(R[0].off - R[0].c * 0.5) < 1, `rings fill by their share: left 50%, right 1 of 4 (offsets ${R[0].off.toFixed(1)}/${R[0].c.toFixed(1)}, ${R[1].off.toFixed(1)}/${R[1].c.toFixed(1)})`);
   let rw = await rows();
