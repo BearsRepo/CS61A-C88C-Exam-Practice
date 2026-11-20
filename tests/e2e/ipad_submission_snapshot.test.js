@@ -36,7 +36,8 @@ const pick = (s) => JSON.stringify(FIELDS.map((k) => s[k]));
   const tools = (page) => {
     const click = async (sel) => { await page.waitForSelector(sel, { visible: true, timeout: 8000 }); await page.click(sel); await wait(80); };
     const st = async () => { await wait(350); return page.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY); };
-    const ready = async () => { await page.waitForSelector('#pane-right .part'); await wait(200); };
+    const ready = async () => { await page.waitForSelector('#pane-right .part'); await wait(200); await page.evaluate(() => { const b = document.querySelector('#annot-bar [data-ann="pen"][aria-pressed="true"]'); if (b) b.click(); }); await wait(80); // an iPad exam opens with the Pen on (default); these checks start with no tool
+    };
     const seed = async () => {
       await page.goto(APP_URL);
       await page.evaluate((k, v) => { localStorage.setItem(k, v); Storage.prototype.setItem = function () {}; }, KEY, JSON.stringify(EXAM));

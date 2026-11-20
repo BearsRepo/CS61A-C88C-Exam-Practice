@@ -58,6 +58,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   await pad.goto(APP_URL); await wait(150);
   await P.click('[data-action="enter"]'); await P.click('[data-action="start-exam"]');
   await pad.waitForSelector('#pane-right .part'); await wait(200);
+  await pad.evaluate(() => { const b = document.querySelector('#annot-bar [data-ann="pen"][aria-pressed="true"]'); if (b) b.click(); }); await wait(80); // an iPad exam opens with the Pen on (default); these checks start with no tool
   await P.click('#x-sp25-4e-0');                                                   // 4e: an option eliminated, none chosen
   const key4f = await pad.evaluate(() => window.CS61A_BANK.ANSWER_KEY['sp25-4f'].correct);
   await P.click(`label[for="c-sp25-4f-${key4f}"]`);                               // 4f: chosen as usual (correct)

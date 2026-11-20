@@ -34,7 +34,8 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   const tools = (page) => {
     const click = async (sel) => { await page.waitForSelector(sel, { visible: true, timeout: 8000 }); await page.click(sel); await wait(80); };
     const st = async () => { await wait(350); return page.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY); };
-    const ready = async () => { await page.waitForSelector('#pane-right .part'); await page.waitForSelector('.CodeMirror'); await wait(150); };
+    const ready = async () => { await page.waitForSelector('#pane-right .part'); await page.waitForSelector('.CodeMirror'); await wait(150); await page.evaluate(() => { const b = document.querySelector('#annot-bar [data-ann="pen"][aria-pressed="true"]'); if (b) b.click(); }); await wait(80); // an iPad exam opens with the Pen on (default); these checks start with no tool
+    };
     const startExam = async () => {
       await page.goto(APP_URL);
       await page.evaluate((k, v) => { localStorage.setItem(k, v); Storage.prototype.setItem = function () {}; }, KEY, JSON.stringify(EXAM));
@@ -180,6 +181,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   await pad.goto(APP_URL); await wait(150);
   await P.click('[data-action="enter"]'); await P.click('[data-action="start-exam"]');
   await pad.waitForSelector('#pane-right .part'); await wait(200);
+  await pad.evaluate(() => { const b = document.querySelector('#annot-bar [data-ann="pen"][aria-pressed="true"]'); if (b) b.click(); }); await wait(80); // an iPad exam opens with the Pen on (default); these checks start with no tool
   const next = await P.st();
   ok(next.exam.id !== examId && (await P.group()) === 'sp25-4b' && (await P.shown()).length === 0 && !next.exam.handwriting, 'a new attempt of the same question starts with no handwriting');
   await P.reloadResume();

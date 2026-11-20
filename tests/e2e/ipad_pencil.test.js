@@ -43,6 +43,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
       await page.goto(APP_URL); await wait(150);
       await click('[data-action="enter"]'); await click('[data-action="start-exam"]');
       await page.waitForSelector('#pane-right .part'); await page.waitForSelector('.CodeMirror');
+      await page.evaluate(() => { const b = document.querySelector('#annot-bar [data-ann="pen"][aria-pressed="true"]'); if (b) b.click(); }); await wait(80); // an iPad exam opens with the Pen on (default); these checks start with no tool
     };
     // A synthetic stroke: pointerdown on whatever is under the first point, then moves and up on the document.
     const stroke = (type, pts) => page.evaluate((type, pts) => {
