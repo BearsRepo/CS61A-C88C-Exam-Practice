@@ -103,9 +103,29 @@
   // If another tab writes the store, this tab's copy is out of date: saving it would overwrite the other tab's
   // work (e.g. erase an exam submitted there). Stop saving and ask for a reload instead (see the 'storage' listener).
   let staleTab = false;
+  // iPad exam handwriting as last written to storage, per session whose newest strokes may not be on disk yet: the
+  // exam in progress, and the attempt it becomes when submitted (the same object) until a save gets through. If
+  // storage is full, everything else (answers, progress, the submission itself) is still saved, with the handwriting
+  // that was saved before, so new strokes can never cost the exam its answers or its submission. They stay on
+  // screen until reload. inkFull: the user was told once.
+  const savedInk = new Map(); // session -> its handwriting as last saved (undefined: none saved yet)
+  let inkFull = false;
+  const inkSnapshot = (hw) => hw && Object.fromEntries(Object.entries(hw).map(([k, v]) => [k, v.slice()]));
   function save() {
     if (staleTab) return;
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch (e) { /* storage unavailable: work lives in memory only */ }
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(store));
+      savedInk.clear(); // all of it is on disk now
+      if (store.exam) savedInk.set(store.exam, inkSnapshot(store.exam.handwriting));
+    } catch (e) {
+      if (store.exam && !savedInk.has(store.exam)) savedInk.set(store.exam, undefined); // a new exam: none on disk yet
+      if ([...savedInk.keys()].some((x) => x.handwriting)) {
+        try {
+          localStorage.setItem(STORE_KEY, JSON.stringify(store, function (k, v) { return k === 'handwriting' && savedInk.has(this) ? savedInk.get(this) : v; }));
+          if (!inkFull) { inkFull = true; setTimeout(() => alert('Browser storage is full, so your latest handwriting on this exam can’t be saved. Your answers are still being saved.'), 0); }
+        } catch (e2) { /* storage unavailable: work lives in memory only */ }
+      } /* else storage unavailable: work lives in memory only */
+    }
     if (ANALYTICS) ANALYTICS.changed(); // usage tracking works out what changed, a moment later
   }
   let saveTimer = null;
@@ -150,6 +170,7 @@
     if (t && !(isObj(t) && typeof t.durationMs === 'number' && typeof t.remainingMs === 'number' && (t.runningSince === null || typeof t.runningSince === 'number'))) s.timer = null;
     if (typeof s.title !== 'string') s.title = 'Practice set';
     if (typeof s.startedAt !== 'number') s.startedAt = Date.now();
+    if ('handwriting' in s) s.handwriting = cleanHandwriting(s.handwriting, s.groups); // iPad practice sets too
     return s;
   }
   // Keep only valid values in saved preference lists (they drive filtering on the home page).
@@ -175,7 +196,22 @@
     a.notes = migrateNotes(a.notes || {});
     a.annotations = a.annotations || {};
     a.eliminated = a.eliminated || {};
+    if ('handwriting' in a) a.handwriting = cleanHandwriting(a.handwriting, a.groups);
     return a;
+  }
+  // iPad exam handwriting: { pid: [{ id, kind: 'ink', pts: [[x, y], …], color?, w? }] }. A damaged record loses only
+  // the bad strokes; strokes for a question the attempt doesn't contain are dropped, so they can't show elsewhere.
+  function cleanHandwriting(hw, groups) {
+    if (!isObj(hw)) return {};
+    const own = new Set(groups.map((g) => g.pid));
+    const okPt = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
+    const out = {};
+    Object.keys(hw).forEach((pid) => {
+      const list = Array.isArray(hw[pid]) && own.has(pid) ? hw[pid].filter((k) => isObj(k) && typeof k.id === 'string' && k.kind === 'ink'
+        && Array.isArray(k.pts) && k.pts.length && k.pts.every(okPt)) : [];
+      if (list.length) out[pid] = list;
+    });
+    return out;
   }
 
   const saved = load();
@@ -190,6 +226,7 @@
     attempts: (Array.isArray(saved && saved.attempts) ? saved.attempts : []).map(migrateAttempt).filter(Boolean), // submitted exams, oldest first
     reviews: (saved && saved.reviews && typeof saved.reviews === 'object') ? saved.reviews : {}, // attemptId -> review workspace
   };
+  if (store.exam) savedInk.set(store.exam, inkSnapshot(store.exam.handwriting)); // what storage holds now (see save)
   // Scratch code and annotations belong to the session they were made in. Before v4, practice kept them in
   // store-wide maps keyed by problem, so they leaked into every later set with the same question. A saved
   // practice set takes over the entries for its own problems; the rest belonged to finished sets and are dropped.
@@ -264,6 +301,16 @@
   // view: which session the question screen shows. 'practice' | 'exam' (in progress) | 'review' (a submitted attempt)
   const ui = { screen: document.body.dataset.page === 'menu' ? 'home' : 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
+  // iPad: Safari on iPadOS 13+ reports a Mac user agent by default, and a Mac never has a touch screen, so a "Mac"
+  // with more than one touch point is an iPad. Turns on Apple Pencil drawing over both panes during an exam.
+  const IS_IPAD = (() => {
+    try {
+      const n = navigator;
+      return /iPad/.test(n.userAgent) || ((n.platform === 'MacIntel' || /Macintosh/.test(n.userAgent)) && n.maxTouchPoints > 1);
+    } catch (e) { return false; }
+  })();
+  if (IS_IPAD) document.documentElement.classList.add('ipad');
+
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
   // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
   const trackedSession = (s) => (s && s.reviewOf ? attemptById(s.reviewOf) : s) || null;
@@ -286,7 +333,7 @@
       store.reviews[id] = {
         reviewOf: id, mode: 'exam', title: a.title, kind: a.kind, examId: a.examId,
         ids: a.ids.slice(), groups: copy(a.groups), index: 0,
-        answers: copy(a.answers), eliminated: copy(a.eliminated), notes: copy(a.notes), annotations: copy(a.annotations), diagrams: copy(a.diagrams),
+        answers: copy(a.answers), eliminated: copy(a.eliminated), notes: copy(a.notes), annotations: copy(a.annotations), diagrams: {}, // the diagram starts blank to redraw; the submitted one is shown read-only
         marked: {}, checked: {}, revealed: {}, selfGrade: {}, timer: null, startedAt: Date.now(),
       };
     }
@@ -590,6 +637,15 @@
     const ed = { pid, wrap, cm, blanks: [], hl: {}, current: null };
     buildBlanks(ed);
     anns(pid).filter((a) => a.kind === 'code').forEach((a) => markCode(ed, a));
+    if (IS_IPAD) { // pen strokes drawn on the code follow it when it scrolls sideways (see codeView)
+      let sl = 0;
+      cm.on('scroll', () => {
+        const x = cm.getScrollInfo().left;
+        if (x === sl) return;
+        sl = x;
+        if (pid === leftPid && anns(pid).some((a) => a.kind === 'pen' && typeof a.sx === 'number')) layoutStrokes();
+      });
+    }
     cm.on('change', (c, ch) => {
       notes[pid] = cm.getValue();
       if ([...ch.text, ...ch.removed].join('\n').includes('⟦')) buildBlanks(ed); // a token was pasted
@@ -643,7 +699,23 @@
   let leftPid = null;
   let leftObserver = null;
   let drawing = null; // in-progress pen stroke or eraser drag
+  // Pen colours (iPad exams only, from the quick switcher). Red is the default and is stored without a colour, so
+  // older strokes and every desktop stroke stay red; others are stored as { color: 'blue' | 'black' }.
+  const PEN_COLORS = { red: '#d62828', blue: '#1f5fd6', black: '#1b1b1b' };
+  let penColor = 'red';
+  const inkStyle = (c) => (c && c !== 'red' && PEN_COLORS[c] ? ` style="stroke:${PEN_COLORS[c]}"` : '');
+  const withColor = (c) => (c && c !== 'red' && PEN_COLORS[c] ? { color: c } : {});
 
+  // iPad exams: Apple Pencil strokes on the right (answer) pane, including over code, answer boxes and the paper
+  // diagram. Saved with the exam in progress as handwriting[pid] = [{ id, kind: 'ink', pts, color?, w }], pts in the
+  // pane's scroll coordinates and w the pane's width when drawn. They share the question's Undo / Redo / Clear, and
+  // are saved by the same save() as everything else. Desktop never reads or writes them. An iPad practice set keeps
+  // its own the same way (store.session.handwriting), with the same toolbar on the divider. In Review, the same field on the review workspace is the student's own review layer for the answer pane; the
+  // submitted attempt's handwriting is never read or written here.
+  const inkSession = (s) => examActive(s) || isReview(s) || (!!s && !isExam(s)); // …and practice sets
+  const padWork = (s) => IS_IPAD && (examActive(s) || (!!s && !isExam(s))); // an iPad exam in progress or practice set
+  const inkMap = () => { const s = cur(); return IS_IPAD && inkSession(s) ? s.handwriting || (s.handwriting = {}) : null; };
+  const rinks = (pid) => { const m = inkMap(); return (m && m[pid]) || []; };
   const anns = (pid) => { const all = annotationsOf(); return all[pid] || (all[pid] = []); };
   const hist = (pid) => history[pid] || (history[pid] = { undo: [], redo: [] });
   const newId = () => `a${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -714,10 +786,25 @@
     if (pts.length === 1) return `M${x0} ${y0}l0.01 0`;
     return `M${x0} ${y0}` + pts.slice(1).map(([x, y]) => `L${x} ${y}`).join('');
   }
-  function absPoints(art, a) {
+  // A stroke that starts on the code editor (iPad) keeps sx, the editor's horizontal scroll when it was drawn, and
+  // follows the code when the editor scrolls sideways: it moves by the scroll since then and is clipped to the
+  // editor, as the code is. Strokes without sx are drawn where they were drawn, as before.
+  function codeView(art) { // the left pane's editor: its scroll and visible code columns, in article pixels
+    const ed = leftPid && editors[leftPid];
+    if (!ed || !ed.cm || !art || !art.contains(ed.wrap)) return null;
+    const el = ed.cm.getWrapperElement();
+    const r = el.getBoundingClientRect();
+    const A = art.getBoundingClientRect();
+    const sl = ed.cm.getScrollInfo().left;
+    const gw = ed.cm.getGutterElement().offsetWidth;
+    return { el, sl, x0: r.left - A.left + Math.min(sl, gw), x1: r.right - A.left };
+  }
+  const codeShift = (a, v) => (typeof a.sx === 'number' && v ? a.sx - v.sl : 0);
+  const codeClipped = (a, v) => typeof a.sx === 'number' && v && (v.sl > 0 || codeShift(a, v) !== 0);
+  function absPoints(art, a, v = codeView(art)) {
     const bl = blocks(art);
     const b = bl[a.block] || bl[0];
-    const ox = b ? b.offsetLeft : 0;
+    const ox = (b ? b.offsetLeft : 0) + codeShift(a, v);
     const oy = b ? b.offsetTop : 0;
     return a.pts.map(([x, y]) => [x + ox, y + oy]);
   }
@@ -729,15 +816,24 @@
     svg.setAttribute('height', 0);
     svg.setAttribute('width', art.scrollWidth);
     svg.setAttribute('height', art.scrollHeight);
-    const paths = anns(leftPid).filter((a) => a.kind === 'pen')
-      .map((a) => `<path d="${strokePath(absPoints(art, a))}" data-aid="${a.id}"/>`).join('');
-    const livePath = drawing && drawing.kind === 'pen' ? `<path class="live" d="${strokePath(drawing.pts)}"/>` : '';
+    const v = codeView(art);
+    const pens = anns(leftPid).filter((a) => a.kind === 'pen');
+    const clip = v && pens.some((a) => codeClipped(a, v)) ? `<defs><clipPath id="code-ink-clip"><rect x="${v.x0}" y="0" width="${Math.max(0, v.x1 - v.x0)}" height="${art.scrollHeight}"/></clipPath></defs>` : '';
+    const paths = clip + pens
+      .map((a) => `<path d="${strokePath(absPoints(art, a, v))}" data-aid="${a.id}"${inkStyle(a.color)}${codeClipped(a, v) ? ' clip-path="url(#code-ink-clip)"' : ''}/>`).join('');
+    const livePath = drawing && drawing.kind === 'pen' && !drawing.right ? `<path class="live" d="${strokePath(drawing.pts)}"${inkStyle(drawing.color)}/>` : '';
     svg.innerHTML = paths + livePath;
     layoutNotes();
   }
 
   // Apply one annotation change to state and to whatever is on screen.
   function addAnn(pid, a) {
+    if (a.kind === 'ink') {
+      const m = inkMap();
+      if (m) (m[pid] || (m[pid] = [])).push(a);
+      if (pid === leftPid) layoutRightInk();
+      return;
+    }
     anns(pid).push(a.kind === 'note' ? normNote(cloneAnn(a)) : a); // notes are edited in place, so the list keeps its own copy
     if (a.kind === 'code') markCode(editors[pid], a);
     if (pid !== leftPid) return;
@@ -746,6 +842,14 @@
     if (a.kind === 'note') renderNotes();
   }
   function removeAnn(pid, id) {
+    const ri = rinks(pid).findIndex((x) => x.id === id);
+    if (ri >= 0) {
+      const list = rinks(pid);
+      const [a] = list.splice(ri, 1);
+      if (!list.length) delete inkMap()[pid];
+      if (pid === leftPid) layoutRightInk();
+      return a;
+    }
     const list = anns(pid);
     const i = list.findIndex((x) => x.id === id);
     if (i < 0) return null;
@@ -831,10 +935,19 @@
   }
   function eraseAt(x, y, clientX, clientY) {
     const pid = leftPid;
+    leftHits(x, y, clientX, clientY).forEach((id) => {
+      const a = removeAnn(pid, id);
+      if (a) drawing.ops.push({ op: 'remove', ann: a });
+    });
+  }
+  function leftHits(x, y, clientX, clientY) { // ids of the marks the eraser touches at this point
+    const pid = leftPid;
     const art = article();
     const hits = new Set();
+    const v = codeView(art);
     anns(pid).filter((a) => a.kind === 'pen').forEach((a) => {
-      const pts = absPoints(art, a);
+      if (codeClipped(a, v) && (x < v.x0 || x > v.x1)) return; // that part is hidden with the scrolled-out code
+      const pts = absPoints(art, a, v);
       const near = pts.length === 1 ? Math.hypot(x - pts[0][0], y - pts[0][1]) < 9
         : pts.some((p, i) => i && distToSegment(x, y, pts[i - 1], p) < 9);
       if (near) hits.add(a.id);
@@ -843,10 +956,7 @@
       const hl = el.closest && el.closest('mark.hl, .cm-hl');
       if (hl && hl.dataset.aid) hits.add(hl.dataset.aid);
     });
-    hits.forEach((id) => {
-      const a = removeAnn(pid, id);
-      if (a) drawing.ops.push({ op: 'remove', ann: a });
-    });
+    return hits;
   }
 
   function examSettingsHTML() {
@@ -892,9 +1002,16 @@
     ui.annMode = ui.annMode === mode ? 'none' : mode;
     const art = article();
     if (art) art.dataset.mode = ui.annMode;
+    if (noteUnified()) { // the notes follow the main toolbar
+      if (['pen', 'eraser'].includes(ui.annMode)) flushNoteEdit();
+      const l = noteLayer();
+      if (l) l.querySelectorAll('.snote').forEach((el) => { el.dataset.tool = toolOf(el.dataset.aid); });
+    }
     updateToolbar();
+    syncPaper();
   }
   function updateToolbar() {
+    if (IS_IPAD) updatePenColor();
     const bar = document.getElementById('annot-bar');
     if (!bar || !leftPid) return;
     const h = hist(leftPid);
@@ -903,15 +1020,16 @@
       if (['hl', 'pen', 'eraser'].includes(k)) b.setAttribute('aria-pressed', String(ui.annMode === k));
       if (k === 'undo') b.disabled = !h.undo.length;
       if (k === 'redo') b.disabled = !h.redo.length;
-      if (k === 'clear') b.disabled = !anns(leftPid).length;
+      if (k === 'clear') b.disabled = !anns(leftPid).length && !rinks(leftPid).length;
     });
     const hint = document.getElementById('annot-hint');
     if (hint) {
+      const pencil = pencilInk();
       hint.textContent = {
         none: '',
         hl: 'Select text or code to highlight it.',
-        pen: 'Draw with the mouse or trackpad. Scrolling still works.',
-        eraser: 'Click or drag over a mark to erase it.',
+        pen: pencil ? 'Draw with Apple Pencil on either side. Fingers still scroll and tap.' : 'Draw with the mouse or trackpad. Scrolling still works.',
+        eraser: pencil ? 'Touch a mark with Apple Pencil to erase it.' : 'Click or drag over a mark to erase it.',
       }[ui.annMode];
     }
   }
@@ -959,11 +1077,239 @@
       if (bi < 0) bi = y0 < (bl[0] ? bl[0].offsetTop : 0) ? 0 : bl.length - 1;
       const b = bl[bi];
       const pts = d.pts.map(([x, y]) => [Math.round((x - b.offsetLeft) * 10) / 10, Math.round((y - b.offsetTop) * 10) / 10]);
-      commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'pen', block: bi, pts } }]);
+      const v = IS_IPAD && codeView(art); // started on the code: it follows the code's horizontal scroll
+      const r = v && v.el.getBoundingClientRect();
+      const A = v && art.getBoundingClientRect();
+      const [x0, y0a] = d.pts[0];
+      const onCode = v && x0 >= r.left - A.left && x0 <= r.right - A.left && y0a >= r.top - A.top && y0a <= r.bottom - A.top;
+      commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'pen', block: bi, pts, ...withColor(d.color), ...(onCode ? { sx: Math.round(v.sl) } : {}) } }]);
       layoutStrokes();
     } else {
       record(leftPid, d.ops);
     }
+  }
+
+  // ── iPad exams: Apple Pencil over both panes ──
+  // The red pen, eraser and highlighter above, with these differences: the Pencil (or a mouse / trackpad) draws on
+  // either pane, including over the code, the answer boxes and the environment diagram, which act like paper
+  // while a tool is on (see syncPaper); fingers keep scrolling and tapping (the left pane's overlay stops catching
+  // touches); the highlighter follows a Pencil drag over the text or code; and a Pencil tap on a control (an option,
+  // an Eliminate button, a link) is a tap, while a drag that starts there draws.
+  // Review uses all of it too: the strokes go to the review workspace (store.reviews), never to the submitted attempt.
+  const pencilInk = () => IS_IPAD && ui.screen === 'practice' && inkSession(cur());
+  const INK_SKIP = '#annot-bar, .note-layer, .p-header, .p-footer'; // these keep their own handling
+  const INK_TAP = 'button, a[href], label, summary, select, input[type="radio"], input[type="checkbox"], [role="button"], [role="switch"], [data-action], .choice';
+  const paperOn = () => pencilInk() && ['pen', 'eraser', 'hl'].includes(ui.annMode);
+  // The toolbar on an iPad exam sits on the divider between the panes (styles.css), and its Pen gets a colour menu:
+  // the Pen button still turns the pen on and off with one tap; the small dot under it opens Red / Blue / Black,
+  // and picking one turns the pen on in that colour. Apple Pencil double tap and squeeze aren't available to web
+  // pages, so the toolbar is the way to switch.
+  const cap = (k) => k[0].toUpperCase() + k.slice(1);
+  function penColorHTML() {
+    return `<span class="pen-color-wrap">
+        <button class="ann-btn pen-color-btn" data-ann="pencolor" id="pen-color-btn" title="Pen colour" aria-label="Pen colour: ${cap(penColor)}" aria-haspopup="true" aria-expanded="false" aria-controls="pen-colors"><span class="pc-dot" aria-hidden="true"></span></button>
+        <span class="pen-colors" id="pen-colors" role="menu" aria-label="Pen colour" hidden>${Object.keys(PEN_COLORS).map((k) => `<button class="pc-item" role="menuitemradio" data-ann="color" data-color="${k}" aria-checked="${penColor === k}" style="--c:${PEN_COLORS[k]}"><span class="pc-dot" aria-hidden="true"></span>${cap(k)}</button>`).join('')}</span>
+      </span>`;
+  }
+  function setPenMenu(open) {
+    const m = document.getElementById('pen-colors');
+    const b = document.getElementById('pen-color-btn');
+    if (!m || !b) return;
+    m.hidden = !open;
+    b.setAttribute('aria-expanded', String(open));
+  }
+  function updatePenColor() {
+    const bar = document.getElementById('annot-bar');
+    if (!bar) return;
+    bar.style.setProperty('--pen', PEN_COLORS[penColor]);
+    const b = document.getElementById('pen-color-btn');
+    if (b) b.setAttribute('aria-label', `Pen colour: ${cap(penColor)}`);
+    const pen = b && bar.querySelector('[data-ann="pen"]');
+    if (pen) { pen.title = `${cap(penColor)} pen`; pen.setAttribute('aria-label', `${cap(penColor)} pen`); }
+    bar.querySelectorAll('[data-ann="color"]').forEach((x) => x.setAttribute('aria-checked', String(x.dataset.color === penColor)));
+    const f = document.getElementById('p-footer');
+    if (f) bar.style.setProperty('--fh', `${f.offsetHeight}px`); // narrow screens: the toolbar sits just above the bottom bar
+  }
+  // While a tool is on, the code editor and the typed-answer boxes are read-only, so iPadOS Scribble can't turn
+  // Pencil writing into text and the Pencil's marks stay ink. Turning the tool off makes them typeable again.
+  function syncPaper() {
+    if (!IS_IPAD) return;
+    const on = paperOn();
+    document.querySelectorAll(':is(#pane-right, #review-work) :is(textarea, input:not([type="radio"]):not([type="checkbox"]))').forEach((f) => {
+      if (on && !f.readOnly) { f.readOnly = true; f.dataset.paper = '1'; } else if (!on && f.dataset.paper) { f.readOnly = false; delete f.dataset.paper; }
+    });
+    const ed = leftPid && editors[leftPid];
+    if (ed && ed.cm) {
+      const ro = ed.cm.getOption('readOnly');
+      if (on && ro !== 'nocursor') { ed.paperRO = ro; ed.cm.setOption('readOnly', 'nocursor'); } else if (!on && ro === 'nocursor' && 'paperRO' in ed) { ed.cm.setOption('readOnly', ed.paperRO); delete ed.paperRO; }
+    }
+    const act = document.activeElement;
+    if (on && act && act.closest && act.closest('#pane-left, #pane-right') && act.matches('textarea, input:not([type="radio"]):not([type="checkbox"])')) act.blur();
+  }
+  let pencil = null; // { id, right, x0, y0, tap, started } while the Pencil is down on a pane
+  let swallow = null; // { el, until }: a stroke that started on a control must not also click it
+
+  function rightPoint(e) { // in the right pane's scroll coordinates, where its ink layer sits
+    const pane = document.getElementById('pane-right');
+    const r = pane.getBoundingClientRect();
+    return [r1(e.clientX - r.left - pane.clientLeft + pane.scrollLeft), r1(e.clientY - r.top - pane.clientTop + pane.scrollTop)];
+  }
+  // iPad practice: Show Solution (and its feedback) opens at the end of a part and pushes the parts below it down.
+  // Answer-pane strokes are kept in pane coordinates, so before the answers are re-rendered the top of each part is
+  // noted, and afterwards each stroke moves by as much as the part whose band (its top to the next part's top) holds
+  // the stroke's middle. Only the points change; the stored format is the same.
+  function partTops() {
+    const pane = document.getElementById('pane-right');
+    const top = pane.getBoundingClientRect().top - pane.scrollTop;
+    return [...pane.querySelectorAll('#right-body .part[data-part]')].map((el) => [el.dataset.part, el.getBoundingClientRect().top - top]);
+  }
+  function followParts(s, pid, before) {
+    const list = (s.handwriting || {})[pid];
+    if (!list || !list.length || !before.length) return;
+    const after = new Map(partTops());
+    const delta = before.map(([id, y]) => [y, after.has(id) ? after.get(id) - y : 0]);
+    if (delta.every(([, d]) => Math.abs(d) < 0.5)) return;
+    let moved = false;
+    list.forEach((k) => {
+      const ys = k.pts.map((p) => p[1]);
+      const mid = (Math.min(...ys) + Math.max(...ys)) / 2;
+      let d = 0;
+      delta.forEach(([y, dy]) => { if (mid >= y) d = dy; }); // the last part starting above the stroke's middle
+      if (Math.abs(d) < 0.5) return;
+      k.pts.forEach((p) => { p[1] = r1(p[1] + d); });
+      moved = true;
+    });
+    if (moved) save();
+  }
+  function layoutRightInk() {
+    const svg = document.getElementById('ink-right');
+    const pane = document.getElementById('pane-right');
+    if (!svg || !pane) return;
+    svg.setAttribute('width', 0); // measure without the layer itself
+    svg.setAttribute('height', 0);
+    svg.setAttribute('width', pane.scrollWidth);
+    svg.setAttribute('height', pane.scrollHeight);
+    const list = leftPid ? rinks(leftPid) : [];
+    svg.innerHTML = list.map((a) => `<path d="${strokePath(a.pts)}" data-aid="${a.id}"${inkStyle(a.color)}/>`).join('')
+      + (drawing && drawing.right && drawing.kind === 'pen' ? `<path class="live" d="${strokePath(drawing.pts)}"${inkStyle(drawing.color)}/>` : '');
+  }
+  const rightHits = ([x, y]) => rinks(leftPid).filter((a) => (a.pts.length === 1 ? Math.hypot(x - a.pts[0][0], y - a.pts[0][1]) < 12
+    : a.pts.some((p, i) => i && distToSegment(x, y, a.pts[i - 1], p) < 12)));
+  function eraseRightAt(p) {
+    rightHits(p).forEach((a) => {
+      const gone = removeAnn(leftPid, a.id);
+      if (gone) drawing.ops.push({ op: 'remove', ann: gone });
+    });
+  }
+  // Highlighter with the Pencil: the drag selects from where it started to where it is (text, or code in the
+  // editor), and lifting the Pencil highlights the selection exactly as a mouse selection would.
+  function hlAnchor(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const ed = leftPid && editors[leftPid];
+    if (ed && ed.cm && el && el.closest('.CodeMirror')) return { cm: ed.cm, pos: ed.cm.coordsChar({ left: x, top: y }, 'window') };
+    const r = document.caretRangeFromPoint && document.caretRangeFromPoint(x, y);
+    return r && el && el.closest('#problem-article [data-annot]') ? { node: r.startContainer, offset: r.startOffset } : null;
+  }
+  function hlTo(x, y) {
+    const a = drawing.a;
+    if (!a) return;
+    if (a.cm) { a.cm.setSelection(a.pos, a.cm.coordsChar({ left: x, top: y }, 'window')); return; }
+    const r = document.caretRangeFromPoint(x, y);
+    if (r) window.getSelection().setBaseAndExtent(a.node, a.offset, r.startContainer, r.startOffset);
+  }
+  function startInk(e) {
+    pencil.started = true;
+    if (ui.annMode === 'hl') { drawing = { kind: 'hl', a: hlAnchor(e.clientX, e.clientY) }; return; }
+    if (!pencil.right) { // the left pane: exactly the red pen / eraser above
+      const [x, y] = overlayPoint(e);
+      if (ui.annMode === 'pen') { drawing = { kind: 'pen', pts: [[x, y]], color: penColor }; layoutStrokes(); } else { drawing = { kind: 'eraser', ops: [] }; eraseAt(x, y, e.clientX, e.clientY); }
+      return;
+    }
+    if (ui.annMode === 'pen') { drawing = { kind: 'pen', right: true, pts: [rightPoint(e)], color: penColor }; layoutRightInk(); } else { drawing = { kind: 'eraser', right: true, ops: [] }; eraseRightAt(rightPoint(e)); }
+  }
+  function onPencilDown(e) {
+    // A Pencil tap on the toolbar is clicked in onPencilUp like any control, with or without a tool on.
+    const qs = !pencil && e.pointerType === 'pen' && pencilInk() && e.target.closest && e.target.closest('#annot-bar button');
+    if (qs) { pencil = { id: e.pointerId, type: 'pen', x0: e.clientX, y0: e.clientY, tap: qs, started: false, switcher: true }; return; }
+    if (pencil || !paperOn()) return;
+    if (e.pointerType === 'touch' || e.button !== 0 || !e.target.closest || e.target.closest(INK_SKIP)) return;
+    if (ui.annMode === 'hl' && e.pointerType !== 'pen') return; // a mouse / trackpad selects text, as on a desktop
+    const side = e.target.closest('#pane-left, #pane-right');
+    if (!side) return;
+    const right = side.id === 'pane-right';
+    const tap = e.target.closest('.orig-ink') ? null : e.target.closest(INK_TAP); // the original's copy is only a picture
+    if (ui.annMode === 'hl' && right && !tap) return; // nothing to highlight on the right
+    pencil = { id: e.pointerId, type: e.pointerType, right, x0: e.clientX, y0: e.clientY, tap, started: false };
+    if (pencil.tap && ui.annMode === 'eraser') { // the eraser on a mark erases it, even over a control
+      const hit = right ? rightHits(rightPoint(e)).length : leftHits(...overlayPoint(e), e.clientX, e.clientY).size;
+      if (hit) pencil.tap = null;
+    }
+    if (pencil.tap) return; // wait: a tap clicks the control, a drag draws
+    e.preventDefault(); // no text selection, focus or editor cursor
+    e.stopPropagation();
+    startInk(e);
+  }
+  function onPencilMove(e) {
+    if (!pencil || e.pointerId !== pencil.id || pencil.switcher) return; // a slip on the toolbar is still a tap
+    if (!pencil.started) {
+      if (Math.hypot(e.clientX - pencil.x0, e.clientY - pencil.y0) < 6) return;
+      swallow = { el: pencil.tap, until: Date.now() + 800 };
+      startInk({ clientX: pencil.x0, clientY: pencil.y0 });
+    }
+    if (!drawing) return;
+    if (drawing.kind === 'hl') { hlTo(e.clientX, e.clientY); return; }
+    if (!drawing.right) { onOverlayMove(e); return; }
+    const p = rightPoint(e);
+    if (drawing.kind === 'pen') {
+      const last = drawing.pts[drawing.pts.length - 1];
+      if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 1.5) return;
+      drawing.pts.push(p);
+      const lp = document.querySelector('#ink-right path.live');
+      if (lp) lp.setAttribute('d', strokePath(drawing.pts));
+    } else eraseRightAt(p);
+  }
+  function onPencilUp(e) {
+    if (!pencil || e.pointerId !== pencil.id) return;
+    const { started, tap, type } = pencil;
+    pencil = null;
+    if (!started) {
+      // A Pencil tap on a control: Safari drops the click once the Pencil's touches are cancelled, so click it here
+      // and let no native click follow (it would toggle an Eliminate button back). A mouse clicks by itself.
+      if (tap && type === 'pen') { tap.click(); swallow = { el: tap, until: Date.now() + 700 }; }
+      return;
+    }
+    if (!drawing) return;
+    if (drawing.kind === 'hl') { drawing = null; highlightSelection(); return; }
+    if (!drawing.right) { onOverlayUp(); return; }
+    const d = drawing;
+    drawing = null;
+    if (d.kind === 'pen') commit(leftPid, [{ op: 'add', ann: { id: newId(), kind: 'ink', pts: d.pts, ...withColor(d.color), w: document.getElementById('pane-right').clientWidth } }]);
+    else { record(leftPid, d.ops); layoutRightInk(); }
+  }
+  // Safari scrolls, selects text or starts Scribble under the Pencil unless its touches are cancelled. Only the
+  // Pencil's ("stylus") touches are, so fingers still scroll and tap; Pencil taps are clicked in onPencilUp.
+  const stylus = (e) => Array.from(e.changedTouches || []).some((t) => t.touchType === 'stylus');
+  function onPencilTouch(e) {
+    if (!pencil || !stylus(e)) return;
+    if (e.cancelable) e.preventDefault();
+    e.stopPropagation(); // the code editor's own touch handling stays out of it
+  }
+  if (IS_IPAD) {
+    document.addEventListener('pointerdown', onPencilDown, true);
+    document.addEventListener('pointermove', onPencilMove, true);
+    document.addEventListener('pointerup', onPencilUp, true);
+    document.addEventListener('pointercancel', onPencilUp, true);
+    ['touchstart', 'touchmove', 'touchend'].forEach((t) => document.addEventListener(t, onPencilTouch, { capture: true, passive: false }));
+    document.addEventListener('click', (e) => { // a tap anywhere else closes the colour menu
+      if (e.target.closest && !e.target.closest('.pen-color-wrap')) setPenMenu(false);
+    });
+    document.addEventListener('click', (e) => {
+      const w = swallow;
+      if (!w || Date.now() > w.until || !w.el.contains(e.target)) return;
+      swallow = null; // cancelling a label's click also stops it from checking its input
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
   }
 
   // ── Sticky notes ──
@@ -989,7 +1335,7 @@
   // ({ type: 'text' | 'tree', text | tree }) are converted when shown (normNote). Note highlights are blue, so they
   // show on yellow.
   const NOTE_MIN = { w: 228, h: 110 };
-  const NOTE_NEW = { w: 260, h: 170 };
+  const NOTE_NEW = { w: 300, h: 210 };
   const NOTE_PAD = 8;  // space between the body's edge and what is in it
   const NOTE_GAP = 8;  // the smallest space between two items
   const GRIP = 12;     // the drag strip at the top of each item
@@ -1011,7 +1357,12 @@
   const noteEl = (id) => { const l = noteLayer(); return l ? l.querySelector(`.snote[data-aid="${id}"]`) : null; };
   const paneEl = (side) => document.getElementById(side === 'right' ? 'pane-right' : 'pane-left');
   const minMap = () => { const s = cur(); return s.noteMin || (s.noteMin = {}); };
-  const toolOf = (id) => noteTool[id] || 'select';
+  // iPad exams and practice: notes have no toolbar of their own; the main toolbar's Pen (with its colour), Highlighter and Eraser
+  // work in them too, Undo / Redo / Clear are the main ones (note changes are already steps in the question's history),
+  // and with no tool on a note is for typing.
+  const noteUnified = () => pencilInk() && padWork(cur());
+  const MAIN_NOTE_TOOL = { pen: 'pen', eraser: 'eraser', hl: 'hl' };
+  const toolOf = (id) => (noteUnified() ? MAIN_NOTE_TOOL[ui.annMode] || 'select' : noteTool[id] || 'select');
   const nhist = (id) => noteHist[id] || (noteHist[id] = { undo: [], redo: [] });
   const ordinal = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
   const noteTime = (a) => a.t || parseInt(String(a.id).slice(1, 9), 36) || 0;
@@ -1167,7 +1518,7 @@
     const it = itemOf(a, k.item);
     return it ? k.pts.map(([x, y]) => [r1(x + it.x), r1(y + it.y)]) : null;
   }
-  const inkHTML = (a) => (a.ink || []).map((k) => { const p = strokeAbs(a, k); return p ? `<path d="${strokePath(p)}"/>` : ''; }).join('');
+  const inkHTML = (a) => (a.ink || []).map((k) => { const p = strokeAbs(a, k); return p ? `<path d="${strokePath(p)}"${inkStyle(k.color)}/>` : ''; }).join('');
   // The smallest size that shows everything in the note.
   function noteMinSize(el, a) {
     let w = 0;
@@ -1200,8 +1551,8 @@
     const btn = (k, label, extra) => `<button type="button" class="ann-btn" data-nt="${k}" title="${label}" aria-label="${label}" ${extra || ''}>${icon(k)}</button>`;
     return `<div class="snote" data-aid="${a.id}" data-tool="${tool}" role="group" aria-label="Sticky note ${n}">
         <div class="snote-bar" data-nd="move" title="Drag to move"><span class="snote-title">Note ${n}</span><span class="snote-btns"><button type="button" class="snote-hbtn" data-nd="min" title="Minimize" aria-label="Minimize note ${n}">–</button><button type="button" class="snote-hbtn snote-x" data-nd="delete" title="Delete this note" aria-label="Delete note ${n}">×</button></span></div>
-        <div class="snote-tools" role="toolbar" aria-label="Note ${n} tools">${NOTE_TOOLS.map(([k, label]) => btn(k, label, `aria-pressed="${tool === k}"`)).join('')}<span class="ann-sep" aria-hidden="true"></span>${btn('undo', 'Undo in this note', h.undo.length ? '' : 'disabled')}${btn('redo', 'Redo in this note', h.redo.length ? '' : 'disabled')}${btn('del', 'Delete selected', noteSel[a.id] ? '' : 'disabled')}${btn('clear', 'Clear this note', filled ? '' : 'disabled')}</div>
-        <div class="snote-body">${filled ? '' : '<p class="snote-empty">Type here, draw, or add a tree.</p>'}<div class="snote-canvas">${a.items.map((it) => itemHTML(a, it)).join('')}<svg class="snote-ink" aria-hidden="true">${inkHTML(a)}</svg></div></div>
+        ${noteUnified() ? '' : `<div class="snote-tools" role="toolbar" aria-label="Note ${n} tools">${NOTE_TOOLS.map(([k, label]) => btn(k, label, `aria-pressed="${tool === k}"`)).join('')}<span class="ann-sep" aria-hidden="true"></span>${btn('undo', 'Undo in this note', h.undo.length ? '' : 'disabled')}${btn('redo', 'Redo in this note', h.redo.length ? '' : 'disabled')}${btn('del', 'Delete selected', noteSel[a.id] ? '' : 'disabled')}${btn('clear', 'Clear this note', filled ? '' : 'disabled')}</div>`}
+        <div class="snote-body">${filled ? '' : `<p class="snote-empty">${noteUnified() ? 'Type here, or draw with the toolbar’s Pen.' : 'Type here, draw, or add a tree.'}</p>`}<div class="snote-canvas">${a.items.map((it) => itemHTML(a, it)).join('')}<svg class="snote-ink" aria-hidden="true">${inkHTML(a)}</svg></div></div>
         <div class="snote-size" data-nd="size" title="Drag to resize"></div>
       </div>`;
   }
@@ -1417,6 +1768,38 @@
     el.dataset.tool = noteTool[id];
     el.querySelectorAll('.snote-tools [aria-pressed]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.nt === noteTool[id])));
   }
+  // iPad: the toolbar sits on the divider in the middle of the work area, so a new note goes where it is wholly visible
+  // and clear of the toolbar (measured, in layer pixels): below it, else above it, else to its left or right, 20px
+  // away; stepping past another new note as above while it stays so. null when no such spot (or no toolbar) is found.
+  function clearOfToolbar(layer) {
+    const bar = document.getElementById('annot-bar');
+    const r = bar && bar.getBoundingClientRect();
+    if (!r || !r.width) return null;
+    const L = layer.getBoundingClientRect();
+    const t = { l: r.left - L.left, t: r.top - L.top, r: r.right - L.left, b: r.bottom - L.top };
+    const foot = document.querySelector('.p-footer');
+    const ft = foot ? foot.getBoundingClientRect().top : Infinity;
+    // the part of the layer on screen (in portrait the work area can run past the bottom of the window)
+    const V = { l: Math.max(0, -L.left), t: Math.max(0, -L.top), r: Math.min(layer.clientWidth, window.innerWidth - L.left), b: Math.min(layer.clientHeight, window.innerHeight - L.top, (ft > 0 ? ft : Infinity) - L.top) };
+    const { w, h } = NOTE_NEW;
+    const G = 20;
+    const ok = (x, y) => x >= V.l && y >= V.t && x + w <= V.r && y + h <= V.b && (x + w <= t.l || x >= t.r || y + h <= t.t || y >= t.b);
+    const taken = (x, y) => [...layer.querySelectorAll('.snote')].some((n) => Math.abs(n.offsetLeft - x) < 12 && Math.abs(n.offsetTop - y) < 12);
+    const cx = Math.round((V.l + V.r - w) / 2);
+    const cy = Math.round((V.t + V.b - h) / 2);
+    const tries = [[cx, Math.round(t.b + G)], [cx, Math.round(t.t - G - h)], [Math.round(t.l - G - w), cy], [Math.round(t.r + G), cy]];
+    for (const [x0, y0] of tries) {
+      if (!ok(x0, y0)) continue;
+      if (!taken(x0, y0)) return [x0, y0];
+      for (const [dx, dy] of [[28, 28], [-28, 28], [28, -28], [-28, -28]]) { // past another new note, staying clear
+        let [x, y] = [x0, y0];
+        for (let i = 0; i < 12 && taken(x, y) && ok(x + dx, y + dy); i++) { x += dx; y += dy; }
+        if (!taken(x, y)) return [x, y];
+      }
+      return [x0, y0];
+    }
+    return null;
+  }
   // The note button makes a note right away, in the middle of the work area (both panes). If another note already
   // starts there, the new one steps down and to the right so it doesn't hide it.
   function createNote() {
@@ -1425,15 +1808,19 @@
     flushNoteEdit();
     let px = Math.round((layer.clientWidth - NOTE_NEW.w) / 2);
     let py = Math.round((layer.clientHeight - NOTE_NEW.h) / 2);
-    const taken = () => [...layer.querySelectorAll('.snote')].some((n) => Math.abs(n.offsetLeft - px) < 12 && Math.abs(n.offsetTop - py) < 12);
-    for (let i = 0; i < 12 && taken(); i++) { px += 28; py += 28; }
-    px = Math.max(0, Math.min(px, layer.clientWidth - NOTE_NEW.w));
-    py = Math.max(0, Math.min(py, layer.clientHeight - NOTE_NEW.h));
+    const takenAt = (x, y) => [...layer.querySelectorAll('.snote')].some((n) => Math.abs(n.offsetLeft - x) < 12 && Math.abs(n.offsetTop - y) < 12);
+    const spot = pencilInk() && clearOfToolbar(layer);
+    if (spot) [px, py] = spot;
+    else {
+      for (let i = 0; i < 12 && takenAt(px, py); i++) { px += 28; py += 28; }
+      px = Math.max(0, Math.min(px, layer.clientWidth - NOTE_NEW.w));
+      py = Math.max(0, Math.min(py, layer.clientHeight - NOTE_NEW.h));
+    }
     const a = Object.assign({ id: newId(), kind: 'note' }, anchorAt(px, py), NOTE_NEW, { t: Date.now(), items: [] });
     if (['pen', 'eraser'].includes(ui.annMode)) setAnnMode('none'); // type in the new note, not draw on the page
     commit(leftPid, [{ op: 'add', ann: a }]);
     startText(a.id, [0, GRIP]);
-    announce('Note added. Type, or use its toolbar to highlight, draw or add a tree.');
+    announce(noteUnified() ? 'Note added. Type, or use the toolbar to draw, highlight or erase in it.' : 'Note added. Type, or use its toolbar to highlight, draw or add a tree.');
   }
 
   // ── Minimizing: a note is pulled into its numbered icon in the bottom-left corner, and pushed back out of it ──
@@ -1761,7 +2148,7 @@
           const rects = rectsOf(a, sizes);
           const on = a.items.find((it) => { const r = rects[it.id]; return x0 >= r.x && x0 <= r.x + r.w && y0 >= r.y && y0 <= r.y + r.h; });
           const pts = on ? k.pts.map(([x, y]) => [r1(x - on.x), r1(y - on.y)]) : k.pts;
-          a.ink = [...(a.ink || []), Object.assign({ id: newId(), pts }, on ? { item: on.id } : {})];
+          a.ink = [...(a.ink || []), Object.assign({ id: newId(), pts }, on ? { item: on.id } : {}, noteUnified() ? withColor(penColor) : {})];
         });
       } else if (k.changed) { recordNote(leftPid, k.before, cloneAnn(live)); renderNotes(); }
       return;
@@ -2519,6 +2906,7 @@
     detachEditors();
     Object.keys(editors).forEach((k) => delete editors[k]);
     Object.keys(history).forEach((k) => delete history[k]);
+    drawing = null; // a stroke still under the Pencil belongs to the session being left; lifting it later adds nothing
     leftPid = null;
     cachedFor = null;
     ui.annMode = 'none';
@@ -2576,6 +2964,7 @@
   }
   function saveAndLeave() {
     const s = store.exam;
+    if (s.timer && s.timer.runningSince && timeLeft(s.timer) <= 0) { submitExam(true); return; } // time ran out first
     pauseTimer(s.timer);
     stopActive(s);
     s.leftAt = Date.now();
@@ -2589,6 +2978,7 @@
   }
   function resumeExam() {
     const s = store.exam;
+    if (s.timer && !s.timer.runningSince && s.timer.remainingMs <= 0) { submitExam(true); return; } // left with no time on the clock
     s.leftAt = null;
     if (s.timer && s.timer.remainingMs > 0 && !s.timer.runningSince) s.timer.runningSince = Date.now();
     if (!s.activeSince) s.activeSince = Date.now();
@@ -2975,7 +3365,7 @@
     const review = isReview(cur());
     const bar = `<div class="annot-bar" id="annot-bar" role="toolbar" aria-label="Annotation tools">
         ${tool('hl', 'Highlighter (select text)', 'aria-pressed="false"')}
-        ${tool('pen', 'Red pen', 'aria-pressed="false"')}
+        ${tool('pen', 'Red pen', 'aria-pressed="false"')}${pencilInk() ? penColorHTML() : ''}
         ${tool('eraser', 'Eraser', 'aria-pressed="false"')}
         ${tool('note', 'New sticky note')}
         <span class="ann-sep" aria-hidden="true"></span>
@@ -3004,7 +3394,7 @@
         <div class="annot-text" data-annot="outro"></div>
         <svg class="annot-layer" aria-hidden="true"></svg>
       </article>
-      ${review ? '<section class="review-work" id="review-work" aria-label="Review workspace"></section>' : ''}`;
+      ${review ? `<section class="review-work" id="review-work" aria-label="Review workspace">${reviewHeadHTML()}<div id="diagram-slot"></div><div id="review-parts"></div></section>` : ''}`;
   }
   // ── Run Code (Phase 6A): runs the problem's scratch code with Python in the browser (runner.js) ──
   // Phase 6B: when a verified suite exists for the problem (data/test_suites.js), the same click also runs it.
@@ -3336,19 +3726,21 @@
     return `<ul class="choices ${q.mono ? 'mono' : ''}" role="${multi ? 'group' : 'radiogroup'}" aria-label="Answer choices for part ${esc(q.label)}">${items}</ul>`;
   }
 
-  function officialAnswerHTML(q) {
+  // heading: Review's card always has one (practice keeps its own, shown only with a solution).
+  function officialAnswerHTML(q, heading) {
     const key = ANSWER_KEY[q.id];
-    if (!key) return '<p>Solution not yet available.</p>';
+    const none = `${heading ? `<div class="title">${heading}</div>` : ''}<p>Solution not yet available.</p>`;
+    if (!key) return none;
     let ans;
     if (isMC(q)) ans = (Array.isArray(key.correct) ? key.correct : [key.correct]).map((i) => q.choices[i]).join('\n');
     else if (key.accepted && key.accepted.length) ans = key.accepted[0];
-    else return '<p>Solution not yet available.</p>';
+    else return none;
     const alts = !isMC(q) && key.accepted.length > 1
       ? `<div class="alts">Also accepted: ${key.accepted.slice(1).map((x) => `<code>${esc(x)}</code>`).join(', ')}</div>` : '';
     const expl = key.explanation
       ? `<div class="expl-label">Explanation <span>written for this site, not official</span></div><div class="rich">${rich(key.explanation)}</div>`
       : '<div class="alts">Explanation not yet available.</div>';
-    return `<div class="title">Official answer</div><pre>${esc(ans)}</pre>${alts}${expl}`;
+    return `<div class="title">${heading || 'Official answer'}</div><pre>${esc(ans)}</pre>${alts}${expl}`;
   }
 
   function renderFeedback(q, s) {
@@ -3374,8 +3766,8 @@
   }
 
   // ── Review (right pane): submitted answer, current review answer, official answer ──
-  const STATUS_LABEL = { correct: 'Correct', incorrect: 'Incorrect', skipped: 'Unanswered', staff: 'Graded by Course Staff' };
-  const badgeCls = (st) => (st === 'skipped' ? 'skipped' : st === 'staff' ? 'ungraded' : st);
+  const STATUS_LABEL = { correct: 'Correct', incorrect: 'Incorrect', skipped: 'Unanswered', staff: 'Graded by Course Staff', handwritten: 'Handwritten · not graded' };
+  const badgeCls = (st) => (st === 'skipped' ? 'skipped' : st === 'staff' || st === 'handwritten' ? 'ungraded' : st);
   function sameAnswer(x, y) {
     const blank = (v) => v === undefined || v === null || (Array.isArray(v) ? !v.length : String(v).trim() === '');
     if (blank(x) || blank(y)) return blank(x) && blank(y);
@@ -3401,46 +3793,222 @@
     return v ? String(v) : '';
   }
   function renderReviewPanel(q, a, w) {
-    const st = statusIn(a, q.id);
+    const st = shownStatus(a, q.id);
     const pts = hasPoints(q) ? `${fmtPts(q.points)} pt` : 'points not published';
+    // A typed answer, and/or the handwriting (mounted into the slot below); "No answer submitted" only with neither.
     const sub = isMC(q) ? submittedChoicesHTML(q, a)
-      : hasAnswer(a, q.id) ? `<pre class="rv-pre">${esc(a.answers[q.id])}</pre>` : '<p class="rv-none">No answer submitted.</p>';
-    const changed = !sameAnswer(w.answers[q.id], a.answers[q.id]);
-    const now = answerText(q, w.answers[q.id]);
-    // Learning feedback on the review answer only; it never changes the stored grade.
-    const match = changed && now && autoGradable(q) ? (examStatus(w, q.id) === 'correct' ? ' · matches the official answer' : ' · doesn’t match the official answer') : '';
-    const current = changed
-      ? `<div class="rv-block rv-current"><div class="rv-k">Current review answer <span>(not scored${match})</span></div>
-          ${now ? `<pre class="rv-pre">${esc(now)}</pre>` : '<p class="rv-none">Cleared.</p>'}
-          <button class="btn btn-sm" data-action="reset-answer" data-q="${q.id}">Reset to submitted answer</button></div>`
-      : '<p class="rv-same">Your review answer is the same as what you submitted.</p>';
-    const verdict = {
-      correct: '<div class="verdict">✓ Correct</div>',
-      incorrect: '<div class="verdict">✗ Incorrect</div>',
-      skipped: '<div class="verdict">Unanswered</div>',
-      staff: '<div class="verdict">Graded by Course Staff</div><p class="staff-note">This question requires manual grading and will not be graded on this platform.</p>',
-    }[st];
+      : hasAnswer(a, q.id) ? `<pre class="rv-pre">${esc(a.answers[q.id])}</pre>` : st === 'handwritten' ? '' : '<p class="rv-none">No answer submitted.</p>';
+    // The right pane only compares: the submitted answer and the official one. The editable review answer is on the left.
+    // The grade stays with the submitted answer (the badge, and these notes); the official card is the same for all.
+    const note = {
+      staff: '<p class="staff-note rv-note">This question requires manual grading and will not be graded on this platform.</p>',
+      handwritten: '<p class="staff-note rv-note">You answered this part in handwriting. It isn’t graded on this platform: compare it with the official answer.</p>',
+    }[st] || '';
     return `<div class="rv-part" id="rv-${q.id}">
       <p class="q-head"><span class="lbl">${esc(q.label)}</span>${promptParts(q.prompt).head}
         <span class="part-meta">${pts} · <span class="badge ${badgeCls(st)}">${STATUS_LABEL[st]}</span></span></p>${promptParts(q.prompt).below}
-      <div class="rv-block"><div class="rv-k">Your submitted answer</div>${sub}</div>
-      ${current}
-      <div class="feedback ${{ correct: 'good', incorrect: 'bad', skipped: 'info', staff: 'info' }[st]}">${verdict}${officialAnswerHTML(q)}</div>
+      <div class="rv-block"><div class="rv-k">Your submitted answer</div>${sub}${origInk(a, q.problem).length ? `<div class="orig-slot" data-orig="part" data-q="${q.id}"></div>` : ''}${note}</div>
+      <div class="feedback info rv-official">${officialAnswerHTML(q, 'Official Answer')}</div>
     </div>`;
   }
   function renderReviewRight(g, w) {
     const a = attemptById(w.reviewOf);
     return `<section class="question review-right" aria-label="Question ${w.index + 1}: submitted and official answers">
-      <div class="q-bar"><span class="q-num">${w.index + 1}</span><span class="rv-title">Submitted &amp; official answers</span>
+      <div class="q-bar"><span class="q-num">${w.index + 1}</span><span class="rv-title">Submitted &amp; official answers</span>${handwrittenIn(a, g).loose ? '<span class="badge ungraded hw-q" title="Handwriting on this question that isn’t inside one part’s answer: see Other Submitted Handwriting">Handwritten work</span>' : ''}
         <span class="qtype">${g.ids.length > 1 ? `${g.ids.length} parts` : TYPE_LABEL[QMAP[g.ids[0]].type]}</span></div>
+      ${origInk(a, g.pid).length ? '<div class="orig-slot" data-orig="full"></div>' : ''}${PMAP[g.pid].figure ? '<div class="orig-slot" data-orig="diagram"></div>' : ''}
       ${g.ids.map((id) => renderReviewPanel(QMAP[id], a, w)).join('<hr class="part-sep">')}
+      ${origInk(a, g.pid).length ? '<div class="orig-slot" data-orig="other"></div>' : ''}
     </section>`;
   }
+
+  // ── Review: the original handwriting (iPad Phase 2D-2) ──
+  // The submitted attempt's answer-pane strokes (attempt.handwriting[pid], Phase 2A) were drawn over the exam's right
+  // pane, in its coordinates at width w. Review lays that pane out differently, so the strokes are shown over a
+  // read-only copy of the exam pane rebuilt from the attempt (the same render functions, same width, same CSS), and
+  // both are scaled together to fit. Each stroke that lies wholly within one part goes in that part's "Your submitted
+  // answer" (a slice of the copy); within the diagram, in "Original Diagram Work"; anything else (the question bar,
+  // across parts) in "Other Submitted Handwriting". When the copy can't be trusted to match (strokes drawn at
+  // different widths, or outside the rebuilt pane), the whole pane is shown once instead, as submitted.
+  // Reads only: nothing here writes to the attempt, and the copy is inert, without ids, names or actions.
+  const origInk = (a, pid) => { const hw = a && isObj(a.handwriting) ? a.handwriting[pid] : null; return Array.isArray(hw) ? hw : []; };
+  const origLayouts = new Map(); // `${attempt id}|${pid}|${w}` -> measured copy (layouts are deterministic)
+  const ORIG_STRIP = ['id', 'for', 'name', 'data-action', 'data-qid', 'data-blank', 'data-i', 'data-pid', 'data-ann', 'data-dg', 'data-dgl', 'data-did', 'data-slot',
+    'aria-controls', 'aria-labelledby', 'aria-describedby', 'aria-pressed', 'aria-current', 'tabindex'];
+  function origCopyHTML(a, g) {
+    const fig = PMAP[g.pid].figure;
+    const keep = ui.activeBlank;
+    ui.activeBlank = null; // no part highlighted in the copy
+    let html;
+    try { html = `<div class="o-dg">${fig ? renderDiagram(fig) : ''}</div><div class="o-body">${renderRight(g, a)}</div>`; } finally { ui.activeBlank = keep; }
+    return origClean(html);
+  }
+  function origClean(html) {
+    const t = document.createElement('template');
+    t.innerHTML = html;
+    t.content.querySelectorAll('*').forEach((el) => {
+      if (el.dataset && el.dataset.part) { el.dataset.opart = el.dataset.part; delete el.dataset.part; }
+      ORIG_STRIP.forEach((k) => el.removeAttribute(k));
+      if (el.matches('input, textarea, button, select')) { el.setAttribute('disabled', ''); el.setAttribute('tabindex', '-1'); }
+    });
+    return t.innerHTML;
+  }
+  // The submitted diagram's labels, lists, arrows and strokes (attempt.diagrams), drawn by the diagram's own code into
+  // the copy's canvas. Arrow layout writes into the items it lays out, so it gets a copy of them, never the attempt's;
+  // it also shares one geometry cache with the live diagram, which is laid out again afterwards.
+  function origDrawDiagram(canvas, pid, a) {
+    const fig = PMAP[pid].figure;
+    const list = JSON.parse(JSON.stringify((isObj(a.diagrams) && a.diagrams[pid]) || []));
+    if (!list.length) return 0;
+    const keep = { canvas: dg.canvas, list: dg.list, slots: dg.slots, selected: dg.selected, drag: dg.drag };
+    Object.assign(dg, { canvas, list, slots: fig.slots || [], selected: null, drag: null });
+    try { drawDiagram(); } finally {
+      Object.assign(dg, keep);
+      if (dg.canvas && dg.canvas.isConnected && dg.list) drawInk();
+    }
+    return list.length;
+  }
+  // The exam's pane at width w: one column of panes (portrait, narrow padding) when w is a whole iPad's width.
+  const origNarrow = (w) => w > 690 && w <= 822;
+  const origCtx = (w) => `p-main pencil-ink orig-ctx${origNarrow(w) ? ' orig-narrow' : ''}`;
+  function origLayout(a, g, w) {
+    const key = `${a.id}|${g.pid}|${w}`;
+    if (origLayouts.has(key)) return origLayouts.get(key);
+    const html = origCopyHTML(a, g);
+    const host = document.createElement('div');
+    host.className = `${origCtx(w)} orig-measure`;
+    host.setAttribute('aria-hidden', 'true');
+    host.inert = true;
+    host.innerHTML = `<div class="pane pane-right orig-pane" style="width:${w}px">${html}</div>`;
+    document.body.appendChild(host);
+    const pane = host.firstChild;
+    const canvas = pane.querySelector('.dg-canvas');
+    const dgItems = canvas ? origDrawDiagram(canvas, g.pid, a) : 0; // drawn here, unscaled, so arrows land right
+    const top0 = pane.getBoundingClientRect().top + pane.clientTop;
+    const left0 = pane.getBoundingClientRect().left + pane.clientLeft;
+    const h = pane.scrollHeight;
+    const dgEl = pane.querySelector('.o-dg > .dg');
+    const dgBox = dgEl && dgEl.getBoundingClientRect();
+    const els = Array.from(pane.querySelectorAll('[data-opart]'));
+    const tops = els.map((el) => el.getBoundingClientRect().top - top0);
+    const ansBox = (el) => { const b = el.querySelector('.answer-box'); const r = b && b.getBoundingClientRect(); return r ? [r.top - top0, r.bottom - top0, r.left - left0, r.right - left0] : null; };
+    const layout = {
+      html: dgItems ? origClean(pane.innerHTML) : html, w, h, dgItems,
+      dg: dgBox ? [dgBox.top - top0, dgBox.bottom - top0] : null,
+      parts: els.map((el, i) => ({ id: el.dataset.opart, top: tops[i], bottom: i + 1 < tops.length ? tops[i + 1] : h, ans: ansBox(el) })),
+    };
+    host.remove();
+    origLayouts.set(key, layout);
+    return layout;
+  }
+  const origList = (a, pid) => origInk(a, pid).filter((k) => isObj(k) && Array.isArray(k.pts) && k.pts.length);
+  function origWidth(list) { // the width most of it was drawn at (else this pane's)
+    const counts = {};
+    list.forEach((k) => { if (k.w > 0) counts[k.w] = (counts[k.w] || 0) + 1; });
+    const ws = Object.keys(counts).sort((x, y) => counts[y] - counts[x]);
+    const pane = document.getElementById('pane-right');
+    return ws.length ? Number(ws[0]) : (pane && pane.clientWidth) || 590;
+  }
+  // Handwritten answers (shown as submitted, never scored): a written part (not a choice) counts as answered in
+  // handwriting when a stroke sorted to that part (wholly inside it, see origSort) crosses its answer box and is
+  // more than a dot. Strokes elsewhere in a part are notes on the question; strokes that couldn't be sorted to one
+  // part (or a whole-pane fallback) only mark the question ("Handwritten work"), never a part.
+  const handCache = new Map(); // `${attempt id}|${pid}` -> { parts: Set, loose }
+  function handwrittenIn(a, g) {
+    const key = `${a.id}|${g.pid}`;
+    if (handCache.has(key)) return handCache.get(key);
+    const out = { parts: new Set(), loose: false };
+    const list = origList(a, g.pid);
+    if (list.length) {
+      const L = origLayout(a, g, origWidth(list));
+      const sorted = origSort(list, L);
+      const real = (k) => k.pts.reduce((t, p, i) => t + (i ? Math.hypot(p[0] - k.pts[i - 1][0], p[1] - k.pts[i - 1][1]) : 0), 0) >= 12;
+      const crosses = (k, [t, b, l, r]) => k.pts.some(([x, y]) => x >= l - 4 && x <= r + 4 && y >= t - 4 && y <= b + 4);
+      if (sorted.full) out.loose = list.some(real);
+      else {
+        Object.entries(sorted.parts).forEach(([id, ks]) => {
+          const p = L.parts.find((x) => x.id === id);
+          if (!isMC(QMAP[id]) && p && p.ans && ks.some((k) => real(k) && crosses(k, p.ans))) out.parts.add(id);
+        });
+        out.loose = sorted.other.some(real);
+      }
+    }
+    handCache.set(key, out);
+    return out;
+  }
+  // A part's status as shown: its frozen grade, except that a written part left blank but answered in handwriting
+  // shows as a handwritten answer (not graded). The attempt's grades and score never change.
+  function shownStatus(a, id) {
+    const st = statusIn(a, id);
+    if (st !== 'skipped' || isMC(QMAP[id])) return st;
+    const g = a.groups.find((x) => x.ids.includes(id));
+    return g && handwrittenIn(a, g).parts.has(id) ? 'handwritten' : st;
+  }
+  const origBox = (k) => { const ys = k.pts.map((p) => p[1]); return [Math.min(...ys), Math.max(...ys)]; };
+  // Sort the strokes: { full: [...] } when the copy can't be trusted, else { parts: { id: [...] }, diagram, other }.
+  function origSort(list, L) {
+    const T = 6;
+    const fits = list.every((k) => k.w === L.w && k.pts.every(([x, y]) => x >= -12 && x <= L.w + 12 && y >= -12 && y <= L.h + 24));
+    if (!fits) return { full: list };
+    const out = { parts: {}, diagram: [], other: [] };
+    list.forEach((k) => {
+      const [y0, y1] = origBox(k);
+      const inside = L.parts.filter((p) => y0 >= p.top - T && y1 <= p.bottom + T);
+      const mid = (y0 + y1) / 2;
+      const part = inside.length === 1 ? inside[0] : inside.find((p) => mid >= p.top && mid < p.bottom);
+      if (part) (out.parts[part.id] || (out.parts[part.id] = [])).push(k);
+      else if (L.dg && y0 >= L.dg[0] - T && y1 <= L.dg[1] + T) out.diagram.push(k);
+      else out.other.push(k);
+    });
+    return out;
+  }
+  // One read-only view: the copy, cut to [y0, y1) and scaled to the slot's width, with these strokes over it.
+  function origView(slot, L, strokes, y0, y1, label, tag = 'Original handwriting · as submitted · read-only') {
+    const k = Math.min(1, (slot.clientWidth || L.w) / L.w);
+    const top = Math.max(0, y0), bottom = Math.min(L.h, y1);
+    const paths = strokes.map((s) => `<path d="${strokePath(s.pts)}"${inkStyle(s.color)}/>`).join('');
+    return `<figure class="orig-ink" role="img" aria-label="${esc(label)}">
+      <figcaption class="orig-tag">${tag}</figcaption>
+      <div class="orig-clip" style="height:${Math.ceil((bottom - top) * k)}px">
+        <div class="${origCtx(L.w)}" inert aria-hidden="true" style="width:${L.w}px;transform:scale(${k}) translateY(${-top}px)">
+          <div class="pane pane-right orig-pane" style="width:${L.w}px">${L.html}<svg class="orig-svg" width="${L.w}" height="${L.h}">${paths}</svg></div>
+        </div>
+      </div></figure>`;
+  }
+  function mountOriginalInk(g, w) {
+    const body = document.getElementById('right-body');
+    const slots = body ? body.querySelectorAll('[data-orig]') : [];
+    if (!slots.length) return;
+    const a = attemptById(w.reviewOf);
+    const list = origList(a, g.pid);
+    const L = origLayout(a, g, origWidth(list));
+    const sorted = list.length ? origSort(list, L) : { parts: {}, diagram: [], other: [] };
+    const pad = 8; // a little room around a slice, so stroke ends aren't cut
+    slots.forEach((slot) => {
+      const kind = slot.dataset.orig;
+      let html = '';
+      if (kind === 'full' && sorted.full) {
+        html = `<h4 class="orig-h">Original answer pane</h4><p class="orig-note">Your handwriting is shown over the whole answer pane as you saw it, because it couldn’t be matched to single parts.</p>${origView(slot, L, sorted.full, 0, L.h, 'Your original handwriting over the answer pane')}`;
+      } else if (kind === 'part' && sorted.parts && sorted.parts[slot.dataset.q]) {
+        const p = L.parts.find((x) => x.id === slot.dataset.q);
+        html = origView(slot, L, sorted.parts[p.id], p.top - pad, p.bottom + pad, `Your original handwriting for part ${QMAP[p.id].label}`);
+      } else if (kind === 'diagram' && L.dg) {
+        const ink = sorted.full ? [] : sorted.diagram; // with the whole pane shown, its strokes are there
+        const none = !ink.length && !L.dgItems && !sorted.full ? '<p class="orig-note">Nothing was drawn or typed on this diagram.</p>' : '';
+        html = `<h4 class="orig-h">Original Diagram Work</h4>${none}${origView(slot, L, ink, L.dg[0] - pad, L.dg[1] + pad, 'Your submitted environment diagram', 'Submitted diagram · read-only')}`;
+      } else if (kind === 'other' && sorted.other && sorted.other.length) {
+        const ys = sorted.other.flatMap(origBox);
+        html = `<h4 class="orig-h">Other Submitted Handwriting</h4>${origView(slot, L, sorted.other, Math.min(...ys) - 40, Math.max(...ys) + 40, 'Your other original handwriting on this question')}`;
+      }
+      slot.innerHTML = html;
+    });
+  }
   // The editable copy (left pane, under the problem): the normal part renderer, without feedback.
+  // Its heading and editable diagram are built with the left pane (the diagram once per problem); the parts re-render.
+  const reviewHeadHTML = () => `<div class="rw-head"><h3>Your review workspace</h3>
+        <p class="hint">Try the question again here. Changes are saved separately; your submitted answers and score don’t change.</p></div>`;
   function renderReviewWork(g, w) {
-    return `<div class="rw-head"><h3>Your review workspace</h3>
-        <p class="hint">Try the question again here. Changes are saved separately; your submitted answers and score don’t change.</p></div>
-      ${g.ids.map((id) => renderPart(QMAP[id], w)).join('<hr class="part-sep">')}`;
+    return g.ids.map((id) => renderPart(QMAP[id], w)).join('<hr class="part-sep">');
   }
 
   function renderPart(q, s) {
@@ -3457,7 +4025,7 @@
           : q.type === 'code' ? '<p class="selfcheck-note">Self-check: code responses are saved but not auto-graded. Show the solution to compare.</p>' : '<p class="selfcheck-note">Checked against the official answer, ignoring spaces and quote style.</p>'}`;
     }
     const confirming = ui.confirmReveal === id;
-    const canCheck = q.type !== 'code' && !revealed;
+    const canCheck = q.type !== 'code' && !revealed && !IS_IPAD; // iPad practice: Show Solution only
     // Exams never offer Check Answer / Show Solution; feedback exists only in practice and in post-submit review.
     const actions = exam ? '' : `<div class="q-actions">
       ${canCheck ? `<button class="btn btn-primary" data-action="check" ${hasAnswer(s, id) ? '' : 'disabled'}>Check Answer</button>` : ''}
@@ -3598,7 +4166,7 @@
       <div id="p-banner">${bannerHTML(s)}</div>
       <div class="p-main">
         <div class="pane pane-left" id="pane-left"></div>
-        <div class="pane pane-right" id="pane-right"><div id="diagram-slot"></div><div id="right-body"></div></div>
+        <div class="pane pane-right" id="pane-right">${isReview(s) ? '' : '<div id="diagram-slot"></div>'}<div id="right-body"></div>${IS_IPAD ? '<svg class="annot-layer ink-right" id="ink-right" aria-hidden="true"></svg>' : ''}</div>
         <div class="note-layer" id="note-layer"></div>
       </div>
       <footer class="p-footer${isExam(s) ? ' exam' : ''}" id="p-footer">${footerHTML(s)}</footer>
@@ -3697,7 +4265,7 @@
     });
     const order = Object.fromEntries(ALL_TOPICS.map((t, i) => [t.id, i]));
     const topics = Object.values(tally).sort((x, y) => y.parts.length - x.parts.length || order[x.id] - order[y.id]);
-    const unanswered = a.ids.filter((id) => statusIn(a, id) === 'skipped').length;
+    const unanswered = a.ids.filter((id) => shownStatus(a, id) === 'skipped').length;
     return { missed, topics, unanswered, staff: a.ids.filter((id) => statusIn(a, id) === 'staff').length };
   }
   // Up to `n` existing question groups tagged with the topic. Groups outside this attempt come first; ranking is
@@ -3772,10 +4340,11 @@
   // Results for a submitted attempt, read from the grades and score frozen at submission.
   function renderExamResults(a) {
     const sc = a.score;
+    const hand = a.ids.filter((id) => shownStatus(a, id) === 'handwritten').length; // shown only; the frozen score is unchanged
     const rowsFor = (g, gi) => g.ids.map((id) => {
       const q = QMAP[id];
-      const st = statusIn(a, id);
-      const pts = !autoGradable(q) ? '—' : hasPoints(q) ? `${fmtPts(st === 'correct' ? q.points : 0)} / ${fmtPts(q.points)} pts` : 'points n/a';
+      const st = shownStatus(a, id);
+      const pts = !autoGradable(q) || st === 'handwritten' ? '—' : hasPoints(q) ? `${fmtPts(st === 'correct' ? q.points : 0)} / ${fmtPts(q.points)} pts` : 'points n/a';
       return `<li class="part-row">
         <span class="pr-lbl">${esc(q.label)}</span>
         <span class="pr-topics">${q.topics.map((t) => esc(topicLabel(t))).join(', ')}</span>
@@ -3787,9 +4356,10 @@
     const full = a.kind === 'full'; // a full past exam gets one Walkthrough link, beside the Questions heading
     const groups = a.groups.map((g, gi) => {
       const pr = PMAP[g.pid];
-      const c = { correct: 0, incorrect: 0, skipped: 0, staff: 0 };
-      g.ids.forEach((id) => { c[statusIn(a, id)]++; });
-      const summary = ['correct', 'incorrect', 'skipped', 'staff'].filter((k) => c[k]).map((k) => `${c[k]} ${STATUS_LABEL[k].toLowerCase()}`).join(' · ');
+      const c = { correct: 0, incorrect: 0, skipped: 0, staff: 0, handwritten: 0 };
+      g.ids.forEach((id) => { c[shownStatus(a, id)]++; });
+      const summary = ['correct', 'incorrect', 'skipped', 'staff', 'handwritten'].filter((k) => c[k]).map((k) => `${c[k]} ${STATUS_LABEL[k].toLowerCase()}`)
+        .concat(handwrittenIn(a, g).loose ? ['handwritten work'] : []).join(' · ');
       const walk = full ? '' : walkLinkHTML(pr.exam); // topic-based: each group links its own exam's playlist
       return `<details class="rq-group${walk ? ' has-walk' : ''}"${c.incorrect ? ' open' : ''}>
         <summary><span class="rq-n">${gi + 1}</span><span class="rq-title">${esc(pr.title)}<small>${esc(SRC[pr.exam].label)} · Q${esc(pr.number)} · ${g.ids.length} part${g.ids.length === 1 ? '' : 's'}</small></span><span class="rq-sum">${summary}</span>${walk ? `<span class="rq-walk">${walk}</span>` : ''}</summary>
@@ -3811,8 +4381,9 @@
         <div class="stats">
           <div class="stat good"><div class="v">${sc.counts.correct}</div><div class="k">Correct parts</div></div>
           <div class="stat bad"><div class="v">${sc.counts.incorrect}</div><div class="k">Incorrect parts</div></div>
-          <div class="stat"><div class="v">${sc.counts.skipped}</div><div class="k">Unanswered parts</div></div>
+          <div class="stat"><div class="v">${sc.counts.skipped - hand}</div><div class="k">Unanswered parts</div></div>
           <div class="stat"><div class="v">${sc.counts.staff}</div><div class="k">Graded by Course Staff</div></div>
+          ${hand ? `<div class="stat"><div class="v">${hand}</div><div class="k">Handwritten · not graded</div></div>` : ''}
         </div>
       </section>
       <p class="disclaimer-strong">All grades on this platform are for practice purposes only and do not predict your actual exam scores.</p>
@@ -3852,7 +4423,11 @@
 
     if (ui.screen === 'practice') {
       const s = cur();
-      if (cachedFor !== s) { dropLeftCaches(); cachedFor = s; } // new/restarted set: nothing carried over
+      if (cachedFor !== s) { // new/restarted set: nothing carried over
+        dropLeftCaches();
+        cachedFor = s;
+        if (padWork(s)) ui.annMode = 'pen'; // an iPad exam or practice set opens ready for the Pencil; questions keep the choice
+      }
       const g = curGroup();
       const shell = `${ui.view}:${ui.attemptId || ''}`; // practice, exam and review each get a fresh shell
       if (!document.getElementById('pane-left') || app.dataset.shell !== shell) {
@@ -3867,12 +4442,27 @@
       }
       const right = document.getElementById('pane-right');
       const sameGroup = right.dataset.group === g.pid;
+      const tops = sameGroup && padWork(s) && !isExam(s) ? partTops() : null;
       document.getElementById('right-body').innerHTML = isReview(s) ? renderReviewRight(g, s) : renderRight(g, s); // the diagram beside it is left alone
+      if (tops) followParts(s, g.pid, tops);
+      if (isReview(s)) mountOriginalInk(g, s);
       right.dataset.group = g.pid;
       if (!sameGroup) right.scrollTop = 0;
       if (leftPid !== g.pid) buildLeft(g);
-      const work = document.getElementById('review-work'); // review: the editable answers live under the problem
-      if (work) work.innerHTML = renderReviewWork(g, s);
+      if (IS_IPAD) {
+        document.querySelector('.p-main').classList.toggle('pencil-ink', pencilInk());
+        syncPaper();
+        updatePenColor();
+        layoutRightInk();
+        if (!right.dataset.inkWatch) { // keep the layer as tall as the pane's content
+          right.dataset.inkWatch = '1';
+          const ro = new ResizeObserver(() => layoutRightInk());
+          ro.observe(document.getElementById('right-body'));
+          ro.observe(document.getElementById('diagram-slot'));
+        }
+      }
+      const work = document.getElementById('review-parts'); // review: the editable answers live under the problem
+      if (work) { work.innerHTML = renderReviewWork(g, s); if (IS_IPAD) syncPaper(); } // re-rendered boxes stay paper
       fillBlanks(editors[g.pid]);
       document.title = `Q${s.index + 1} · ${isExam(s) ? (isReview(s) ? 'Exam review' : 'Exam') : 'CS 61A & C88C Exam Practice'}`;
     } else {
@@ -4164,6 +4754,13 @@
     if (k === 'hl') {
       if (highlightSelection()) { if (ui.annMode !== 'hl') setAnnMode('hl'); } else setAnnMode('hl');
     } else if (k === 'pen' || k === 'eraser') setAnnMode(k);
+    else if (k === 'pencolor') setPenMenu(document.getElementById('pen-colors').hidden);
+    else if (k === 'color') {
+      penColor = b.dataset.color;
+      setPenMenu(false);
+      if (ui.annMode !== 'pen') setAnnMode('pen'); else updateToolbar();
+      announce(`${cap(penColor)} pen`);
+    }
     else if (k === 'note') createNote();
     else if (k === 'settings') setSettingsOpen(document.getElementById('exam-settings').hidden);
     else if (k === 'autofill') toggleAutoFill();
@@ -4171,7 +4768,7 @@
     else if (k === 'redo') { flushNoteEdit(); redo(leftPid); }
     else if (k === 'clear') {
       flushNoteEdit();
-      const list = anns(leftPid);
+      const list = anns(leftPid).concat(rinks(leftPid)); // with an iPad exam's Pencil strokes on the right
       if (!list.length || !confirm('Clear all highlights, drawings and sticky notes for this question?')) return;
       commit(leftPid, list.slice().map((a) => ({ op: 'remove', ann: a })));
       announce('Annotations cleared. Use Undo to restore them.');
@@ -4330,6 +4927,11 @@
     }
   });
   window.addEventListener('beforeunload', save);
+  window.addEventListener('pagehide', save);
+  window.addEventListener('resize', () => { // the original handwriting (Review) is scaled to its slot's width
+    const s = ui.screen === 'practice' && cur();
+    if (s && isReview(s) && document.getElementById('right-body')) mountOriginalInk(curGroup(), s);
+  }); // iPad Safari closes or leaves the page without beforeunload
   // Another tab saved: this tab's copy is stale. Saving is already blocked (save()); cover the page so no
   // work is done here that can't be kept, and offer a reload, which picks up the other tab's state.
   window.addEventListener('storage', (e) => {

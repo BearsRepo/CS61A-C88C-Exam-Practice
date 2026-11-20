@@ -19,7 +19,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const click = async (sel) => { await page.waitForSelector(sel); await page.$eval(sel, (el) => el.click()); await wait(40); };
   const tool = (k) => click(`[data-dg="${k}"]`);
   const canvasAt = async (x, y) => {
-    const r = await page.$eval('#dg-canvas', (el) => { document.getElementById('pane-right').scrollTop = 0; const b = el.getBoundingClientRect(); return { left: b.left, top: b.top }; });
+    const r = await page.$eval('#dg-canvas', (el) => { // in Review the diagram is in the left pane, under the problem
+      if (el.closest('#pane-right')) document.getElementById('pane-right').scrollTop = 0; else if (el.getBoundingClientRect().top < 0 || el.getBoundingClientRect().top > 200) el.scrollIntoView({ block: 'start' });
+      const b = el.getBoundingClientRect(); return { left: b.left, top: b.top };
+    });
     return [r.left + x, r.top + y];
   };
   const drag = async (x1, y1, x2, y2) => {
@@ -141,13 +144,15 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await click('#nav-toggle');
   await click('#nav-fa25-2');
   await page.waitForSelector('#dg-canvas');
-  ok(await page.$('.dg-layer .dg-pen') && await page.$eval('.dg-text:not(.dg-slot)', (i) => i.value === 's!'), 'review: the diagram is there');
+  ok(await page.$('[data-orig="diagram"] .dg-layer .dg-pen') && await page.$eval('[data-orig="diagram"] .dg-text:not(.dg-slot)', (i) => i.value === 's!'), 'review: the submitted diagram is shown (read-only, right)');
+  ok(await page.$('#review-work #dg-canvas') && !(await page.$('#review-work .dg-layer .dg-pen')) && !(await page.$('#review-work .dg-text:not(.dg-slot)')), 'review: the editable diagram (left) starts blank');
   ok(await page.$('#tutor-btn'), 'review: the Python Tutor button is available');
+  await page.$eval('#review-work #dg-canvas', (c) => c.scrollIntoView({ block: 'center' })); await wait(150);
   await tool('pen');
   await drag(300, 200, 360, 230);
   S = await st();
   ok(JSON.stringify(S.attempts[0].diagrams) === submitted, 'review: new marks don’t change the submitted attempt');
-  ok(Object.values(S.reviews)[0].diagrams['fa25-2'].length === 4, 'review: new marks are saved in the review workspace');
+  ok(Object.values(S.reviews)[0].diagrams['fa25-2'].length === 1, 'review: new marks are saved in the review workspace');
 
   const opened = [];
   await page.evaluate(() => { window.__opened = []; window.open = (...a) => { window.__opened.push(a); return null; }; });
@@ -210,7 +215,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // Blanks: typeable straight away, Tab moves on, and they get out of the way while drawing.
   await tool('pen'); // back to typing
   const review = async () => Object.values((await st()).reviews)[0].diagrams['fa25-2'];
-  ok(await page.$$eval('.dg-slot', (l) => l.length) === 24, 'blanks: Fall 2025 Q2 has all 24');
+  ok(await page.$$eval('#dg-canvas .dg-slot', (l) => l.length) === 24, 'blanks: Fall 2025 Q2 has all 24');
+  await page.$eval('#dg-canvas', (c) => c.scrollIntoView({ block: 'start' })); await wait(150);
   const firstBlank = await page.$eval('.dg-slot[data-slot="1"]', (el) => [el.offsetLeft + 8, el.offsetTop + 10]);
   await clickAt(...firstBlank);
   await page.keyboard.type('s');

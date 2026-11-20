@@ -174,6 +174,44 @@ mark.hl { background: #fff176; color: inherit; border-radius: 2px; padding: 0; }
 .annot-layer path { fill: none; stroke: #d62828; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .9; }
 .problem[data-mode="pen"] .annot-layer { pointer-events: auto; cursor: crosshair; touch-action: none; }
 .problem[data-mode="eraser"] .annot-layer { pointer-events: auto; cursor: cell; touch-action: none; }
+/* iPad exams: Apple Pencil draws on both panes (app.js, pencilInk), so the overlay never catches fingers and
+   the right pane carries its own ink layer. Fingers scroll and tap as usual. */
+.ipad .pane-right { position: relative; }
+.pencil-ink .problem .annot-layer { pointer-events: none; }
+.p-main.pencil-ink:has(.problem[data-mode="pen"], .problem[data-mode="eraser"]) .pane { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.p-main.pencil-ink .pane :is(input, textarea, .CodeMirror) { -webkit-user-select: text; user-select: text; } /* still typeable */
+/* iPad exams: the environment diagram is paper. Its own toolkit and frame / binding editing are off; the main pen
+   draws over it. It is laid out at full size so the ink (in the pane's coordinates) stays on it. */
+.p-main.pencil-ink .dg-bar { display: none; }
+.p-main.pencil-ink .dg-canvas, .p-main.pencil-ink .dg-canvas * { pointer-events: none !important; }
+.p-main.pencil-ink .dg-scroll { max-height: none; overflow: visible; }
+/* iPad exams: the annotation toolbar leaves the top of the left pane and becomes a column on the divider between
+   the panes, over their padding only, so it is in reach from both sides and covers no content. (Its containing
+   block is .p-main, outside the scrolling pane, so it stays put while either pane scrolls.) */
+.p-main.pencil-ink #annot-bar { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); flex-direction: column; gap: 1px; max-width: none; margin: 0; padding: 4px 3px; border: 1px solid var(--line-strong); border-radius: 20px; box-shadow: 0 4px 14px rgba(0, 0, 0, .14); z-index: 20; }
+.p-main.pencil-ink #annot-bar .ann-btn { width: 34px; height: 32px; }
+.p-main.pencil-ink .pane-left { padding-top: 24px; } /* the toolbar no longer sits at the top */
+.p-main:not(.pencil-ink) .pen-color-wrap { display: none; } /* e.g. once time runs out */
+.p-main.pencil-ink #annot-bar .ann-sep { width: 20px; height: 1px; margin: 3px 0; }
+.p-main.pencil-ink #annot-hint { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; } /* still read out */
+.p-main.pencil-ink #annot-bar .ann-btn[data-ann="pen"], .p-main.pencil-ink #annot-bar .ann-btn[data-ann="pen"][aria-pressed="true"] { color: var(--pen, #c62828); border-color: currentColor; }
+.p-main.pencil-ink #annot-bar .ann-btn[data-ann="pen"][aria-pressed="false"] { border-color: transparent; }
+.p-main.pencil-ink #annot-bar .exam-settings { top: 0; left: calc(100% + 8px); }
+/* Pen colour: a dot under the Pen opens Red / Blue / Black */
+.pen-color-wrap { position: relative; display: inline-flex; }
+.p-main.pencil-ink #annot-bar .pen-color-btn { height: 20px; margin-top: -2px; }
+.pc-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--c, var(--pen, #d62828)); box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px rgba(0, 0, 0, .25); }
+.pen-colors { position: absolute; left: calc(100% + 8px); top: -8px; z-index: 40; display: flex; flex-direction: column; gap: 2px; padding: 4px; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0, 0, 0, .14); font-family: var(--sans); font-size: 14px; }
+.pen-colors[hidden] { display: none; }
+.pc-item { display: flex; align-items: center; gap: 10px; min-width: 104px; height: 38px; padding: 0 12px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--ink); text-align: left; }
+.pc-item[aria-checked="true"] { border-color: var(--c); font-weight: 700; }
+@media (max-width: 820px) { /* one column of panes: a row in the bottom-right corner, just above the bottom bar */
+  .p-main.pencil-ink #annot-bar { position: fixed; flex-direction: row; left: auto; top: auto; right: 12px; bottom: calc(var(--fh, 64px) + 10px); transform: none; padding: 3px 4px; }
+  .p-main.pencil-ink #annot-bar .ann-sep { width: 1px; height: 20px; margin: 0 3px; }
+  .p-main.pencil-ink #annot-bar .pen-color-btn { width: 22px; height: 32px; margin: 0 0 0 -3px; }
+  .p-main.pencil-ink #annot-bar .exam-settings, .p-main.pencil-ink .pen-colors { top: auto; bottom: calc(100% + 8px); left: auto; right: 0; }
+  .p-main.pencil-ink #annot-bar .exam-settings { right: -4px; }
+}
 
 /* Sticky notes: a layer over both panes. Only its notes take clicks. */
 .note-layer { position: absolute; inset: 0; z-index: 15; overflow: hidden; pointer-events: none; font-family: var(--sans); }
@@ -854,3 +892,25 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .policy li { margin: 4px 0; }
 .policy-summary { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 4px 18px 8px; margin: 18px 0; }
 .policy-summary h2 { font-size: 18px; margin-top: 14px; }
+
+/* Review: the original handwriting over a read-only copy of the exam's answer pane (iPad Phase 2D-2). The copy
+   rebuilds the exam pane exactly (same width, the iPad exam's CSS, the body's font), then is scaled to fit. */
+.orig-ctx { display: block; position: absolute; left: 0; top: 0; transform-origin: 0 0; font-family: var(--sans); font-size: 15px; line-height: 1.5; color: var(--ink); background: var(--paper); text-align: left; pointer-events: none; }
+.orig-measure { position: absolute; left: -100000px; top: 0; visibility: hidden; }
+.orig-ctx .orig-pane { position: relative; overflow: visible; min-height: 0; padding: 24px 36px 40px; border: 0; }
+.orig-ctx .question .q-head { margin: 0 0 12px; } /* not the review panel's tighter heading */
+.orig-ctx :is(.choices, .answer-box, .q-actions, .feedback, .selfcheck-note) { margin-left: 22px; }
+.orig-ctx .choices { padding-left: 22px; margin-left: 0; }
+.orig-ctx.orig-narrow .orig-pane { padding: 18px 16px 24px; } /* the exam was one column of panes */
+.orig-ctx.orig-narrow :is(.choices, .answer-box, .q-actions, .feedback, .selfcheck-note) { margin-left: 0; padding-left: 0; }
+.orig-svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 1; }
+.orig-svg path { fill: none; stroke: #d62828; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.orig-slot:empty { display: block; height: 0; }
+.orig-ink { margin: 8px 0 4px; padding: 0; border: 1px dashed #9aa3ad; border-radius: 6px; background: #f7f7f4; overflow: hidden; }
+.orig-tag { font: 600 11px/1.4 var(--sans); letter-spacing: .04em; text-transform: uppercase; color: #5d6670; padding: 4px 8px; border-bottom: 1px dashed #c9ced4; background: #eef0f2; }
+.orig-clip { position: relative; overflow: hidden; }
+.orig-h { font: 700 13px/1.4 var(--sans); margin: 14px 0 4px; color: var(--ink); }
+.orig-note { font-family: var(--sans); font-size: 12.5px; color: var(--muted); margin: 0 0 6px; }
+.review-work #diagram-slot { margin: 6px 0 14px; } /* Review: the editable (blank) diagram above part (a) */
+.q-bar .hw-q { margin-left: 4px; }
+.rv-block .rv-note { font-size: 13px; color: var(--muted); margin: 6px 0 0; } /* Review: the grade's note, with the submitted answer */
