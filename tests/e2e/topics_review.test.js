@@ -41,7 +41,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   }));
   const rows = () => page.$$eval('#tr-sec .mp-topic', (t) => t.map((x) => ({ topic: x.dataset.topic, meta: x.querySelector('.mp-topic-n').textContent, up: (x.querySelector('.tr-up') || {}).textContent || null, go: !!x.querySelector('.mp-topic-go') })));
   const stats = () => page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
-  const pick = async (t) => { await page.select('#tr-topic', t); await wait(150); await showCharts(); };
+  const lang = async (v) => { await page.click(`.tr-langs [data-action="tr-lang"][data-v="${v}"]`); await wait(150); await showCharts(); };
+  const bars = () => page.$$eval('.tr-bar', (b) => b.map((x) => [x.querySelector('.tr-bar-name').textContent, x.querySelector('.tr-bar-val').textContent]));
+  const barRatio = () => page.$eval('.tr-bar-fill', (b) => b.getBoundingClientRect().width / b.parentElement.getBoundingClientRect().width);
 
   await page.goto(APP_URL);
   // four multiple-choice Trees parts from different questions, and a short answer from another question
@@ -86,24 +88,43 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const greenUp = await page.$eval('#tr-sec .tr-up', (e) => getComputedStyle(e).color);
   ok(greenUp === 'rgb(29, 122, 58)', `the improvement badge is green (${greenUp})`);
 
-  // ── the radar ──
-  let labels = await page.$$eval('.rd-label tspan:first-child', (t) => t.map((x) => x.textContent));
-  ok(labels.length === 12 && labels.includes('Gleam') && labels.includes('SQL') && labels.includes('Trees'), `All: one axis per Python topic plus Gleam and SQL (${labels.length}: ${labels.join(', ')})`);
-  const treesVal = await page.$$eval('.rd-label', (l) => { const x = l.find((e) => e.querySelector('tspan').textContent === 'Trees'); return x.querySelector('.rd-val').textContent; });
-  const gleamVal = await page.$$eval('.rd-label', (l) => { const x = l.find((e) => e.querySelector('tspan').textContent === 'Gleam'); return x.querySelector('.rd-val').textContent; });
-  ok(treesVal === '50%' && gleamVal === '—', `axis values are first-try % correct; a topic never tried shows — (Trees ${treesVal}, Gleam ${gleamVal})`);
-  await pick('trees');
-  labels = await page.$$eval('.rd-label tspan:first-child', (t) => t.map((x) => x.textContent));
-  ok(labels.length >= 3 && labels.length <= 6 && labels.includes('+ Recursion') && labels.every((l) => l === 'Trees only' || l.startsWith('+ ') || l === 'Trees overall'), `one topic: its own axes, named by the real tag pairs (${labels.join(', ')})`);
+  // ── All: one bar per language ──
+  let B = await bars();
+  ok(B.map((x) => x[0]).join() === 'Python,Gleam,SQL' && B[0][1] === '50%' && B[1][1] === '—' && B[2][1] === '—', `All: a bar for each language, first-try % correct (${B.map((x) => x.join(' ')).join(', ')})`);
+  ok(Math.abs((await barRatio()) - 0.5) < 0.02, 'the Python bar is half full');
+  ok((await page.$$eval('.tr-langs .lang-opt', (b) => b.map((x) => x.textContent))).join() === 'All,Python,Gleam,SQL', 'the picker has All, Python, Gleam and SQL');
+  // clicking a bar switches to that language
+  await page.click('button.tr-bar[data-v="python"]'); await wait(150); await showCharts();
+  ok(await page.$eval('.tr-langs [data-v="python"]', (b) => b.getAttribute('aria-checked')) === 'true', 'clicking the Python bar switches to Python');
+  // ── Python: a radar with every Python topic ──
+  const pyTopics = await page.$$eval('.rd-label', (l) => l.map((x) => x.textContent));
+  ok(pyTopics.length === 10 && pyTopics.some((x) => x.startsWith('Trees')) && pyTopics.some((x) => x.startsWith('OOP')), `Python: one axis per Python topic (${pyTopics.length}: ${pyTopics.join(', ')})`);
+  const scores = await page.$$eval('.rd-score', (t) => t.map((x) => x.textContent));
+  ok(scores.includes('50') && pyTopics.filter((x) => x.endsWith(' —')).length === pyTopics.length - scores.length, `each tried topic shows its score beside its point (${scores.join(', ')}); untried topics show —`);
+  const look = await page.evaluate(() => {
+    const area = getComputedStyle(document.querySelector('.rd-area'));
+    const none = document.querySelector('.rd-dot.none');
+    return { fill: area.fill, r: none ? Math.hypot(Number(none.getAttribute('cx')), Number(none.getAttribute('cy'))) : null };
+  });
+  const alpha = Number((/rgba\([^)]*,\s*([\d.]+)\)/.exec(look.fill) || [])[1]);
+  ok(alpha >= 0.3, `the radar is a filled blue area (${look.fill})`);
+  ok(look.r !== null && Math.abs(look.r - 18) < 0.5, `0% sits on a small inner circle, not the centre (radius ${look.r && look.r.toFixed(1)})`);
   rw = await rows();
-  ok(rw.length === 1 && rw[0].topic === 'trees', 'one topic: the list shows that topic’s row');
-  await pick('sql-joins');
-  const spokes = await page.$$eval('.rd-spoke', (s) => s.length);
-  ok(spokes >= 3, `a topic with few pairs still has a radar, at least a triangle (${spokes} axes)`);
-  rw = await rows();
-  ok(rw.length === 1 && rw[0].meta === 'Not tried yet', 'a topic not tried yet says so');
+  const pyOnly = await page.evaluate((ids) => ids.every((t) => !/^(gl|sql)-/.test(t)), rw.map((r) => r.topic));
+  ok(rw.length && pyOnly, 'Python: the list shows only Python topics');
+  // ── Gleam: nothing tried ──
+  await lang('gleam');
+  const glTopics = await page.evaluate(() => { const G = window.CS61A_GLEAM_BANK; return G.TOPICS.filter((t) => G.QUESTIONS.some((q) => q.topics.includes(t.id))).length; });
+  ok((await page.$$eval('.rd-label', (l) => l.length)) === glTopics, `Gleam: a radar with each Gleam topic that has questions (${glTopics})`);
+  ok(/Answer Gleam questions in Practice or Exam Mode/.test(await text('#tr-sec .mp-empty')), 'Gleam not tried yet: a hint instead of a list');
   R = await rings();
   ok(R[0].text === '—' && R[1].text === '—' && R[0].band === 'band-none', 'its rings show — and stay empty');
+  // ── SQL: bars for its two topics ──
+  await lang('sql');
+  B = await bars();
+  ok(B.map((x) => x[0]).join() === 'Joins,Aggregation' && !(await has('#tr-sec .rd')), `SQL: one bar per topic, no radar (${B.map((x) => x[0]).join(', ')})`);
+  ok(!(await has('.tr-bar button, button.tr-bar')), 'SQL topic bars are not buttons');
+  ok(!(await has('#tr-sec .tr-single')), 'there is no single-topic view');
 
   // ── one exam alone never shows an improvement; red bands ──
   const E2 = exam('e2', [P.a, P.b, P.c, P.d], { [P.a]: 'incorrect', [P.b]: 'incorrect', [P.c]: 'incorrect', [P.d]: 'correct' }, T3);
@@ -125,32 +146,34 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await page.evaluate(() => window.scrollTo(0, 0)); await wait(200);
   const below = await page.evaluate(() => document.getElementById('tr-sec').getBoundingClientRect().top > window.innerHeight);
   ok(below && await has('.tr-charts.anim'), 'before the charts scroll into view: not drawn yet');
-  const before = await page.$eval('.rd-shape', (g) => getComputedStyle(g).transform);
-  ok(/matrix\(0, 0, 0, 0/.test(before), `the radar shape starts at the centre (${before})`);
+  ok((await barRatio()) < 0.01, 'the bars start empty');
   await page.evaluate(() => document.getElementById('tr-sec').scrollIntoView()); await wait(350);
-  const mid = await page.evaluate(() => ({ anim: !!document.querySelector('.tr-charts.anim'), pct: document.querySelector('.ring-pct .ring-mid b').textContent, scale: getComputedStyle(document.querySelector('.rd-shape')).transform }));
-  ok(!mid.anim && mid.pct !== '50%' && !/matrix\(1, 0, 0, 1/.test(mid.scale), `scrolling into view starts drawing: the radar grows and the numbers count up (at 0.35 s: ${mid.pct}, ${mid.scale})`);
+  const mid = await page.evaluate(() => ({ anim: !!document.querySelector('.tr-charts.anim'), pct: document.querySelector('.ring-pct .ring-mid b').textContent }));
+  const midBar = await barRatio();
+  ok(!mid.anim && mid.pct !== '50%' && midBar > 0.02 && midBar < 0.49, `scrolling into view starts drawing: the bars grow and the numbers count up (at 0.35 s: ${mid.pct}, bar ${midBar.toFixed(2)})`);
   await wait(1100);
-  const end = await page.evaluate(() => ({ pct: document.querySelector('.ring-pct .ring-mid b').textContent, scale: getComputedStyle(document.querySelector('.rd-shape')).transform }));
-  ok(end.pct === '50%' && /matrix\(1, 0, 0, 1/.test(end.scale), `after about a second everything is drawn (${end.pct})`);
+  const endPct = await page.$eval('.ring-pct .ring-mid b', (b) => b.textContent);
+  ok(endPct === '50%' && Math.abs((await barRatio()) - 0.5) < 0.02, `after about a second everything is drawn (${endPct})`);
   await click('[data-action="menu"][data-id="hfilter"]');
   ok(!(await has('.tr-charts.anim')), 'other changes on the page (opening the Filter menu) do not replay the animation');
   await page.mouse.click(5, 5); await wait(150);
-  await page.select('#tr-topic', 'trees'); await wait(50);
-  ok(await page.evaluate(() => { const el = document.querySelector('.tr-charts'); return el.classList.contains('anim') || getComputedStyle(document.querySelector('.rd-shape')).transform !== 'matrix(1, 0, 0, 1, 0, 0)'; }), 'changing the topic draws the charts again');
+  await page.click('.tr-langs [data-action="tr-lang"][data-v="python"]'); await wait(60);
+  ok(await page.evaluate(() => { const el = document.querySelector('.tr-charts'); return el.classList.contains('anim') || getComputedStyle(document.querySelector('.rd-shape')).transform !== 'matrix(1, 0, 0, 1, 0, 0)'; }), 'changing the language draws the charts again (the radar grows from the centre)');
+  await wait(1200);
+  ok(/matrix\(1, 0, 0, 1/.test(await page.$eval('.rd-shape', (g) => getComputedStyle(g).transform)), 'then the radar is fully drawn');
   // reduce motion
   await page.setViewport({ width: 1200, height: 700 });
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
   await seed({ version: 5, prefs: { mode: 'practice' }, practice: [S1, S2], attempts: [E1] });
   await page.evaluate(() => document.getElementById('tr-sec').scrollIntoView()); await wait(120);
-  const rm = await page.evaluate(() => ({ anim: !!document.querySelector('.tr-charts.anim'), pct: document.querySelector('.ring-pct .ring-mid b').textContent, scale: getComputedStyle(document.querySelector('.rd-shape')).transform }));
-  ok(!rm.anim && rm.pct === '50%' && /matrix\(1, 0, 0, 1/.test(rm.scale), `reduce motion: drawn at once, no counting (${rm.pct})`);
+  const rm = await page.evaluate(() => ({ anim: !!document.querySelector('.tr-charts.anim'), pct: document.querySelector('.ring-pct .ring-mid b').textContent }));
+  ok(!rm.anim && rm.pct === '50%' && Math.abs((await barRatio()) - 0.5) < 0.02, `reduce motion: drawn at once, no counting (${rm.pct})`);
   await page.emulateMediaFeatures([]);
 
   // ── empty, and phone width ──
   await seed({ version: 5, prefs: { mode: 'practice' } });
   await showCharts();
-  ok(await has('#tr-sec .rd') && /Answer questions in Practice or Exam Mode/.test(await text('#tr-sec .mp-empty')), 'nothing tried yet: an empty radar grid and a hint');
+  ok((await bars()).every((b) => b[1] === '—') && /Answer questions in Practice or Exam Mode/.test(await text('#tr-sec .mp-empty')), 'nothing tried yet: empty bars and a hint');
 
   // ── a real practice set: wrong on the first Check, right on a retry → first try wrong, nothing still wrong ──
   const choices = await page.evaluate((id) => ({ n: window.CS61A_BANK.QUESTIONS.find((q) => q.id === id).choices.length, right: window.CS61A_BANK.ANSWER_KEY[id].correct }), P.a);

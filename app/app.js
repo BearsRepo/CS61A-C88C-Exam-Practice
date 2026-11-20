@@ -287,7 +287,7 @@
   // A saved pick can be a question that is now wholly out of scope; drop it so it can't start an empty group.
   store.examPrefs.picked = [...new Set(store.examPrefs.picked)].filter((pid) => PMAP[pid] && EXAM_QUESTIONS.some((q) => q.problem === pid));
   // view: which session the question screen shows. 'practice' | 'exam' (in progress) | 'review' (a submitted attempt)
-  const ui = { trTopic: 'all', trDrawn: null, hFilter: { type: [], status: [], year: [] }, screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
+  const ui = { trLang: 'all', trDrawn: null, hFilter: { type: [], status: [], year: [] }, screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
   // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
@@ -3148,51 +3148,53 @@
     store.autoCounts[topic] = n;
     createExam('custom', null, pids, null, { title: `${t.name} Review #${n}`, auto: { topic, n } });
   }
-  // ── Topics to Review: radar + two rings (left), topic picker + list (right) ──
-  // Every submitted exam counts here (Incomplete ones too), with Practice Checks. Charts draw in once when scrolled
-  // into view, and again when the topic changes (not on other re-renders); reduce motion shows them at once.
-  const SHORT_TOPIC = { fundamentals: 'Fundamentals', hof: 'HOF', env: 'Env Diagrams', lists: 'Lists & Mutation', links: 'Linked Lists' };
+  // ── Topics to Review: chart + two rings (left), language picker + topic list (right) ──
+  // Every submitted exam counts here (Incomplete ones too), with Practice Checks. All: one bar per language. Python and
+  // Gleam: a radar with one axis per topic. SQL (two topics): one bar per topic. Charts draw in once when scrolled into
+  // view, and again when the language changes (not on other re-renders); reduce motion shows them at once.
+  const SHORT_TOPIC = { fundamentals: 'Fundamentals', hof: 'HOF', env: 'Env Diagrams', lists: 'Lists & Mutation', links: 'Linked Lists',
+    'gl-lists': 'Lists & Patterns', 'gl-recursion': 'Recursion', 'gl-hof': 'HOF', 'gl-types': 'Custom Types', 'gl-dicts': 'Dictionaries',
+    'gl-result': 'Result', 'gl-immutable': 'Immutable Data', 'gl-interpreters': 'Interpreters' };
   const shortTopic = (t) => SHORT_TOPIC[t] || topicById(t).name;
-  // Radar axes: { label, has(q) }. All: the Python topics, plus one Gleam and one SQL axis. One topic: the topic on its
-  // own and with each topic it shares questions with (at least 3 axes, at most 6).
-  function radarAxes(topic) {
-    if (topic === 'all') {
-      return TOPICS_IN_SCOPE.filter((t) => TOPIC_POOL.some((q) => q.topics.includes(t))).map((t) => ({ label: shortTopic(t), has: (q) => q.topics.includes(t) }))
-        .concat({ label: 'Gleam', has: (q) => q.topics.some(isGleamTopic) }, { label: 'SQL', has: (q) => q.topics.some(isSqlTopic) });
-    }
-    const name = shortTopic(topic);
-    const pool = TOPIC_POOL.filter((q) => q.topics.includes(topic));
-    const pairs = {};
-    pool.forEach((q) => q.topics.forEach((o) => { if (o !== topic && topicById(o) && !OUT_TOPICS.has(o)) pairs[o] = (pairs[o] || 0) + 1; }));
-    const ranked = Object.entries(pairs).sort((a, b) => b[1] - a[1]);
-    const pairAxis = ([o]) => ({ label: `+ ${shortTopic(o)}`, has: (q) => q.topics.includes(topic) && q.topics.includes(o) });
-    const axes = [];
-    if (pool.some((q) => q.topics.every((o) => o === topic))) axes.push({ label: `${name} only`, has: (q) => q.topics.includes(topic) && q.topics.every((o) => o === topic) });
-    ranked.filter(([, n]) => n >= 3).forEach((p) => { if (axes.length < 6) axes.push(pairAxis(p)); });
-    if (axes.length < 3) axes.push({ label: `${name} overall`, has: (q) => q.topics.includes(topic) });
-    ranked.filter(([, n]) => n < 3).forEach((p) => { if (axes.length < 3) axes.push(pairAxis(p)); });
-    while (axes.length < 3) axes.push({ label: '', has: () => false, blank: true });
-    return axes;
-  }
+  const TR_LANGS = [['all', 'All'], ['python', 'Python'], ['gleam', 'Gleam'], ['sql', 'SQL']];
+  const langTopics = (lang) => (PROGRESS_TOPICS.find(([name]) => name.toLowerCase() === lang) || [null, []])[1];
+  const isPyTopic = (t) => !isGleamTopic(t) && !isSqlTopic(t);
+  const LANG_HAS = { all: () => true, python: (q) => q.topics.some(isPyTopic), gleam: (q) => q.topics.some(isGleamTopic), sql: (q) => q.topics.some(isSqlTopic) };
+  // Radar: 0% sits on a small inner circle (not the very centre), so the shape stays a filled area even with 0% topics.
   function radarSVG(axes, values) {
-    const R = 100, n = axes.length;
+    const R = 100, R0 = 18, n = axes.length;
     const at = (i, r) => { const a = (-90 + (i * 360) / n) * (Math.PI / 180); return [r * Math.cos(a), r * Math.sin(a)]; };
-    const poly = (r) => axes.map((_, i) => at(i, r).map((v) => v.toFixed(1)).join(',')).join(' ');
-    const grid = [0.25, 0.5, 0.75, 1].map((f) => `<polygon class="rd-grid" points="${poly(R * f)}"/>`).join('');
-    const spokes = axes.map((_, i) => { const [x, y] = at(i, R); return `<line class="rd-spoke" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
-    const pts = values.map((v, i) => at(i, (R * (v || 0)) / 100));
-    const shape = `<polygon class="rd-area" points="${pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}"/>`
-      + pts.map(([x, y], i) => (axes[i].blank ? '' : `<circle class="rd-dot${values[i] === null ? ' none' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`)).join('');
-    const labels = axes.map((ax, i) => {
-      if (ax.blank) return '';
-      const [x, y] = at(i, R + 16);
-      const anchor = x > 6 ? 'start' : x < -6 ? 'end' : 'middle';
-      const dy = y < -6 ? -14 : y > 6 ? 4 : -5;
-      const v = values[i];
-      return `<text class="rd-label" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}"><tspan x="${x.toFixed(1)}" dy="0">${esc(ax.label)}</tspan><tspan class="rd-val${v === null ? ' none' : ''}" x="${x.toFixed(1)}" dy="13">${v === null ? '—' : `${v}%`}</tspan></text>`;
+    const rad = (v) => R0 + ((R - R0) * (v || 0)) / 100;
+    const fmt = (p) => p.map((v) => v.toFixed(1)).join(',');
+    const poly = (r) => axes.map((_, i) => fmt(at(i, r))).join(' ');
+    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => `<polygon class="rd-grid${f === 1 ? ' outer' : ''}" points="${poly(R0 + (R - R0) * f)}"/>`).join('');
+    const spokes = axes.map((_, i) => { const [x0, y0] = at(i, R0), [x, y] = at(i, R); return `<line class="rd-spoke" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
+    const pts = values.map((v, i) => at(i, rad(v)));
+    const shape = `<polygon class="rd-area" points="${pts.map(fmt).join(' ')}"/>`
+      + pts.map(([x, y], i) => `<circle class="rd-dot${values[i] === null ? ' none' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`).join('');
+    // the score beside each point (blue), and the topic name outside the chart (grey)
+    const scores = values.map((v, i) => {
+      if (v === null) return '';
+      const [x, y] = at(i, rad(v) + 13);
+      return `<text class="rd-score" x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="middle">${v}</text>`;
     }).join('');
-    const desc = axes.filter((a) => !a.blank).map((a, i) => `${a.label}: ${values[i] === null ? 'not tried' : `${values[i]}% correct`}`).join('; ');
-    return `<svg class="rd" viewBox="-235 -150 470 300" role="img" aria-label="First-try % correct by topic. ${esc(desc)}">${grid}${spokes}<g class="rd-shape">${shape}</g>${labels}</svg>`;
+    const labels = axes.map((ax, i) => {
+      const [x, y] = at(i, R + 28);
+      const anchor = x > 6 ? 'start' : x < -6 ? 'end' : 'middle';
+      const dy = y < -6 ? -2 : y > 6 ? 10 : 4;
+      return `<text class="rd-label${values[i] === null ? ' none' : ''}" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}">${esc(ax.label)}${values[i] === null ? ' —' : ''}</text>`;
+    }).join('');
+    const desc = axes.map((a, i) => `${a.label}: ${values[i] === null ? 'not tried' : `${values[i]}% correct`}`).join('; ');
+    return `<svg class="rd" viewBox="-230 -142 460 284" role="img" aria-label="First-try % correct by topic. ${esc(desc)}">${grid}${spokes}
+      <text class="rd-zero" x="0" y="3.5" text-anchor="middle">0%</text><g class="rd-shape">${shape}</g><g class="rd-scores">${scores}</g>${labels}</svg>`;
+  }
+  // Bars: one per row ({ label, value, key? }); a row with a key switches the language when clicked.
+  function barsHTML(rows) {
+    return `<ul class="tr-bars">${rows.map((r) => {
+      const inner = `<span class="tr-bar-name">${esc(r.label)}</span><span class="tr-bar-track"><span class="tr-bar-fill band-${pctBand(r.value)}" style="--w:${r.value || 0}%"></span></span>
+        <span class="tr-bar-val">${r.value === null ? '—' : `${r.value}%`}</span>`;
+      return `<li>${r.key ? `<button class="tr-bar" data-action="tr-lang" data-v="${r.key}" aria-label="${esc(r.label)}: ${r.value === null ? 'not tried' : `${r.value}% correct`}. Show ${esc(r.label)} topics">${inner}</button>` : `<div class="tr-bar">${inner}</div>`}</li>`;
+    }).join('')}</ul>`;
   }
   // A ring that fills clockwise from the bottom: frac 0..1, the number in the middle, a colour band.
   function ringSVG(cls, frac, big, small, band, label) {
@@ -3209,40 +3211,40 @@
   const canTopicExam = (t) => EXAM_PIDS.some((pid) => partsOf(pid).length && groupTopics(pid).includes(t));
   function topicRow(t, s) {
     const name = topicById(t).name;
-    const meta = s.tried ? `${s.wrong} incorrect · ${s.pct}% correct` : 'Not tried yet';
     return `<li class="mp-topic" data-topic="${esc(t)}"><span class="mp-topic-name">${esc(name)}${s.improvement > 0 ? ` <span class="tr-up" title="First-try % correct, later questions compared with earlier ones">+${s.improvement}%</span>` : ''}</span>
-        <span class="mp-topic-n">${meta}</span>
+        <span class="mp-topic-n">${s.wrong} incorrect · ${s.pct}% correct</span>
         ${canTopicExam(t) ? `<button class="btn btn-sm mp-topic-go" data-action="topic-exam" data-topic="${esc(t)}" aria-label="Start a 5-question ${esc(name)} exam">Start topic exam</button>` : ''}</li>`;
   }
   function topicsSectionHTML() {
-    const topic = ui.trTopic === 'all' || PROGRESS_TOPICS.some(([, ids]) => ids.includes(ui.trTopic)) ? ui.trTopic : 'all';
+    const lang = TR_LANGS.some(([k]) => k === ui.trLang) ? ui.trLang : 'all';
     const ev = partEvents(() => true);
-    const has = topic === 'all' ? () => true : (q) => q.topics.includes(topic);
-    const s = partStats(ev, has);
-    const axes = radarAxes(topic);
-    const values = axes.map((ax) => (ax.blank ? null : partStats(ev, ax.has).pct));
-    const key = `${topic}`;
-    const anim = ui.trDrawn !== key;
+    const s = partStats(ev, LANG_HAS[lang]);
+    const pctOf = (has) => partStats(ev, has).pct;
+    let chart;
+    if (lang === 'all') chart = barsHTML(TR_LANGS.slice(1).map(([k, label]) => ({ key: k, label, value: pctOf(LANG_HAS[k]) })));
+    else if (lang === 'sql') chart = barsHTML(langTopics('sql').map((t) => ({ label: topicById(t).name, value: pctOf((q) => q.topics.includes(t)) })));
+    else {
+      const ids = langTopics(lang);
+      chart = radarSVG(ids.map((t) => ({ label: shortTopic(t) })), ids.map((t) => pctOf((q) => q.topics.includes(t))));
+    }
+    const anim = ui.trDrawn !== lang;
     const left = ringSVG('ring-pct', (s.pct || 0) / 100, s.pct === null ? { text: '—' } : { text: `${s.pct}%`, count: s.pct, suffix: '%' }, '', pctBand(s.pct), 'Correctness');
     const right = ringSVG('ring-wrong', s.tried ? s.wrong / s.tried : 0, s.tried ? { text: String(s.wrong), count: s.wrong, of: s.tried } : { text: '—' }, '', wrongBand(s.wrong, s.tried), 'Incorrect');
-    const opt = (t) => `<option value="${esc(t)}" ${t === topic ? 'selected' : ''}>${esc(topicById(t).name)}</option>`;
-    const picker = `<label class="tr-pick"><span>Topic</span><select id="tr-topic"><option value="all" ${topic === 'all' ? 'selected' : ''}>All topics</option>
-        ${PROGRESS_TOPICS.filter(([, ids]) => ids.length).map(([g, ids]) => `<optgroup label="${g}">${ids.map(opt).join('')}</optgroup>`).join('')}</select></label>`;
-    let rows;
-    if (topic === 'all') {
-      rows = PROGRESS_TOPICS.flatMap(([, ids]) => ids).map((t) => [t, partStats(ev, (q) => q.topics.includes(t))]).filter(([, x]) => x.tried)
-        .sort((a, b) => b[1].wrong - a[1].wrong || a[1].pct - b[1].pct || topicById(a[0]).name.localeCompare(topicById(b[0]).name))
-        .map(([t, x]) => topicRow(t, x)).join('');
-    } else rows = topicRow(topic, s);
+    const picker = `<div class="tr-langs" role="radiogroup" aria-label="Language">${TR_LANGS.map(([k, label]) =>
+      `<button class="lang-opt" role="radio" data-action="tr-lang" data-v="${k}" aria-checked="${k === lang}">${label}</button>`).join('')}</div>`;
+    const topics = lang === 'all' ? PROGRESS_TOPICS.flatMap(([, ids]) => ids) : langTopics(lang);
+    const rows = topics.map((t) => [t, partStats(ev, (q) => q.topics.includes(t))]).filter(([, x]) => x.tried)
+      .sort((a, b) => b[1].wrong - a[1].wrong || a[1].pct - b[1].pct || topicById(a[0]).name.localeCompare(topicById(b[0]).name))
+      .map(([t, x]) => topicRow(t, x)).join('');
     return `<section class="mp-card" aria-labelledby="mt-h" id="tr-sec">
         <h2 id="mt-h">Topics to Review</h2>
         <div class="tr-grid">
-          <div class="tr-charts${anim ? ' anim' : ''}" data-key="${esc(key)}">
-            ${radarSVG(axes, values)}
+          <div class="tr-charts${anim ? ' anim' : ''}" data-key="${lang}">
+            <div class="tr-chart tr-chart-${lang === 'all' || lang === 'sql' ? 'bars' : 'radar'}">${chart}</div>
             <div class="tr-rings">${left}${right}</div>
           </div>
           <div class="tr-side">${picker}
-            ${rows ? `<ul class="mp-topics">${rows}</ul>` : '<p class="mp-empty">Answer questions in Practice or Exam Mode to see your topics here.</p>'}
+            ${rows ? `<ul class="mp-topics">${rows}</ul>` : `<p class="mp-empty">Answer ${lang === 'all' ? '' : `${TR_LANGS.find(([k]) => k === lang)[1]} `}questions in Practice or Exam Mode to see your topics here.</p>`}
           </div>
         </div>
       </section>`;
@@ -4392,6 +4394,7 @@
       case 'progress': ui.screen = 'progress'; ui.menu = null; ui.trDrawn = null; window.scrollTo(0, 0); break;
       case 'hfilter-clear': ui.hFilter = { type: [], status: [], year: [] }; break;
       case 'topic-exam': startTopicReview(btn.dataset.topic); return;
+      case 'tr-lang': ui.trLang = btn.dataset.v; break; // Topics to Review: All, Python, Gleam or SQL
       case 'delete-attempt': {
         const a = attemptById(btn.dataset.id);
         if (!a || !confirm(`Delete "${a.title}" from My History? Its answers, results and review notes are removed for good.`)) return;
@@ -4597,7 +4600,6 @@
       store.prefs.minutes = Number.isInteger(v) ? v : NaN;
       save(); render(); return;
     }
-    if (el.id === 'tr-topic') { ui.trTopic = el.value; render(); return; } // Topics to Review: All or one topic
     const hf = el.dataset && el.dataset.hf;
     if (hf) { // My History filter
       const list = ui.hFilter[hf];
