@@ -192,11 +192,12 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const practiceWrong = { id: 'pw', ids: [plan.p3], index: 0, title: 'Practice with a wrong answer', answers: { [plan.p3]: 0 }, timer: null, startedAt: now - 50000, finishedAt: now - 40000, finished: true, notes: {}, annotations: {} };
   await seed({ version: 5, prefs: { mode: 'practice' }, attempts: [A1, A2, A3], practice: [practiceWrong] });
   await toProgress();
-  const problems = new Set(plan.ids.map((id) => plan.problemOf[id]).concat(plan.p3problem));
+  // questions with an answered part in the Completed exams (A1 skipped its A+ part; A2 is Incomplete, so it is left out)
+  const problems = new Set(plan.ids.filter((id) => id !== plan.zero).map((id) => plan.problemOf[id]).concat(plan.p3problem));
   const stats = await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
   ok(stats[0] === '1', `Full Exams Completed counts only full exams with every part answered (A+ excepted): ${stats[0]}`);
-  ok(stats[1] === String(problems.size), `Questions Practiced counts each question once across retakes (${stats[1]} of ${problems.size})`);
-  ok(stats[2] === '67%', `Automatic Accuracy uses each part's latest result (a skipped retake keeps the earlier one; practice is left out): ${stats[2]}`);
+  ok(stats[1] === String(problems.size), `Questions Practiced counts each question of the Completed exams once (${stats[1]} of ${problems.size})`);
+  ok(stats[2] === '33%', `Automatic Accuracy counts Completed exams only (the Incomplete retake that got Q1 right is left out, and so is practice): ${stats[2]}`);
   R = await cards();
   ok(R.find((r) => r.id === 'xa1').tag === 'Completed' && R.find((r) => r.id === 'xa2').tag === 'Incomplete' && R.find((r) => r.id === 'xa1').action === 'open-attempt', 'exams: Completed (A+ unanswered is fine) / Incomplete (a part left unanswered), opened by their cards');
   ok(R.find((r) => r.id === 'xa1').meta.startsWith('Full Exam · ') && R.find((r) => r.id === 'xa3').meta.startsWith('Topic-based Exam · '), 'cards show the type: Full Exam / Topic-based Exam');
@@ -268,6 +269,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await click('.mh-card [data-action="resume-exam"]'); await page.waitForSelector('#pane-right .part');
   ok((await st()).exam && (await st()).exam.title === sub.title, 'Resume continues the exam in progress');
   await click('[data-action="save-leave"]');
+
+  // ── a later Completed retake that gets the part right: its latest result counts ──
+  const A4 = attempt('xa4', 'full', 'fa25', 'Fall 2025 Midterm 2', plan.ids, gradedAll(plan.ids, { [plan.p1]: 'correct', [plan.zero]: 'skipped' }), [plan.zero], now - 10000);
+  await seed({ version: 5, prefs: { mode: 'practice' }, attempts: [A1, A2, A3, A4] });
+  await toProgress();
+  const stats2 = await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
+  ok(stats2[0] === '2' && stats2[1] === stats[1] && stats2[2] === '67%', `a Completed retake: 2 full exams, questions still counted once (${stats2[1]}), accuracy uses the latest result (${stats2[2]})`);
 
   // ── phone width: no sideways scroll ──
   await toProgress();

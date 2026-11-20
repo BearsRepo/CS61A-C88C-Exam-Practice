@@ -2997,23 +2997,31 @@
   const STATUS = { completed: 'Completed', incomplete: 'Incomplete', progress: 'In Progress' };
   // Submitted exams, oldest first (store.attempts is kept in submission order).
   const doneExams = () => store.attempts.filter((a) => a.submitted);
-  function progressStats() {
-    const exams = doneExams();
+  // Each part's latest automatic grade ('correct' | 'incorrect') over these exams, oldest first; a skipped part keeps
+  // its earlier grade. Also the questions (problems) with an answered part.
+  function latestResults(exams) {
     const practiced = new Set();
-    const latest = {}; // part id -> its latest automatic grade ('correct' | 'incorrect'); a skipped part keeps its earlier one
+    const latest = {};
     exams.slice().sort((a, b) => a.finishedAt - b.finishedAt).forEach((a) => a.ids.forEach((id) => {
       if (!QMAP[id]) return;
       if (hasAnswer(a, id)) practiced.add(QMAP[id].problem);
       const g = a.graded && a.graded[id];
       if (g === 'correct' || g === 'incorrect') latest[id] = g;
     }));
+    return { practiced, latest };
+  }
+  // The summary uses Completed exams only (every part answered, A+ excepted). Topics to Review uses every submitted
+  // exam: a wrong answer in an Incomplete exam is still worth reviewing.
+  function progressStats() {
+    const completed = doneExams().filter((a) => setStatus(a) === 'completed');
+    const { practiced, latest } = latestResults(completed);
     const graded = Object.values(latest);
     const right = graded.filter((g) => g === 'correct').length;
     const wrong = {}; // topic id -> parts whose latest result is incorrect
-    Object.entries(latest).forEach(([id, g]) => { if (g === 'incorrect') QMAP[id].topics.forEach((t) => { wrong[t] = (wrong[t] || 0) + 1; }); });
+    Object.entries(latestResults(doneExams()).latest).forEach(([id, g]) => { if (g === 'incorrect') QMAP[id].topics.forEach((t) => { wrong[t] = (wrong[t] || 0) + 1; }); });
     return {
-      exams: exams.length,
-      fullCompleted: exams.filter((a) => a.kind === 'full' && setStatus(a) === 'completed').length,
+      exams: completed.length,
+      fullCompleted: completed.filter((a) => a.kind === 'full').length,
       questions: practiced.size,
       graded: graded.length,
       accuracy: graded.length ? Math.round((right / graded.length) * 100) : null,
@@ -3111,7 +3119,7 @@
           ${stat(st.exams ? st.questions : '—', 'Questions Practiced')}
           ${stat(st.accuracy === null ? '—' : `${st.accuracy}%`, 'Automatic Accuracy')}
         </div>
-        ${st.exams ? '' : '<p class="hint">Submit an exam in Exam Mode to see your numbers here.</p>'}
+        ${st.exams ? '' : '<p class="hint">Complete an exam in Exam Mode (answer every part) to see your numbers here.</p>'}
       </section>
       <section class="mp-card" aria-labelledby="mh-h">
         <div class="mp-head"><h2 id="mh-h">My History</h2>${items.length ? historyFilterHTML(items) : ''}</div>
