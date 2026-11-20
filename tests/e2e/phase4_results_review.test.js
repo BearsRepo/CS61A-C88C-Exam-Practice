@@ -88,7 +88,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(await page.evaluate(() => !document.querySelector('.CodeMirror').CodeMirror.getOption('readOnly')), 'scratch editor editable');
   ok((await cmValue()) === B.PROBLEMS['fa25-1'].code, 'fa25-1 scratch code = submitted version (unedited template)');
   const rvB = await text('#rv-fa25-1b');
-  ok(/Your submitted answer/.test(rvB) && rvB.includes('[1, 2]') && /Official answer/.test(rvB) && /✗ Incorrect/.test(rvB), 'panel: submitted answer, verdict, official answer');
+  ok(/Your submitted answer/.test(rvB) && rvB.includes('[1, 2]') && /Official Answer/.test(rvB) && await page.$eval('#rv-fa25-1b .badge', (b) => b.textContent) === 'Incorrect' && await page.$eval('#rv-fa25-1b .feedback', (f) => f.classList.contains('info') && !f.querySelector('.verdict')), 'panel: submitted answer with its grade, neutral Official Answer card');
   const rvA = await text('#rv-fa25-1a');
   if (B.ANSWER_KEY['fa25-1a'].explanation) ok(/Explanation written for this site, not official/.test(rvA), 'explanations labelled as not official');
   ok(await has('#rv-fa25-1a .choices.static .choice.correct'), 'submitted correct choice shown in green');
@@ -97,11 +97,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // ── 6/7. edit MCQ, short answer, scratch code; persistence; attempt untouched ──
   const wrongA = (keyA + 1) % parts('fa25-1')[0].choices.length;
   await click(`label[for="c-fa25-1a-${wrongA}"]`);
-  ok(/Current review answer/.test(await text('#rv-fa25-1a')) && /doesn’t match the official answer/.test(await text('#rv-fa25-1a')), 'changed MCQ shows current review answer (not scored)');
+  ok(!/Current review answer/.test(await text('#rv-fa25-1a')) && /Your submitted answer/.test(await text('#rv-fa25-1a')), 'changed MCQ: the right pane still compares only the submitted and official answers');
   ok(await page.$eval('#rv-fa25-1a .badge', (b) => b.textContent) === 'Correct', 'original grade badge unchanged');
   await page.click('#ta-fa25-1b', { clickCount: 3 }); await page.keyboard.press('Backspace');
   await page.keyboard.type(B.ANSWER_KEY['fa25-1b'].accepted[0]);
-  ok(/matches the official answer/.test(await text('#rv-fa25-1b')), 'typing updates the review panel live (matches official)');
+  ok(!/Current review answer/.test(await text('#rv-fa25-1b')), 'typing a review answer adds nothing to the right pane');
   await page.evaluate(() => document.querySelector('.CodeMirror').CodeMirror.replaceRange('# review edit\n', { line: 0, ch: 0 }));
   await click('[data-action="next"]');
   ok((await cmValue()).startsWith('# submitted scratch'), 'sp25-5d scratch code starts from the submitted (edited) version');
@@ -121,11 +121,8 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await click('.actions [data-action="exam-review"]');
   await page.waitForSelector('#review-work .part');
   ok(await has(`#c-fa25-1a-${wrongA}:checked`) && (await page.$eval('#ta-fa25-1b', (t) => t.value)) === B.ANSWER_KEY['fa25-1b'].accepted[0] && (await cmValue()).startsWith('# review edit'), 'review edits restored after reload + reopen from history');
-  // resets
-  await click('#rv-fa25-1a [data-action="reset-answer"]');
-  ok(await has(`#c-fa25-1a-${keyA}:checked`) && /same as what you submitted/.test(await text('#rv-fa25-1a')), 'Reset to submitted answer (MCQ)');
-  await click('#rv-fa25-1b [data-action="reset-answer"]');
-  ok((await page.$eval('#ta-fa25-1b', (t) => t.value)) === '[1, 2]', 'Reset to submitted answer (short answer)');
+  // resets: the right pane no longer has Reset to submitted answer; the code reset is unchanged
+  ok(!(await page.$('[data-action="reset-answer"]')), 'no Reset to submitted answer on the right pane');
   await click('#editor-reset');
   ok((await cmValue()) === B.PROBLEMS['fa25-1'].code, 'Reset code to submitted version (fa25-1)');
   await wait(400);
@@ -183,7 +180,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await page.focus('#ta-fa25-1b'); await page.keyboard.type('attempt two edit');
   await wait(400);
   S = await st();
-  ok(S.reviews[A2.id].answers['fa25-1b'] === 'attempt two edit' && S.reviews[A1.id].answers['fa25-1b'] === '[1, 2]', 'workspaces isolated between attempts');
+  ok(S.reviews[A2.id].answers['fa25-1b'] === 'attempt two edit' && S.reviews[A1.id].answers['fa25-1b'] === B.ANSWER_KEY['fa25-1b'].accepted[0], 'workspaces isolated between attempts');
 
   // ── 9. empty states ──
   // all correct → no topics; only staff-graded → "No automatically graded questions"

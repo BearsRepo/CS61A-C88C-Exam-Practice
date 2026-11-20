@@ -1,7 +1,7 @@
 // First-visit tour (app/tour.js): the welcome prompt, one-time tips across Practice, an exam and its review,
 // dimming and blocking the page behind a tip, the countdown waiting while tips are up, End tutorial, No thanks, Replay.
 const puppeteer = require('puppeteer-core');
-const { APP_URL, CHROME } = require('./config');
+const { APP_URL, CHROME, welcomeScreen } = require('./config');
 const KEY = 'cs61a-practice:v1';
 const TOUR = 'cs61a-practice:tour';
 let fails = 0;
@@ -13,7 +13,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const errors = [];
   const fresh = async (width = 1400, height = 900) => {
     const ctx = await browser.createBrowserContext();
-    const page = await ctx.newPage();
+    const page = await ctx.newPage(); await welcomeScreen(page);
     await page.setViewport({ width, height });
     page.on('pageerror', (e) => errors.push(String(e)));
     page.on('dialog', (d) => d.accept());
