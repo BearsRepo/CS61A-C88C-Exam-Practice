@@ -36,7 +36,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const showCharts = async () => { await page.evaluate(() => document.getElementById('tr-sec').scrollIntoView()); await wait(1500); };
   const rings = () => page.evaluate(() => ['.ring-pct', '.ring-wrong'].map((sel) => {
     const r = document.querySelector(sel);
-    return { band: [...r.classList].find((c) => c.startsWith('band-')), text: r.querySelector('.ring-mid b').textContent, small: (r.querySelector('.ring-mid small') || {}).textContent || '',
+    return { band: [...r.classList].find((c) => c.startsWith('band-')), text: r.querySelector('.ring-mid b').textContent, small: (r.querySelector('.ring-num i') || {}).textContent || '', cap: r.querySelector('figcaption').textContent,
       off: Number(getComputedStyle(r.querySelector('.ring-arc')).strokeDashoffset.replace('px', '')), c: Number(r.querySelector('.ring-arc').style.getPropertyValue('--c')) };
   }));
   const rows = () => page.$$eval('#tr-sec .mp-topic', (t) => t.map((x) => ({ topic: x.dataset.topic, meta: x.querySelector('.mp-topic-n').textContent, up: (x.querySelector('.tr-up') || {}).textContent || null, go: !!x.querySelector('.mp-topic-go') })));
@@ -71,12 +71,13 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // ── the rules ──
   await seed({ version: 5, prefs: { mode: 'practice' }, practice: [S1, S2], attempts: [E1] });
   let st = await stats();
-  ok(st[1] === '5', `Questions Practiced: Checked practice parts and answered exam parts, each question once (${st[1]})`);
+  ok(st[1].split('/')[0] === '5', `Questions Practiced: Checked practice parts and answered exam parts, each question once (${st[1]})`);
   ok(st[2] === '50%', `Automatic Accuracy: each part's first try ever, Practice or Exam (a, b wrong; c, d right; u not an exact match, left out): ${st[2]}`);
   await showCharts();
   let R = await rings();
   ok(R[0].text === '50%' && R[0].band === 'band-mid', `left ring: 50% correct on the first try, yellow (${R[0].text}, ${R[0].band})`);
-  ok(R[1].text === '1' && R[1].small === 'of 4 tried' && R[1].band === 'band-good', `right ring: 1 still incorrect of 4 tried (a: wrong again in the later exam; b: fixed in practice), green (${R[1].text} ${R[1].small}, ${R[1].band})`);
+  ok(R[0].cap === 'Correctness' && R[1].cap === 'Incorrect', 'the rings are labelled Correctness and Incorrect');
+  ok(R[1].text === '1' && R[1].small === '/4' && R[1].band === 'band-good', `right ring: 1/4 still incorrect (a: wrong again in the later exam; b: fixed in practice), green (${R[1].text} ${R[1].small}, ${R[1].band})`);
   ok(Math.abs(R[1].off - R[1].c * 0.75) < 1 && Math.abs(R[0].off - R[0].c * 0.5) < 1, `rings fill by their share: left 50%, right 1 of 4 (offsets ${R[0].off.toFixed(1)}/${R[0].c.toFixed(1)}, ${R[1].off.toFixed(1)}/${R[1].c.toFixed(1)})`);
   let rw = await rows();
   const tr = rw.find((r) => r.topic === 'trees');
@@ -165,7 +166,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await click('[data-action="home"]'); await click('[data-action="progress"]'); await showCharts();
   R = await rings();
   st = await stats();
-  ok(R[0].text === '0%' && R[1].text === '0' && st[1] === '1' && st[2] === '0%', `retrying until right does not raise accuracy (${R[0].text}), and the part is no longer "still incorrect" (${R[1].text})`);
+  ok(R[0].text === '0%' && R[1].text === '0' && st[1].split('/')[0] === '1' && st[2] === '0%', `retrying until right does not raise accuracy (${R[0].text}), and the part is no longer "still incorrect" (${R[1].text})`);
   await seed({ version: 5, prefs: { mode: 'practice' }, practice: [S1, S2], attempts: [E1] });
   await page.setViewport({ width: 390, height: 800 }); await wait(200);
   ok(await page.evaluate(() => document.documentElement.scrollWidth <= 390), 'phone width: no sideways scroll');

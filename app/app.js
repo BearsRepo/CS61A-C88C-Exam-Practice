@@ -3053,21 +3053,24 @@
     ['Gleam', GL.TOPICS.map((t) => t.id)],
     ['SQL', SQL_TOPICS_IN_SCOPE],
   ].map(([name, ids]) => [name, ids.filter((t) => TOPIC_POOL.some((q) => q.topics.includes(t)))]);
-  // The summary: Full Exams Completed (full exams marked Completed), Questions Practiced (each question once: a part
-  // Checked in Practice or answered in a Completed exam) and Automatic Accuracy (each part's first try ever, in Practice
-  // or a Completed exam: correct ÷ tried).
+  // The summary, from everything done (each question counted once):
+  //   Full Exams Completed: different full past exams with a Completed attempt, out of all full past exams
+  //   Questions Practiced: questions with a part Checked in Practice or answered in a submitted exam, out of all
+  //     questions in this semester's scope
+  //   Automatic Accuracy: each part's first try ever (Practice first Check or exam grade): correct ÷ tried
+  const TOTAL_QUESTIONS = new Set(TOPIC_POOL.map((q) => q.problem)).size;
+  const TOTAL_FULL_EXAMS = Object.keys(EXAMS).length;
   function progressStats() {
-    const isDone = (a) => setStatus(a) === 'completed';
-    const completed = doneExams().filter(isDone);
     const practiced = new Set();
     [store.session, ...store.practice].filter(Boolean).forEach((s) => s.ids.forEach((id) => {
       if (QMAP[id] && ((s.checked && s.checked[id]) || (s.firstCheck && s.firstCheck[id]))) practiced.add(QMAP[id].problem);
     }));
-    completed.forEach((a) => a.ids.forEach((id) => { if (QMAP[id] && hasAnswer(a, id)) practiced.add(QMAP[id].problem); }));
-    const acc = partStats(partEvents(isDone), () => true);
+    doneExams().forEach((a) => a.ids.forEach((id) => { if (QMAP[id] && hasAnswer(a, id)) practiced.add(QMAP[id].problem); }));
+    const fullDone = new Set(doneExams().filter((a) => a.kind === 'full' && setStatus(a) === 'completed').map((a) => a.examId));
+    const acc = partStats(partEvents(() => true), () => true);
     return {
-      any: practiced.size > 0 || completed.length > 0,
-      fullCompleted: completed.filter((a) => a.kind === 'full').length,
+      any: practiced.size > 0 || fullDone.size > 0,
+      fullCompleted: fullDone.size,
       questions: practiced.size,
       tried: acc.tried,
       accuracy: acc.pct,
@@ -3198,7 +3201,7 @@
     return `<figure class="ring ${cls} band-${band}"><svg viewBox="0 0 120 120" aria-hidden="true">
         <circle class="ring-track" cx="60" cy="60" r="${r}"/>
         <circle class="ring-arc" cx="60" cy="60" r="${r}" transform="rotate(90 60 60)" style="--c:${C.toFixed(2)};--off:${off.toFixed(2)}" stroke-dasharray="${C.toFixed(2)}"/>
-      </svg><div class="ring-mid"><b ${big.count !== undefined ? `data-count="${big.count}" data-suffix="${big.suffix || ''}"` : ''}>${big.text}</b>${small ? `<small>${small}</small>` : ''}</div>
+      </svg><div class="ring-mid"><span class="ring-num"><b ${big.count !== undefined ? `data-count="${big.count}" data-suffix="${big.suffix || ''}"` : ''}>${big.text}</b>${big.of !== undefined ? `<i>/${big.of}</i>` : ''}</span>${small ? `<small>${small}</small>` : ''}</div>
       <figcaption>${label}</figcaption></figure>`;
   }
   const pctBand = (p) => (p === null ? 'none' : p >= 70 ? 'good' : p >= 50 ? 'mid' : 'bad');
@@ -3220,8 +3223,8 @@
     const values = axes.map((ax) => (ax.blank ? null : partStats(ev, ax.has).pct));
     const key = `${topic}`;
     const anim = ui.trDrawn !== key;
-    const left = ringSVG('ring-pct', (s.pct || 0) / 100, s.pct === null ? { text: '—' } : { text: `${s.pct}%`, count: s.pct, suffix: '%' }, '', pctBand(s.pct), 'Correct on the first try');
-    const right = ringSVG('ring-wrong', s.tried ? s.wrong / s.tried : 0, s.tried ? { text: String(s.wrong), count: s.wrong } : { text: '—' }, s.tried ? `of ${s.tried} tried` : '', wrongBand(s.wrong, s.tried), 'Still incorrect');
+    const left = ringSVG('ring-pct', (s.pct || 0) / 100, s.pct === null ? { text: '—' } : { text: `${s.pct}%`, count: s.pct, suffix: '%' }, '', pctBand(s.pct), 'Correctness');
+    const right = ringSVG('ring-wrong', s.tried ? s.wrong / s.tried : 0, s.tried ? { text: String(s.wrong), count: s.wrong, of: s.tried } : { text: '—' }, '', wrongBand(s.wrong, s.tried), 'Incorrect');
     const opt = (t) => `<option value="${esc(t)}" ${t === topic ? 'selected' : ''}>${esc(topicById(t).name)}</option>`;
     const picker = `<label class="tr-pick"><span>Topic</span><select id="tr-topic"><option value="all" ${topic === 'all' ? 'selected' : ''}>All topics</option>
         ${PROGRESS_TOPICS.filter(([, ids]) => ids.length).map(([g, ids]) => `<optgroup label="${g}">${ids.map(opt).join('')}</optgroup>`).join('')}</select></label>`;
@@ -3277,16 +3280,16 @@
     const st = progressStats();
     const items = historyItems();
     const shown = items.filter(historyMatches);
-    const stat = (v, label) => `<div class="mp-stat"><b>${v}</b><span>${label}</span></div>`;
+    const stat = (v, label, total) => `<div class="mp-stat"><b>${v}${total !== undefined ? `<small>/${total}</small>` : ''}</b><span>${label}</span></div>`;
     return `<main class="home progress">
       <div class="mp-top"><button class="btn btn-sm btn-home" data-action="go-home">${icon('home')}Home</button></div>
       ${storageWarningHTML()}
       <section class="mp-card" aria-labelledby="mp-h">
         <h1 id="mp-h" class="mp-h1">My Progress</h1>
-        <p class="hint mp-sub">Summary from your Completed Exams</p>
+        <p class="hint mp-sub">Summary from your practice sets and exams</p>
         <div class="mp-stats">
-          ${stat(st.fullCompleted, 'Full Exams Completed')}
-          ${stat(st.any ? st.questions : '—', 'Questions Practiced')}
+          ${stat(st.fullCompleted, 'Full Exams Completed', TOTAL_FULL_EXAMS)}
+          ${stat(st.questions, 'Questions Practiced', TOTAL_QUESTIONS)}
           ${stat(st.accuracy === null ? '—' : `${st.accuracy}%`, 'Automatic Accuracy')}
         </div>
         ${st.any ? '' : '<p class="hint">Check answers in Practice Mode or complete an exam to see your numbers here.</p>'}

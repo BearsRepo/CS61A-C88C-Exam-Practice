@@ -61,8 +61,10 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(!(await has('.history')) && !(await has('.hist-row')), 'Exam Mode: no Exam history at the bottom of the home page');
   await click('#mode-practice');
   await toProgress();
-  ok(/My Progress/.test(await text('.progress h1')) && (await text('.mp-sub')) === 'Summary from your Completed Exams', 'My Progress page: heading and "Summary from your Completed Exams"');
-  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'nothing done yet: 0 full exams, — questions, — accuracy');
+  ok(/My Progress/.test(await text('.progress h1')) && (await text('.mp-sub')) === 'Summary from your practice sets and exams', 'My Progress page: heading and "Summary from your practice sets and exams"');
+  const empty = await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
+  ok(empty[0] === '0/17' && /^0\/\d{3,}$/.test(empty[1]) && empty[2] === '—', `nothing done yet: 0 of the 17 full exams, 0 of all questions, — accuracy (${empty.join(', ')})`);
+  ok(await page.$eval('.mp-stat b small', (s) => parseFloat(getComputedStyle(s).fontSize) < parseFloat(getComputedStyle(s.parentElement).fontSize) * 0.6), 'the total ("/17") is about half the size of the number');
   ok(/Nothing here yet/.test(await text('#mh-h ~ .mp-empty, .mp-card:nth-of-type(2) .mp-empty')) && !(await has('.mh-filter')), 'empty My History: a hint and no Filter button');
   ok(/Answer questions in Practice or Exam Mode/.test(await text('#tr-sec .mp-empty')), 'empty Topics to Review: a hint');
   await toHome();
@@ -83,7 +85,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     return { inCard: !!c.querySelector('.mh-open .mh-status'), links: c.querySelectorAll('a, .link').length, beside: del.left >= st.right && Math.abs((del.top + del.bottom) / 2 - (st.top + st.bottom) / 2) < 6, small: del.width <= 28 }; });
   ok(layout.inCard && layout.links === 0 && layout.beside && layout.small, `the whole card is one button (no Continue / Review link); a small Delete sits right of the status label (${JSON.stringify(layout)})`);
   ok(R[0].bg === GOLD, `In Progress is gold (${R[0].bg})`);
-  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'answers that were never Checked do not count toward the summary');
+  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent.split('/')[0]))).join() === '0,0,—', 'answers that were never Checked do not count toward the summary');
 
   // ── set B: starting a new set keeps A, no warning dialog ──
   dialogs.length = 0;
@@ -193,11 +195,11 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await seed({ version: 5, prefs: { mode: 'practice' }, attempts: [A1, A2, A3], practice: [practiceWrong] });
   await toProgress();
   // questions with an answered part in the Completed exams (A1 skipped its A+ part; A2 is Incomplete, so it is left out)
-  const problems = new Set(plan.ids.filter((id) => id !== plan.zero).map((id) => plan.problemOf[id]).concat(plan.p3problem));
+  const problems = new Set(plan.ids.map((id) => plan.problemOf[id]).concat(plan.p3problem));
   const stats = await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
-  ok(stats[0] === '1', `Full Exams Completed counts only full exams with every part answered (A+ excepted): ${stats[0]}`);
-  ok(stats[1] === String(problems.size), `Questions Practiced counts each question of the Completed exams once (${stats[1]} of ${problems.size})`);
-  ok(stats[2] === '33%', `Automatic Accuracy counts Completed exams only (the Incomplete retake that got Q1 right is left out, and so is practice): ${stats[2]}`);
+  ok(stats[0] === '1/17', `Full Exams Completed: full exams with every part answered (A+ excepted), out of all 17: ${stats[0]}`);
+  ok(stats[1].split('/')[0] === String(problems.size), `Questions Practiced: every submitted exam (the Incomplete retake too), each question once (${stats[1]}, expected ${problems.size})`);
+  ok(stats[2] === '33%', `Automatic Accuracy: each part's first try (the retake that got Q1 right comes later, so Q1 stays wrong; unchecked practice is left out): ${stats[2]}`);
   R = await cards();
   ok(R.find((r) => r.id === 'xa1').tag === 'Completed' && R.find((r) => r.id === 'xa2').tag === 'Incomplete' && R.find((r) => r.id === 'xa1').action === 'open-attempt', 'exams: Completed (A+ unanswered is fine) / Incomplete (a part left unanswered), opened by their cards');
   ok(R.find((r) => r.id === 'xa1').meta.startsWith('Full Exam · ') && R.find((r) => r.id === 'xa3').meta.startsWith('Topic-based Exam · '), 'cards show the type: Full Exam / Topic-based Exam');
@@ -276,7 +278,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await seed({ version: 5, prefs: { mode: 'practice' }, attempts: [A1, A2, A3, A4] });
   await toProgress();
   const stats2 = await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
-  ok(stats2[0] === '2' && stats2[1] === stats[1] && stats2[2] === '33%', `a Completed retake: 2 full exams, questions still counted once (${stats2[1]}), accuracy keeps each part's first try (${stats2[2]})`);
+  ok(stats2[0] === '1/17' && stats2[1] === stats[1] && stats2[2] === '33%', `a Completed retake of the same exam: still 1 of 17 full exams, questions still counted once (${stats2[1]}), accuracy keeps each part's first try (${stats2[2]})`);
 
   // ── phone width: no sideways scroll ──
   await toProgress();
