@@ -1,4 +1,4 @@
-// My Progress → Topics to Review: radar chart + two rings + topic picker, and the rules behind the numbers.
+// My Progress → Topics to Review: bar chart + two rings + language picker, and the rules behind the numbers.
 //   - each question part counts once; accuracy uses its FIRST try ever (Practice: first Check in a set; Exam: its
 //     automatic grade), whichever came first; only correct / incorrect count (not "not an exact match")
 //   - "Still incorrect" uses each part's LATEST result, Practice or Exam
@@ -96,35 +96,25 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   // clicking a bar switches to that language
   await page.click('button.tr-bar[data-v="python"]'); await wait(150); await showCharts();
   ok(await page.$eval('.tr-langs [data-v="python"]', (b) => b.getAttribute('aria-checked')) === 'true', 'clicking the Python bar switches to Python');
-  // ── Python: a radar with every Python topic ──
-  const pyTopics = await page.$$eval('.rd-label', (l) => l.map((x) => x.textContent));
-  ok(pyTopics.length === 10 && pyTopics.some((x) => x.startsWith('Trees')) && pyTopics.some((x) => x.startsWith('OOP')), `Python: one axis per Python topic (${pyTopics.length}: ${pyTopics.join(', ')})`);
-  const plain = await page.evaluate(() => ({ nums: [...document.querySelectorAll('#tr-sec .rd text')].filter((t) => /[0-9]/.test(t.textContent)).length,
-    grey: [...document.querySelectorAll('.rd-label.none')].map((t) => getComputedStyle(t).fill), tried: document.querySelectorAll('.rd-label:not(.none)').length }));
-  ok(plain.nums === 0 && pyTopics.every((x) => !x.includes('—')), 'the radar shows no numbers, and no — marks');
-  ok(plain.grey.length === pyTopics.length - plain.tried && plain.grey.every((c) => c === 'rgb(154, 160, 170)'), `topics not tried yet are greyed out (${plain.grey.length})`);
-  const look = await page.evaluate(() => {
-    const area = getComputedStyle(document.querySelector('.rd-area'));
-    const none = document.querySelector('.rd-dot.none');
-    return { fill: area.fill, r: none ? Math.hypot(Number(none.getAttribute('cx')), Number(none.getAttribute('cy'))) : null };
-  });
-  const alpha = Number((/rgba\([^)]*,\s*([\d.]+)\)/.exec(look.fill) || [])[1]);
-  ok(alpha >= 0.3, `the radar is a filled blue area (${look.fill})`);
-  ok(look.r !== null && Math.abs(look.r - 18) < 0.5, `0% sits on a small inner circle, not the centre (radius ${look.r && look.r.toFixed(1)})`);
+  // ── Python: one bar per Python topic ──
+  const pyBars = await page.$$eval('.tr-bar', (b) => b.map((x) => ({ name: x.querySelector('.tr-bar-name').textContent, val: x.querySelector('.tr-bar-val').textContent, none: x.classList.contains('none'), grey: getComputedStyle(x.querySelector('.tr-bar-name')).color, button: x.tagName === 'BUTTON' })));
+  ok(pyBars.length === 10 && pyBars.some((x) => x.name === 'Trees' && x.val === '50%') && pyBars.some((x) => x.name === 'OOP'), `Python: one bar per Python topic, first-try % correct (${pyBars.map((x) => x.name + ' ' + x.val).join(', ')})`);
+  ok(pyBars.filter((x) => x.val === '—').every((x) => x.none && x.grey === 'rgb(154, 160, 170)') && pyBars.filter((x) => x.none).length === pyBars.filter((x) => x.val === '—').length, 'topics not tried yet are greyed out');
+  ok(!(await has('#tr-sec svg.rd')) && pyBars.every((x) => !x.button), 'no radar chart; topic bars are not buttons');
   rw = await rows();
   const pyOnly = await page.evaluate((ids) => ids.every((t) => !/^(gl|sql)-/.test(t)), rw.map((r) => r.topic));
   ok(rw.length && pyOnly, 'Python: the list shows only Python topics');
   // ── Gleam: nothing tried ──
   await lang('gleam');
   const glTopics = await page.evaluate(() => { const G = window.CS61A_GLEAM_BANK; return G.TOPICS.filter((t) => G.QUESTIONS.some((q) => q.topics.includes(t.id))).length; });
-  ok((await page.$$eval('.rd-label', (l) => l.length)) === glTopics, `Gleam: a radar with each Gleam topic that has questions (${glTopics})`);
+  ok((await bars()).length === glTopics, `Gleam: one bar per Gleam topic that has questions (${glTopics})`);
   ok(/Answer Gleam questions in Practice or Exam Mode/.test(await text('#tr-sec .mp-empty')), 'Gleam not tried yet: a hint instead of a list');
   R = await rings();
   ok(R[0].text === '—' && R[1].text === '—' && R[0].band === 'band-none', 'its rings show — and stay empty');
   // ── SQL: bars for its two topics ──
   await lang('sql');
   B = await bars();
-  ok(B.map((x) => x[0]).join() === 'Joins,Aggregation' && !(await has('#tr-sec .rd')), `SQL: one bar per topic, no radar (${B.map((x) => x[0]).join(', ')})`);
+  ok(B.map((x) => x[0]).join() === 'Joins,Aggregation' && !(await has('#tr-sec svg.rd')), `SQL: one bar per topic (${B.map((x) => x[0]).join(', ')})`);
   ok(!(await has('.tr-bar button, button.tr-bar')), 'SQL topic bars are not buttons');
   ok(!(await has('#tr-sec .tr-single')), 'there is no single-topic view');
 
@@ -160,9 +150,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(!(await has('.tr-charts.anim')), 'other changes on the page (opening the Filter menu) do not replay the animation');
   await page.mouse.click(5, 5); await wait(150);
   await page.click('.tr-langs [data-action="tr-lang"][data-v="python"]'); await wait(60);
-  ok(await page.evaluate(() => { const el = document.querySelector('.tr-charts'); return el.classList.contains('anim') || getComputedStyle(document.querySelector('.rd-shape')).transform !== 'matrix(1, 0, 0, 1, 0, 0)'; }), 'changing the language draws the charts again (the radar grows from the centre)');
+  ok((await barRatio()) < 0.45, 'changing the language draws the charts again (the bars grow from the left)');
   await wait(1200);
-  ok(/matrix\(1, 0, 0, 1/.test(await page.$eval('.rd-shape', (g) => getComputedStyle(g).transform)), 'then the radar is fully drawn');
+  ok(Math.abs((await barRatio()) - (await page.$eval('.tr-bar-val', (v) => (parseInt(v.textContent, 10) || 0) / 100))) < 0.02, 'then the bars are fully drawn');
   // reduce motion
   await page.setViewport({ width: 1200, height: 700 });
   await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);

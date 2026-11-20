@@ -3150,8 +3150,8 @@
     createExam('custom', null, pids, null, { title: `${t.name} Review #${n}`, auto: { topic, n } });
   }
   // ── Topics to Review: chart + two rings (left), language picker + topic list (right) ──
-  // Every submitted exam counts here (Incomplete ones too), with Practice Checks. All: one bar per language. Python and
-  // Gleam: a radar with one axis per topic. SQL (two topics): one bar per topic. Charts draw in once when scrolled into
+  // Every submitted exam counts here (Incomplete ones too), with Practice Checks. All: one bar per language; Python,
+  // Gleam and SQL: one bar per topic. Charts draw in once when scrolled into
   // view, and again when the language changes (not on other re-renders); reduce motion shows them at once.
   const SHORT_TOPIC = { fundamentals: 'Fundamentals', hof: 'HOF', env: 'Env Diagrams', lists: 'Lists & Mutation', links: 'Linked Lists',
     'gl-lists': 'Lists & Patterns', 'gl-recursion': 'Recursion', 'gl-hof': 'HOF', 'gl-types': 'Custom Types', 'gl-dicts': 'Dictionaries',
@@ -3161,40 +3161,12 @@
   const langTopics = (lang) => (PROGRESS_TOPICS.find(([name]) => name.toLowerCase() === lang) || [null, []])[1];
   const isPyTopic = (t) => !isGleamTopic(t) && !isSqlTopic(t);
   const LANG_HAS = { all: () => true, python: (q) => q.topics.some(isPyTopic), gleam: (q) => q.topics.some(isGleamTopic), sql: (q) => q.topics.some(isSqlTopic) };
-  // Radar: 0% sits on a small inner circle (not the very centre), so the shape stays a filled area even with 0% topics.
-  function radarSVG(axes, values) {
-    const R = 100, R0 = 18, n = axes.length;
-    const at = (i, r) => { const a = (-90 + (i * 360) / n) * (Math.PI / 180); return [r * Math.cos(a), r * Math.sin(a)]; };
-    const rad = (v) => R0 + ((R - R0) * (v || 0)) / 100;
-    const fmt = (p) => p.map((v) => v.toFixed(1)).join(',');
-    const poly = (r) => axes.map((_, i) => fmt(at(i, r))).join(' ');
-    const grid = [0, 0.25, 0.5, 0.75, 1].map((f) => `<polygon class="rd-grid${f === 1 ? ' outer' : ''}" points="${poly(R0 + (R - R0) * f)}"/>`).join('');
-    const spokes = axes.map((_, i) => { const [x0, y0] = at(i, R0), [x, y] = at(i, R); return `<line class="rd-spoke" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
-    const pts = values.map((v, i) => at(i, rad(v)));
-    const shape = `<polygon class="rd-area" points="${pts.map(fmt).join(' ')}"/>`
-      + pts.map(([x, y], i) => `<circle class="rd-dot${values[i] === null ? ' none' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`).join('');
-    // the score beside each point (blue), and the topic name outside the chart (grey)
-    const scores = values.map((v, i) => {
-      if (v === null) return '';
-      const [x, y] = at(i, rad(v) + 13);
-      return '';
-    }).join('');
-    const labels = axes.map((ax, i) => {
-      const [x, y] = at(i, R + 28);
-      const anchor = x > 6 ? 'start' : x < -6 ? 'end' : 'middle';
-      const dy = y < -6 ? -2 : y > 6 ? 10 : 4;
-      return `<text class="rd-label${values[i] === null ? ' none' : ''}" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}">${esc(ax.label)}</text>`;
-    }).join('');
-    const desc = axes.map((a, i) => `${a.label}: ${values[i] === null ? 'not tried' : `${values[i]}% correct`}`).join('; ');
-    return `<svg class="rd" viewBox="-230 -142 460 284" role="img" aria-label="First-try % correct by topic. ${esc(desc)}">${grid}${spokes}
-      <g class="rd-shape">${shape}</g><g class="rd-scores">${scores}</g>${labels}</svg>`;
-  }
   // Bars: one per row ({ label, value, key? }); a row with a key switches the language when clicked.
   function barsHTML(rows) {
     return `<ul class="tr-bars">${rows.map((r) => {
       const inner = `<span class="tr-bar-name">${esc(r.label)}</span><span class="tr-bar-track"><span class="tr-bar-fill band-${pctBand(r.value)}" style="--w:${r.value || 0}%"></span></span>
         <span class="tr-bar-val">${r.value === null ? '—' : `${r.value}%`}</span>`;
-      return `<li>${r.key ? `<button class="tr-bar" data-action="tr-lang" data-v="${r.key}" aria-label="${esc(r.label)}: ${r.value === null ? 'not tried' : `${r.value}% correct`}. Show ${esc(r.label)} topics">${inner}</button>` : `<div class="tr-bar">${inner}</div>`}</li>`;
+      return `<li>${r.key ? `<button class="tr-bar" data-action="tr-lang" data-v="${r.key}" aria-label="${esc(r.label)}: ${r.value === null ? 'not tried' : `${r.value}% correct`}. Show ${esc(r.label)} topics">${inner}</button>` : `<div class="tr-bar${r.value === null ? ' none' : ''}">${inner}</div>`}</li>`;
     }).join('')}</ul>`;
   }
   // A ring that fills clockwise from the bottom: frac 0..1, the number in the middle, a colour band.
@@ -3223,11 +3195,7 @@
     const pctOf = (has) => partStats(ev, has).pct;
     let chart;
     if (lang === 'all') chart = barsHTML(TR_LANGS.slice(1).map(([k, label]) => ({ key: k, label, value: pctOf(LANG_HAS[k]) })));
-    else if (lang === 'sql') chart = barsHTML(langTopics('sql').map((t) => ({ label: topicById(t).name, value: pctOf((q) => q.topics.includes(t)) })));
-    else {
-      const ids = langTopics(lang);
-      chart = radarSVG(ids.map((t) => ({ label: shortTopic(t) })), ids.map((t) => pctOf((q) => q.topics.includes(t))));
-    }
+    else chart = barsHTML(langTopics(lang).map((t) => ({ label: shortTopic(t), value: pctOf((q) => q.topics.includes(t)) })));
     const anim = ui.trDrawn !== lang;
     const left = ringSVG('ring-pct', (s.pct || 0) / 100, s.pct === null ? { text: '—' } : { text: `${s.pct}%`, count: s.pct, suffix: '%' }, '', pctBand(s.pct), 'Correctness');
     const right = ringSVG('ring-wrong', s.tried ? s.wrong / s.tried : 0, s.tried ? { text: String(s.wrong), count: s.wrong, of: s.tried } : { text: '—' }, '', wrongBand(s.wrong, s.tried), 'Incorrect');
@@ -3241,7 +3209,7 @@
         <h2 id="mt-h">Topics to Review</h2>
         <div class="tr-grid">
           <div class="tr-charts${anim ? ' anim' : ''}" data-key="${lang}">
-            <div class="tr-chart tr-chart-${lang === 'all' || lang === 'sql' ? 'bars' : 'radar'}">${chart}</div>
+            <div class="tr-chart tr-chart-bars">${chart}</div>
             <div class="tr-rings">${left}${right}</div>
           </div>
           <div class="tr-side">${picker}
