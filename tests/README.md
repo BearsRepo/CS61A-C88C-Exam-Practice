@@ -1,8 +1,10 @@
 # Tests
 
 Browser regression tests for the app in `../app`. They drive a real Chrome through
-[puppeteer-core](https://pptr.dev) against `app/index.html` (no server needed) and check the
-saved `localStorage` state as well as the page.
+[puppeteer-core](https://pptr.dev) against the app page and check the saved `localStorage` state as well
+as the page. The app page is `app/menu.html` once the site has a separate landing page (`app/index.html`),
+and `app/index.html` before that; `e2e/config.js` picks whichever exists and starts the app on its welcome
+screen, so suites click Enter as before.
 
 ```sh
 cd tests
@@ -12,7 +14,13 @@ node e2e/phase5a_qa.test.js   # one suite
 ```
 
 Set `CHROME=/path/to/chrome` if Chrome isn't in the default location, or `APP_URL=http://localhost:8000/`
-to test a served copy. `npm run test:guides` needs `python3`.
+to test a served copy (a URL ending in `/` gets the app page added). With the landing page split, serve the app
+over HTTP: from `file://`, Chrome blocks `site.webmanifest` and logs a console error that the suites count, e.g.
+
+```sh
+python3 -m http.server 8000 -d ../app &   # from tests/
+APP_URL=http://localhost:8000/ node e2e/phase3_exam_mode.test.js
+``` `npm run test:guides` needs `python3`.
 
 | Suite | Covers |
 |---|---|

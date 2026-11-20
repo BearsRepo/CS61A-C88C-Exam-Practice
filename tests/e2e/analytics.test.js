@@ -14,7 +14,7 @@ const puppeteer = require('puppeteer-core');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { CHROME, skipTour } = require('./config');
+const { APP_PAGE, CHROME, skipTour } = require('./config');
 const KEY = 'cs61a-practice:v1';
 const AKEY = 'cs61a-analytics:v1';
 const APP_DIR = path.join(__dirname, '..', '..', 'app');
@@ -117,7 +117,7 @@ function installFake() {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const ORIGIN = `http://localhost:${server.address().port}`;
-  const URL_ = `${ORIGIN}/index.html`;
+  const URL_ = `${ORIGIN}/${APP_PAGE}`;
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
   const outside = [];
   const errors = [];
