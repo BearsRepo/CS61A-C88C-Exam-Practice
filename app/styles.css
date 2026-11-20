@@ -599,6 +599,56 @@ kbd { font-family: var(--mono); font-size: 11px; border: 1px solid var(--line-st
 .mp-topic:first-child { border-top: 0; }
 .mp-topic-name { font-size: 15.5px; }
 .mp-topic-n { font-size: 13.5px; color: var(--muted); white-space: nowrap; }
+/* Topics to Review: radar + rings on the left, topic picker + list on the right */
+.tr-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; margin-top: 10px; align-items: start; }
+.tr-charts { min-width: 0; }
+.rd { display: block; width: 100%; height: auto; overflow: visible; }
+.rd-grid { fill: none; stroke: var(--line); stroke-width: 1; }
+.rd-grid:last-of-type { fill: #fafbfc; }
+.rd-spoke { stroke: var(--line); stroke-width: 1; }
+.rd-area { fill: rgba(0, 50, 98, .14); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.rd-dot { fill: var(--accent); }
+.rd-dot.none { fill: var(--paper); stroke: var(--line-strong); stroke-width: 1.5; }
+.rd-label { font-size: 12px; fill: var(--muted); }
+.rd-val { font-weight: 700; fill: var(--ink); }
+.rd-val.none { fill: var(--line-strong); font-weight: 400; }
+.rd-shape { transform: scale(1); transition: transform 1s cubic-bezier(.33, 1, .68, 1); }
+.tr-rings { display: flex; justify-content: center; gap: 28px; margin-top: 8px; }
+.ring { position: relative; margin: 0; width: 132px; text-align: center; }
+.ring svg { display: block; width: 132px; height: 132px; }
+.ring-track { fill: none; stroke: #edf0f3; stroke-width: 11; }
+.ring-arc { fill: none; stroke: var(--line-strong); stroke-width: 11; stroke-linecap: round; stroke-dashoffset: var(--off); transition: stroke-dashoffset 1s cubic-bezier(.33, 1, .68, 1); }
+.band-none .ring-arc { stroke: transparent; }
+.band-good .ring-arc { stroke: #2e9e57; }
+.band-mid .ring-arc { stroke: #e3a400; }
+.band-bad .ring-arc { stroke: #d2402f; }
+.ring-mid { position: absolute; left: 0; right: 0; top: 0; height: 132px; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.ring-mid b { font-size: 28px; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ring-mid small { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.ring figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+/* before the charts scroll into view: the radar shape at the centre, the rings empty */
+.tr-charts.anim .rd-shape { transform: scale(0); }
+.tr-charts.anim .ring-arc { stroke-dashoffset: var(--c); }
+@media (prefers-reduced-motion: reduce) {
+  .rd-shape, .ring-arc { transition: none; }
+}
+.tr-side { min-width: 0; }
+.tr-pick { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.tr-pick span { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.tr-pick select { flex: 1; min-width: 0; font: inherit; font-size: 15px; padding: 8px 10px; border: 1.5px solid var(--line-strong); border-radius: 10px; background: var(--paper); color: var(--ink); }
+.tr-up { display: inline-block; font-size: 12px; font-weight: 700; color: var(--good); background: var(--good-soft); border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 1px; }
+.tr-side .mp-topic { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+.tr-side .mp-topic-go { grid-column: 2; grid-row: 1 / span 2; }
+.tr-side .mp-topic-n { grid-column: 1; }
+@media (max-width: 760px) {
+  .tr-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .rd-label { font-size: 14px; }
+  .tr-rings { gap: 14px; }
+  .ring, .ring svg { width: 118px; }
+  .ring svg, .ring-mid { height: 118px; }
+}
 .mp-empty { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
 @media (max-width: 640px) {
   .mp-stats { grid-template-columns: 1fr; }

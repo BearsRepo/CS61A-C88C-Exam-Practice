@@ -64,7 +64,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(/My Progress/.test(await text('.progress h1')) && (await text('.mp-sub')) === 'Summary from your Completed Exams', 'My Progress page: heading and "Summary from your Completed Exams"');
   ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'nothing done yet: 0 full exams, — questions, — accuracy');
   ok(/Nothing here yet/.test(await text('#mh-h ~ .mp-empty, .mp-card:nth-of-type(2) .mp-empty')) && !(await has('.mh-filter')), 'empty My History: a hint and no Filter button');
-  ok(/Nothing to review yet/.test(await text('.mp-card:last-child .mp-empty')), 'empty Topics to Review: a hint');
+  ok(/Answer questions in Practice or Exam Mode/.test(await text('#tr-sec .mp-empty')), 'empty Topics to Review: a hint');
   await toHome();
 
   // ── practice set A: start, answer one part, leave unfinished ──
@@ -83,7 +83,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     return { inCard: !!c.querySelector('.mh-open .mh-status'), links: c.querySelectorAll('a, .link').length, beside: del.left >= st.right && Math.abs((del.top + del.bottom) / 2 - (st.top + st.bottom) / 2) < 6, small: del.width <= 28 }; });
   ok(layout.inCard && layout.links === 0 && layout.beside && layout.small, `the whole card is one button (no Continue / Review link); a small Delete sits right of the status label (${JSON.stringify(layout)})`);
   ok(R[0].bg === GOLD, `In Progress is gold (${R[0].bg})`);
-  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'practice work does not count toward the summary');
+  ok((await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent))).join() === '0,—,—', 'answers that were never Checked do not count toward the summary');
 
   // ── set B: starting a new set keeps A, no warning dialog ──
   dialogs.length = 0;
@@ -202,8 +202,9 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   ok(R.find((r) => r.id === 'xa1').tag === 'Completed' && R.find((r) => r.id === 'xa2').tag === 'Incomplete' && R.find((r) => r.id === 'xa1').action === 'open-attempt', 'exams: Completed (A+ unanswered is fine) / Incomplete (a part left unanswered), opened by their cards');
   ok(R.find((r) => r.id === 'xa1').meta.startsWith('Full Exam · ') && R.find((r) => r.id === 'xa3').meta.startsWith('Topic-based Exam · '), 'cards show the type: Full Exam / Topic-based Exam');
   ok(R.map((r) => r.id).join() === 'pw,xa3,xa2,xa1', `newest first (${R.map((r) => r.id).join(', ')})`);
-  const topics = await page.$$eval('.mp-topic', (t) => t.map((x) => [x.querySelector('[data-topic]').dataset.topic, x.querySelector('.mp-topic-n').textContent]));
-  ok(topics.length === plan.p3topics.length && plan.p3topics.every((t) => topics.some(([id, n]) => id === t && n === '1 incorrect')), `Topics to Review: the topics whose latest exam result is incorrect (${topics.map((t) => t.join(' ')).join('; ')})`);
+  const topics = await page.$$eval('#tr-sec .mp-topic', (t) => t.map((x) => [x.dataset.topic, x.querySelector('.mp-topic-n').textContent]));
+  ok(plan.p3topics.every((t) => topics.some(([id, n]) => id === t && n.startsWith('1 incorrect'))) && topics[0][1].startsWith('1 incorrect')
+    && topics.filter(([id]) => !plan.p3topics.includes(id)).every(([, n]) => n.startsWith('0 incorrect')), `Topics to Review: the topics whose latest exam result is incorrect (${topics.map((t) => t.join(' ')).join('; ')})`);
 
   // ── Filter ──
   ok(/^Filter/.test(await text('.mh-filter-btn')), 'My History has a Filter button');
@@ -275,7 +276,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   await seed({ version: 5, prefs: { mode: 'practice' }, attempts: [A1, A2, A3, A4] });
   await toProgress();
   const stats2 = await page.$$eval('.mp-stat b', (b) => b.map((x) => x.textContent));
-  ok(stats2[0] === '2' && stats2[1] === stats[1] && stats2[2] === '67%', `a Completed retake: 2 full exams, questions still counted once (${stats2[1]}), accuracy uses the latest result (${stats2[2]})`);
+  ok(stats2[0] === '2' && stats2[1] === stats[1] && stats2[2] === '33%', `a Completed retake: 2 full exams, questions still counted once (${stats2[1]}), accuracy keeps each part's first try (${stats2[2]})`);
 
   // ── phone width: no sideways scroll ──
   await toProgress();

@@ -287,7 +287,7 @@
   // A saved pick can be a question that is now wholly out of scope; drop it so it can't start an empty group.
   store.examPrefs.picked = [...new Set(store.examPrefs.picked)].filter((pid) => PMAP[pid] && EXAM_QUESTIONS.some((q) => q.problem === pid));
   // view: which session the question screen shows. 'practice' | 'exam' (in progress) | 'review' (a submitted attempt)
-  const ui = { hFilter: { type: [], status: [], year: [] }, screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
+  const ui = { trTopic: 'all', trDrawn: null, hFilter: { type: [], status: [], year: [] }, screen: 'landing', view: 'practice', attemptId: null, menu: null, navOpen: false, dirOpen: false, hideClock: false, confirmReveal: null, annMode: 'none', examQuery: '', sizeDraft: null, walkCollapsed: false };
 
   const attemptById = (id) => store.attempts.find((a) => a.id === id) || null;
   // The session usage tracking files something under: a review workspace counts toward the attempt it reviews.
@@ -2997,35 +2997,80 @@
   const STATUS = { completed: 'Completed', incomplete: 'Incomplete', progress: 'In Progress' };
   // Submitted exams, oldest first (store.attempts is kept in submission order).
   const doneExams = () => store.attempts.filter((a) => a.submitted);
-  // Each part's latest automatic grade ('correct' | 'incorrect') over these exams, oldest first; a skipped part keeps
-  // its earlier grade. Also the questions (problems) with an answered part.
-  function latestResults(exams) {
-    const practiced = new Set();
-    const latest = {};
-    exams.slice().sort((a, b) => a.finishedAt - b.finishedAt).forEach((a) => a.ids.forEach((id) => {
+  // ── Results per question part (My Progress) ──
+  // A practice part's result is a Check: its first Check in a set (firstCheck, [result, time]) and its latest
+  // (lastCheck). Sets checked before these were kept fall back to the saved Check with the set's time. An exam part's
+  // result is its automatic grade, at the time the exam was submitted. Only 'correct' / 'incorrect' count (not
+  // "not an exact match", self-grades, code graded by staff, or skipped parts).
+  const RESULT = (r) => r === 'correct' || r === 'incorrect';
+  function partEvents(examFilter) {
+    const first = []; // first tries: { id, r, t }
+    const last = [];  // latest results
+    [store.session, ...store.practice].filter(Boolean).forEach((s) => s.ids.forEach((id) => {
       if (!QMAP[id]) return;
-      if (hasAnswer(a, id)) practiced.add(QMAP[id].problem);
-      const g = a.graded && a.graded[id];
-      if (g === 'correct' || g === 'incorrect') latest[id] = g;
+      const when = s.finishedAt || s.startedAt || 0;
+      const fc = s.firstCheck && s.firstCheck[id];
+      const lc = s.lastCheck && s.lastCheck[id];
+      const old = !fc && RESULT(s.checked && s.checked[id]) ? [s.checked[id], when] : null;
+      const f = fc || old, l = lc || old;
+      if (f && RESULT(f[0])) first.push({ id, r: f[0], t: f[1] });
+      if (l && RESULT(l[0])) last.push({ id, r: l[0], t: l[1] });
     }));
-    return { practiced, latest };
+    doneExams().filter(examFilter).forEach((a) => a.ids.forEach((id) => {
+      const g = a.graded && a.graded[id];
+      if (QMAP[id] && RESULT(g)) { first.push({ id, r: g, t: a.finishedAt }); last.push({ id, r: g, t: a.finishedAt }); }
+    }));
+    // each part once: its first try ever (Jacob's rule), and its latest result
+    const firstTry = {}, latest = {};
+    first.forEach((e) => { const x = firstTry[e.id]; if (!x || e.t < x.t) firstTry[e.id] = e; });
+    last.forEach((e) => { const x = latest[e.id]; if (!x || e.t >= x.t) latest[e.id] = e; });
+    return { firstTry, latest };
   }
-  // The summary uses Completed exams only (every part answered, A+ excepted). Topics to Review uses every submitted
-  // exam: a wrong answer in an Incomplete exam is still worth reviewing.
+  // Stats for the parts that match `has(q)`: first-try % correct, parts still wrong (latest result), and the
+  // improvement from the earlier half of the parts tried (in the order first tried) to the later half (4+ parts).
+  function partStats(ev, has) {
+    const tries = Object.values(ev.firstTry).filter((e) => has(QMAP[e.id])).sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1));
+    const n = tries.length;
+    const right = tries.filter((e) => e.r === 'correct').length;
+    const wrong = Object.values(ev.latest).filter((e) => has(QMAP[e.id]) && e.r === 'incorrect').length;
+    // Jacob's split: the first floor(n / 2) parts tried against the rest. Parts tried at the same moment (one exam) stay
+    // in the same half, so one exam on its own never shows an improvement.
+    let improvement = null;
+    if (n >= 4) {
+      const cut = tries[Math.floor(n / 2) - 1].t;
+      const early = tries.filter((e) => e.t <= cut), late = tries.filter((e) => e.t > cut);
+      const acc = (list) => (list.filter((e) => e.r === 'correct').length / list.length) * 100;
+      if (early.length && late.length) improvement = Math.round(acc(late) - acc(early));
+    }
+    return { tried: n, pct: n ? Math.round((right / n) * 100) : null, wrong, improvement };
+  }
+  const isGleamTopic = (t) => /^gl-/.test(t);
+  const isSqlTopic = (t) => /^sql-/.test(t);
+  const TOPIC_POOL = QUESTIONS.concat(GL_QUESTIONS); // every part in this semester's scope
+  // Topics in the picker: Python, Gleam and SQL topics in scope that have questions.
+  const PROGRESS_TOPICS = [
+    ['Python', TOPICS_IN_SCOPE],
+    ['Gleam', GL.TOPICS.map((t) => t.id)],
+    ['SQL', SQL_TOPICS_IN_SCOPE],
+  ].map(([name, ids]) => [name, ids.filter((t) => TOPIC_POOL.some((q) => q.topics.includes(t)))]);
+  // The summary: Full Exams Completed (full exams marked Completed), Questions Practiced (each question once: a part
+  // Checked in Practice or answered in a Completed exam) and Automatic Accuracy (each part's first try ever, in Practice
+  // or a Completed exam: correct ÷ tried).
   function progressStats() {
-    const completed = doneExams().filter((a) => setStatus(a) === 'completed');
-    const { practiced, latest } = latestResults(completed);
-    const graded = Object.values(latest);
-    const right = graded.filter((g) => g === 'correct').length;
-    const wrong = {}; // topic id -> parts whose latest result is incorrect
-    Object.entries(latestResults(doneExams()).latest).forEach(([id, g]) => { if (g === 'incorrect') QMAP[id].topics.forEach((t) => { wrong[t] = (wrong[t] || 0) + 1; }); });
+    const isDone = (a) => setStatus(a) === 'completed';
+    const completed = doneExams().filter(isDone);
+    const practiced = new Set();
+    [store.session, ...store.practice].filter(Boolean).forEach((s) => s.ids.forEach((id) => {
+      if (QMAP[id] && ((s.checked && s.checked[id]) || (s.firstCheck && s.firstCheck[id]))) practiced.add(QMAP[id].problem);
+    }));
+    completed.forEach((a) => a.ids.forEach((id) => { if (QMAP[id] && hasAnswer(a, id)) practiced.add(QMAP[id].problem); }));
+    const acc = partStats(partEvents(isDone), () => true);
     return {
-      exams: completed.length,
+      any: practiced.size > 0 || completed.length > 0,
       fullCompleted: completed.filter((a) => a.kind === 'full').length,
       questions: practiced.size,
-      graded: graded.length,
-      accuracy: graded.length ? Math.round((right / graded.length) * 100) : null,
-      topics: Object.entries(wrong).filter(([t]) => topicById(t)).sort((a, b) => b[1] - a[1] || topicById(a[0]).name.localeCompare(topicById(b[0]).name)),
+      tried: acc.tried,
+      accuracy: acc.pct,
     };
   }
   // Every set and exam for My History: { s, type, status, at }. type: practice | full | topic | review (Topic Review).
@@ -3100,14 +3145,139 @@
     store.autoCounts[topic] = n;
     createExam('custom', null, pids, null, { title: `${t.name} Review #${n}`, auto: { topic, n } });
   }
+  // ── Topics to Review: radar + two rings (left), topic picker + list (right) ──
+  // Every submitted exam counts here (Incomplete ones too), with Practice Checks. Charts draw in once when scrolled
+  // into view, and again when the topic changes (not on other re-renders); reduce motion shows them at once.
+  const SHORT_TOPIC = { fundamentals: 'Fundamentals', hof: 'HOF', env: 'Env Diagrams', lists: 'Lists & Mutation', links: 'Linked Lists' };
+  const shortTopic = (t) => SHORT_TOPIC[t] || topicById(t).name;
+  // Radar axes: { label, has(q) }. All: the Python topics, plus one Gleam and one SQL axis. One topic: the topic on its
+  // own and with each topic it shares questions with (at least 3 axes, at most 6).
+  function radarAxes(topic) {
+    if (topic === 'all') {
+      return TOPICS_IN_SCOPE.filter((t) => TOPIC_POOL.some((q) => q.topics.includes(t))).map((t) => ({ label: shortTopic(t), has: (q) => q.topics.includes(t) }))
+        .concat({ label: 'Gleam', has: (q) => q.topics.some(isGleamTopic) }, { label: 'SQL', has: (q) => q.topics.some(isSqlTopic) });
+    }
+    const name = shortTopic(topic);
+    const pool = TOPIC_POOL.filter((q) => q.topics.includes(topic));
+    const pairs = {};
+    pool.forEach((q) => q.topics.forEach((o) => { if (o !== topic && topicById(o) && !OUT_TOPICS.has(o)) pairs[o] = (pairs[o] || 0) + 1; }));
+    const ranked = Object.entries(pairs).sort((a, b) => b[1] - a[1]);
+    const pairAxis = ([o]) => ({ label: `+ ${shortTopic(o)}`, has: (q) => q.topics.includes(topic) && q.topics.includes(o) });
+    const axes = [];
+    if (pool.some((q) => q.topics.every((o) => o === topic))) axes.push({ label: `${name} only`, has: (q) => q.topics.includes(topic) && q.topics.every((o) => o === topic) });
+    ranked.filter(([, n]) => n >= 3).forEach((p) => { if (axes.length < 6) axes.push(pairAxis(p)); });
+    if (axes.length < 3) axes.push({ label: `${name} overall`, has: (q) => q.topics.includes(topic) });
+    ranked.filter(([, n]) => n < 3).forEach((p) => { if (axes.length < 3) axes.push(pairAxis(p)); });
+    while (axes.length < 3) axes.push({ label: '', has: () => false, blank: true });
+    return axes;
+  }
+  function radarSVG(axes, values) {
+    const R = 100, n = axes.length;
+    const at = (i, r) => { const a = (-90 + (i * 360) / n) * (Math.PI / 180); return [r * Math.cos(a), r * Math.sin(a)]; };
+    const poly = (r) => axes.map((_, i) => at(i, r).map((v) => v.toFixed(1)).join(',')).join(' ');
+    const grid = [0.25, 0.5, 0.75, 1].map((f) => `<polygon class="rd-grid" points="${poly(R * f)}"/>`).join('');
+    const spokes = axes.map((_, i) => { const [x, y] = at(i, R); return `<line class="rd-spoke" x1="0" y1="0" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('');
+    const pts = values.map((v, i) => at(i, (R * (v || 0)) / 100));
+    const shape = `<polygon class="rd-area" points="${pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ')}"/>`
+      + pts.map(([x, y], i) => (axes[i].blank ? '' : `<circle class="rd-dot${values[i] === null ? ' none' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5"/>`)).join('');
+    const labels = axes.map((ax, i) => {
+      if (ax.blank) return '';
+      const [x, y] = at(i, R + 16);
+      const anchor = x > 6 ? 'start' : x < -6 ? 'end' : 'middle';
+      const dy = y < -6 ? -14 : y > 6 ? 4 : -5;
+      const v = values[i];
+      return `<text class="rd-label" x="${x.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}"><tspan x="${x.toFixed(1)}" dy="0">${esc(ax.label)}</tspan><tspan class="rd-val${v === null ? ' none' : ''}" x="${x.toFixed(1)}" dy="13">${v === null ? '—' : `${v}%`}</tspan></text>`;
+    }).join('');
+    const desc = axes.filter((a) => !a.blank).map((a, i) => `${a.label}: ${values[i] === null ? 'not tried' : `${values[i]}% correct`}`).join('; ');
+    return `<svg class="rd" viewBox="-235 -150 470 300" role="img" aria-label="First-try % correct by topic. ${esc(desc)}">${grid}${spokes}<g class="rd-shape">${shape}</g>${labels}</svg>`;
+  }
+  // A ring that fills clockwise from the bottom: frac 0..1, the number in the middle, a colour band.
+  function ringSVG(cls, frac, big, small, band, label) {
+    const r = 48, C = 2 * Math.PI * r;
+    const off = C * (1 - Math.max(0, Math.min(1, frac)));
+    return `<figure class="ring ${cls} band-${band}"><svg viewBox="0 0 120 120" aria-hidden="true">
+        <circle class="ring-track" cx="60" cy="60" r="${r}"/>
+        <circle class="ring-arc" cx="60" cy="60" r="${r}" transform="rotate(90 60 60)" style="--c:${C.toFixed(2)};--off:${off.toFixed(2)}" stroke-dasharray="${C.toFixed(2)}"/>
+      </svg><div class="ring-mid"><b ${big.count !== undefined ? `data-count="${big.count}" data-suffix="${big.suffix || ''}"` : ''}>${big.text}</b>${small ? `<small>${small}</small>` : ''}</div>
+      <figcaption>${label}</figcaption></figure>`;
+  }
+  const pctBand = (p) => (p === null ? 'none' : p >= 70 ? 'good' : p >= 50 ? 'mid' : 'bad');
+  const wrongBand = (wrong, tried) => (!tried ? 'none' : wrong / tried <= 0.3 ? 'good' : wrong / tried <= 0.5 ? 'mid' : 'bad');
+  const canTopicExam = (t) => EXAM_PIDS.some((pid) => partsOf(pid).length && groupTopics(pid).includes(t));
+  function topicRow(t, s) {
+    const name = topicById(t).name;
+    const meta = s.tried ? `${s.wrong} incorrect · ${s.pct}% correct` : 'Not tried yet';
+    return `<li class="mp-topic" data-topic="${esc(t)}"><span class="mp-topic-name">${esc(name)}${s.improvement > 0 ? ` <span class="tr-up" title="First-try % correct, later questions compared with earlier ones">+${s.improvement}%</span>` : ''}</span>
+        <span class="mp-topic-n">${meta}</span>
+        ${canTopicExam(t) ? `<button class="btn btn-sm mp-topic-go" data-action="topic-exam" data-topic="${esc(t)}" aria-label="Start a 5-question ${esc(name)} exam">Start topic exam</button>` : ''}</li>`;
+  }
+  function topicsSectionHTML() {
+    const topic = ui.trTopic === 'all' || PROGRESS_TOPICS.some(([, ids]) => ids.includes(ui.trTopic)) ? ui.trTopic : 'all';
+    const ev = partEvents(() => true);
+    const has = topic === 'all' ? () => true : (q) => q.topics.includes(topic);
+    const s = partStats(ev, has);
+    const axes = radarAxes(topic);
+    const values = axes.map((ax) => (ax.blank ? null : partStats(ev, ax.has).pct));
+    const key = `${topic}`;
+    const anim = ui.trDrawn !== key;
+    const left = ringSVG('ring-pct', (s.pct || 0) / 100, s.pct === null ? { text: '—' } : { text: `${s.pct}%`, count: s.pct, suffix: '%' }, '', pctBand(s.pct), 'Correct on the first try');
+    const right = ringSVG('ring-wrong', s.tried ? s.wrong / s.tried : 0, s.tried ? { text: String(s.wrong), count: s.wrong } : { text: '—' }, s.tried ? `of ${s.tried} tried` : '', wrongBand(s.wrong, s.tried), 'Still incorrect');
+    const opt = (t) => `<option value="${esc(t)}" ${t === topic ? 'selected' : ''}>${esc(topicById(t).name)}</option>`;
+    const picker = `<label class="tr-pick"><span>Topic</span><select id="tr-topic"><option value="all" ${topic === 'all' ? 'selected' : ''}>All topics</option>
+        ${PROGRESS_TOPICS.filter(([, ids]) => ids.length).map(([g, ids]) => `<optgroup label="${g}">${ids.map(opt).join('')}</optgroup>`).join('')}</select></label>`;
+    let rows;
+    if (topic === 'all') {
+      rows = PROGRESS_TOPICS.flatMap(([, ids]) => ids).map((t) => [t, partStats(ev, (q) => q.topics.includes(t))]).filter(([, x]) => x.tried)
+        .sort((a, b) => b[1].wrong - a[1].wrong || a[1].pct - b[1].pct || topicById(a[0]).name.localeCompare(topicById(b[0]).name))
+        .map(([t, x]) => topicRow(t, x)).join('');
+    } else rows = topicRow(topic, s);
+    return `<section class="mp-card" aria-labelledby="mt-h" id="tr-sec">
+        <h2 id="mt-h">Topics to Review</h2>
+        <div class="tr-grid">
+          <div class="tr-charts${anim ? ' anim' : ''}" data-key="${esc(key)}">
+            ${radarSVG(axes, values)}
+            <div class="tr-rings">${left}${right}</div>
+          </div>
+          <div class="tr-side">${picker}
+            ${rows ? `<ul class="mp-topics">${rows}</ul>` : '<p class="mp-empty">Answer questions in Practice or Exam Mode to see your topics here.</p>'}
+          </div>
+        </div>
+      </section>`;
+  }
+  // Start the draw-in animation when the charts scroll into view (once per topic while on My Progress).
+  let trObserver = null;
+  function wireTopicCharts() {
+    if (trObserver) { trObserver.disconnect(); trObserver = null; }
+    const el = document.querySelector('.tr-charts.anim');
+    if (!el) return;
+    const start = () => {
+      ui.trDrawn = el.dataset.key;
+      const counters = [...el.querySelectorAll('[data-count]')];
+      const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) { el.classList.remove('anim'); return; }
+      counters.forEach((c) => { c.textContent = `0${c.dataset.suffix}`; });
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        el.classList.remove('anim');
+        const t0 = performance.now(), D = 1000;
+        const tick = (now) => {
+          const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3); // ease-out, like the CSS
+          counters.forEach((c) => { c.textContent = `${Math.round(Number(c.dataset.count) * e)}${c.dataset.suffix}`; });
+          if (k < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }));
+    };
+    if (!('IntersectionObserver' in window)) { start(); return; }
+    trObserver = new IntersectionObserver((entries) => {
+      if (entries.some((x) => x.isIntersecting)) { trObserver.disconnect(); trObserver = null; start(); }
+    }, { threshold: 0.3 });
+    trObserver.observe(el);
+  }
   function renderProgress() {
     const st = progressStats();
     const items = historyItems();
     const shown = items.filter(historyMatches);
     const stat = (v, label) => `<div class="mp-stat"><b>${v}</b><span>${label}</span></div>`;
-    const topics = st.topics.map(([t, n]) => `<li class="mp-topic"><span class="mp-topic-name">${esc(topicById(t).name)}</span>
-        <span class="mp-topic-n">${n} incorrect</span>
-        <button class="btn btn-sm mp-topic-go" data-action="topic-exam" data-topic="${esc(t)}" aria-label="Start a 5-question ${esc(topicById(t).name)} exam">Start topic exam</button></li>`).join('');
     return `<main class="home progress">
       <div class="mp-top"><button class="btn btn-sm btn-home" data-action="go-home">${icon('home')}Home</button></div>
       ${storageWarningHTML()}
@@ -3116,10 +3286,10 @@
         <p class="hint mp-sub">Summary from your Completed Exams</p>
         <div class="mp-stats">
           ${stat(st.fullCompleted, 'Full Exams Completed')}
-          ${stat(st.exams ? st.questions : '—', 'Questions Practiced')}
+          ${stat(st.any ? st.questions : '—', 'Questions Practiced')}
           ${stat(st.accuracy === null ? '—' : `${st.accuracy}%`, 'Automatic Accuracy')}
         </div>
-        ${st.exams ? '' : '<p class="hint">Complete an exam in Exam Mode (answer every part) to see your numbers here.</p>'}
+        ${st.any ? '' : '<p class="hint">Check answers in Practice Mode or complete an exam to see your numbers here.</p>'}
       </section>
       <section class="mp-card" aria-labelledby="mh-h">
         <div class="mp-head"><h2 id="mh-h">My History</h2>${items.length ? historyFilterHTML(items) : ''}</div>
@@ -3127,10 +3297,7 @@
         ${!items.length ? '<p class="mp-empty">Nothing here yet. Start a practice set or an exam from Home.</p>'
           : shown.length ? `<ul class="mh-list">${shown.map(historyCard).join('')}</ul>` : '<p class="mp-empty">No sets match these filters.</p>'}
       </section>
-      <section class="mp-card" aria-labelledby="mt-h">
-        <h2 id="mt-h">Topics to Review</h2>
-        ${topics ? `<ul class="mp-topics">${topics}</ul>` : '<p class="mp-empty">Nothing to review yet. Take an exam to see your weak topics.</p>'}
-      </section>
+      ${topicsSectionHTML()}
     </main>`;
   }
   function storageWarningHTML() {
@@ -4094,6 +4261,7 @@
         : ui.screen === 'landing' ? renderLanding() : ui.screen === 'progress' ? renderProgress() : renderHome();
       const reopened = menuScroll && menuScroll.menu === ui.menu && app.querySelector('.dd.open .dd-panel');
       if (reopened) reopened.scrollTop = menuScroll.top;
+      wireTopicCharts(); // My Progress charts draw in when scrolled into view (does nothing on other screens)
       document.title = ui.screen === 'exam-results' ? 'Exam results · CS 61A & C88C Exam Practice' : ui.screen === 'progress' ? 'My Progress · CS 61A & C88C Exam Practice' : 'CS 61A & C88C Exam Practice';
     }
 
@@ -4218,7 +4386,7 @@
         p.mode = 'practice'; setView('practice'); ui.screen = 'home'; window.scrollTo(0, 0); break;
       case 'discard': shelveSession(); break; // Start Over: the unfinished set moves to the practice history
       case 'open-set': openPracticeSet(btn.dataset.id); break;
-      case 'progress': ui.screen = 'progress'; ui.menu = null; window.scrollTo(0, 0); break;
+      case 'progress': ui.screen = 'progress'; ui.menu = null; ui.trDrawn = null; window.scrollTo(0, 0); break;
       case 'hfilter-clear': ui.hFilter = { type: [], status: [], year: [] }; break;
       case 'topic-exam': startTopicReview(btn.dataset.topic); return;
       case 'delete-attempt': {
@@ -4324,6 +4492,11 @@
         const ans = s.answers[q.id];
         if (isMC(q)) s.checked[q.id] = gradeMC(q, ans) ? 'correct' : 'incorrect';
         else s.checked[q.id] = matchesOfficial(q, ans) ? 'correct' : 'unmatched';
+        { const now = [s.checked[q.id], Date.now()]; // My Progress: the first Check counts as the first try, the latest as the latest result
+          if (!isObj(s.firstCheck)) s.firstCheck = {};
+          if (!isObj(s.lastCheck)) s.lastCheck = {};
+          if (!s.firstCheck[q.id]) s.firstCheck[q.id] = now;
+          s.lastCheck[q.id] = now; }
         if (ANALYTICS) ANALYTICS.checked(s, q.id, s.checked[q.id]);
         announce(`Part ${q.label}: ${{ correct: 'Correct.', incorrect: 'Incorrect.', unmatched: 'Not an exact match. Show the solution to grade yourself.' }[s.checked[q.id]]}`);
         break;
@@ -4421,6 +4594,7 @@
       store.prefs.minutes = Number.isInteger(v) ? v : NaN;
       save(); render(); return;
     }
+    if (el.id === 'tr-topic') { ui.trTopic = el.value; render(); return; } // Topics to Review: All or one topic
     const hf = el.dataset && el.dataset.hf;
     if (hf) { // My History filter
       const list = ui.hFilter[hf];
