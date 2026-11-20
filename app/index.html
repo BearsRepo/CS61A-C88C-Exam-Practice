@@ -1,57 +1,161 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CS 61A &amp; C88C Exam Practice</title>
-  <link rel="stylesheet" href="vendor/codemirror/codemirror.min.css">
-  <link rel="stylesheet" href="vendor/codemirror/monokai.min.css">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#003262">
+  <link rel="icon" type="image/svg+xml" href="assets/site-icon.svg">
+  <link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#f5f6f8">
+<meta name="description" content="CS 61A and C88C exam practice. Prepare with real past-exam questions, practice tools, and progress tracking.">
+<title>CS 61A &amp; C88C Exam Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #12305c;
+    --gold: #f5b642;
+    --gold-edge: #d99c43;
+    --page: #f5f6f8;
+    --grey: #777;
+    --serif: "Times New Roman", Tinos, Times, serif;
+    --sans: "Source Sans 3", "Source Sans Pro", "Segoe UI", Helvetica, Arial, sans-serif;
+    --u: clamp(0.62px, calc(100vw / 430), 1.5px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--page); -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; min-height: 100dvh; background: var(--page); color: var(--navy); }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
+  .page { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; overflow-x: hidden; }
+  .wrap { position: relative; z-index: 1; width: 100%; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; }
+  .strings { position: absolute; z-index: 0; pointer-events: none; height: auto; }
+  .strings line { stroke: #cfcfd2; stroke-width: 1.1; vector-effect: non-scaling-stroke; }
+  #stringsTR { top: 0; right: 0; width: calc(190 * var(--u)); aspect-ratio: 424 / 395; }
+  #stringsBL { bottom: 0; left: 0; width: calc(100 * var(--u)); aspect-ratio: 210 / 211; }
+  .logo { align-self: flex-start; margin: calc(20 * var(--u)) 0 0 calc(24 * var(--u)); font: 400 calc(19 * var(--u))/1 var(--serif); color: var(--navy); text-decoration: none; }
+  main { display: flex; flex-direction: column; gap: calc(28 * var(--u)); padding: calc(40 * var(--u)) calc(24 * var(--u)) calc(36 * var(--u)); }
+  .title { font: 700 calc(46 * var(--u))/1.04 var(--serif); letter-spacing: .008em; }
+  .title .gold { display: block; color: var(--gold); }
+  .title .navy { display: block; margin-top: calc(3 * var(--u)); }
+  .tagline { margin-top: calc(8 * var(--u)); font: italic 300 calc(19 * var(--u))/1.25 var(--sans); color: var(--grey); }
+  .cta-wrap { position: relative; margin-top: calc(34 * var(--u)); width: max-content; max-width: 100%; }
+  .ant { position: absolute; left: calc(4 * var(--u)); top: calc(-27 * var(--u)); width: calc(36 * var(--u)); height: auto; pointer-events: none; }
+  .cta { display: flex; align-items: center; justify-content: center; gap: calc(14 * var(--u)); width: calc(273 * var(--u)); max-width: 100%; height: calc(51 * var(--u)); border-radius: 999px; background: var(--gold); border: calc(2.5 * var(--u)) solid var(--gold-edge); box-shadow: 0 calc(5 * var(--u)) calc(12 * var(--u)) rgba(0,0,0,.18); color: var(--navy); font: 600 calc(21 * var(--u))/1 var(--sans); text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+  .cta:hover { transform: translateY(calc(-1 * var(--u))); box-shadow: 0 calc(7 * var(--u)) calc(14 * var(--u)) rgba(0,0,0,.22); }
+  .cta:active { transform: translateY(calc(1 * var(--u))); }
+  .cta svg { width: calc(36 * var(--u)); height: calc(10 * var(--u)); overflow: visible; }
+  .viewer { width: 100%; aspect-ratio: 481 / 323; border-radius: calc(14 * var(--u)); background: var(--navy); box-shadow: calc(4 * var(--u)) calc(8 * var(--u)) calc(14 * var(--u)) rgba(0,0,0,.2); overflow: hidden; }
+  .viewer iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--navy); }
+  .features { margin-top: auto; padding: 0 calc(24 * var(--u)) calc(44 * var(--u)); display: flex; flex-direction: column; gap: calc(18 * var(--u)); }
+  .feature { display: flex; align-items: flex-start; gap: calc(18 * var(--u)); color: inherit; text-decoration: none; }
+  .feature svg { width: calc(30 * var(--u)); height: calc(30 * var(--u)); flex: none; margin-top: calc(7 * var(--u)); }
+  .feature h3 { font: 700 calc(18 * var(--u))/1.15 var(--serif); letter-spacing: .01em; }
+  .feature p { margin-top: calc(2 * var(--u)); font: italic 400 calc(13 * var(--u))/1.3 var(--sans); color: var(--grey); }
+  .feature:hover h3 { text-decoration: underline; text-underline-offset: calc(3 * var(--u)); }
+  .divider { width: 100%; height: 1.5px; background: var(--navy); opacity: .25; }
+  @media (min-width: 760px) and (min-aspect-ratio: 5/4) {
+    :root { --u: clamp(0.6px, min(calc(100vw / 1036), calc(100dvh / 591)), 2px); }
+    .wrap { max-width: none; margin: 0; }
+    .logo { margin: calc(17 * var(--u)) 0 0 calc(25 * var(--u)); }
+    #stringsTR { width: calc(424 * var(--u)); }
+    #stringsBL { width: calc(210 * var(--u)); }
+    main { flex: 1; margin: auto 0; display: grid; grid-template-columns: 1fr calc(481 * var(--u)); align-items: center; column-gap: calc(20 * var(--u)); padding: calc(10 * var(--u)) calc(65 * var(--u)) 0 calc(62 * var(--u)); }
+    .hero { align-self: center; }
+    .title { font-size: calc(58 * var(--u)); line-height: 1.02; letter-spacing: .005em; }
+    .title .navy { letter-spacing: .015em; margin-top: calc(3 * var(--u)); }
+    .tagline { margin-top: calc(4 * var(--u)); font-size: calc(21 * var(--u)); }
+    .cta-wrap { margin-top: calc(40 * var(--u)); margin-left: calc(3 * var(--u)); }
+    .features { margin-top: 0; flex-direction: row; align-items: flex-start; gap: calc(43 * var(--u)); padding: 0 0 calc(53 * var(--u)) calc(107 * var(--u)); }
+    .feature p { font-size: calc(12 * var(--u)); white-space: nowrap; }
+    .divider { width: 1.5px; height: calc(26 * var(--u)); margin-top: calc(8 * var(--u)); opacity: 1; flex: none; }
+  }
+  @media (min-width: 700px) and (max-aspect-ratio: 4/5) {
+    :root { --u: clamp(0.9px, min(calc(100vw / 680), calc(100dvh / 900)), 1.5px); }
+    .wrap { max-width: 760px; }
+  }
+  @media (max-height: 480px) and (orientation: landscape) and (max-width: 759px) { main { padding-top: calc(20 * var(--u)); } }
+  .credit { padding: 0 calc(16 * var(--u)) calc(12 * var(--u)); text-align: center; color: var(--grey); font: 400 calc(11 * var(--u))/1.4 var(--sans); }
+  @media (prefers-reduced-motion: reduce) { .cta { transition: none; } }
+</style>
 </head>
 <body>
-  <div id="app"></div>
-  <div id="sr-live" class="sr-only" aria-live="assertive"></div>
-  <script src="vendor/codemirror/codemirror.min.js"></script>
-  <script src="vendor/codemirror/python.min.js"></script>
-  <script src="vendor/codemirror/sql.min.js"></script>
-  <script src="vendor/codemirror/matchbrackets.min.js"></script>
-  <script src="vendor/codemirror/closebrackets.min.js"></script>
-  <script src="vendor/codemirror/comment.min.js"></script>
-  <script src="gleam_mode.js"></script>
-  <script src="data/questions.js"></script>
-  <script src="data/final_questions.js"></script>
-  <script src="data/gleam_questions.js"></script>
-  <script src="data/in_scope.js"></script>
-  <script src="data/study_guides.js"></script>
-  <script src="data/test_suites.js"></script>
-  <script src="data/sql_tests.js"></script>
-  <script src="data/walkthroughs.js"></script>
-  <script src="tutor.js"></script>
-  <script src="runner.js"></script>
-  <script src="gleam_runner.js"></script>
-  <script src="sql_runner.js"></script>
-  <script src="tour.js"></script>
-  <script src="config.js"></script>
-  <script src="auth.js"></script>
-  <script src="analytics.js"></script>
-  <script src="app.js"></script>
-  <!-- Cloudflare Web Analytics: aggregate visits/page views only. Added only on the published site, so local copies
-       and the test suite send nothing (Cloudflare rejects other origins and logs console errors). -->
-  <script>
-    if (location.hostname === 'jacobkao-cal.github.io') {
-      const cf = document.createElement('script');
-      cf.type = 'module';
-      cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-      cf.setAttribute('data-cf-beacon', '{"token": "629fadce777742a0838d877beeb3f5d5"}');
-      document.body.appendChild(cf);
+<div class="page">
+  <svg class="strings" id="stringsTR" viewBox="0 0 424 395" aria-hidden="true"></svg>
+  <svg class="strings" id="stringsBL" viewBox="0 0 210 211" aria-hidden="true"></svg>
+  <div class="wrap">
+    <a class="logo" href="https://www.berkeley.edu/" target="_blank" rel="noopener noreferrer">UC Berkeley</a>
+    <main>
+      <section class="hero">
+        <h1 class="title"><span class="gold">CS 61A &amp; C88C</span><span class="navy">Exam Practice</span></h1>
+        <p class="tagline">Your All-In-One Exam Prep Platform</p>
+        <div class="cta-wrap">
+          <svg class="ant" viewBox="0 10 992 786" aria-hidden="true">
+            <g fill="#003262">
+              <ellipse cx="243.02" cy="394.13" rx="242.4" ry="196.1"/>
+              <path d="M 554.28 283.03 C 438.07 299.74 352.79 375.29 363.78 451.77 C 374.78 528.26 477.89 576.72 594.1 560.01 C 710.31 543.31 795.6 467.76 784.6 391.27 C 773.61 314.79 670.49 266.33 554.28 283.03 Z"/>
+              <path d="M 984.89 268.62 C 988.77 282.58 991.31 298.55 991.31 314.18 C 991.31 329.82 989.13 344.86 985.25 358.72 C 985.13 359.02 985.13 359.31 985.01 359.61 C 969.49 411.66 928.51 450 879.96 450.74 L 763.05 450.74 C 743.15 450.74 724.08 442.84 710.01 428.77 C 695.95 414.71 688.05 395.63 688.05 375.74 L 688.05 252.48 C 688.05 232.59 695.95 213.52 710.01 199.45 C 724.08 185.39 743.15 177.48 763.05 177.48 L 879.82 177.48 C 928.75 178.22 969.73 215.97 984.89 268.62 Z"/>
+            </g>
+            <g fill="none" stroke="#003262" stroke-linecap="round">
+              <path d="M 808.3 238.6 L 897.3 50.2" stroke-width="58"/>
+              <path d="M 772.4 263.6 L 727.6 44" stroke-width="58"/>
+              <path d="M 577.8 498.2 L 601.8 752" stroke-width="78"/>
+              <path d="M 725.5 476.4 L 811.3 708.9" stroke-width="78"/>
+              <path d="M 417.8 494.9 L 360.3 740.4" stroke-width="78"/>
+            </g>
+          </svg>
+          <a class="cta" id="startBtn" href="menu.html">
+            <span>Start Practicing</span>
+            <svg viewBox="0 0 36 10" fill="none" stroke="#12305c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 5 H34 M29 1 L34 5 L29 9"/>
+            </svg>
+          </a>
+        </div>
+      </section>
+      <div class="viewer">
+        <iframe title="Interactive string-art demo" loading="lazy" src="https://cs61a.org/fa26/projects/animator/assets/string_art.html"></iframe>
+      </div>
+    </main>
+    <nav class="features" aria-label="Features">
+      <a class="feature" href="menu.html">
+        <svg viewBox="0 0 30 30" fill="none" stroke="#f5b642" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M5 2 H25 V19 L18 28 H5 Z"/><path d="M18 28 V19 H25"/><path d="M10 8 H20 M10 13 H20"/></svg>
+        <span><h3>Past Exams</h3><p>Practice with real questions</p></span>
+      </a>
+      <div class="divider" role="separator"></div>
+      <a class="feature" href="menu.html">
+        <svg viewBox="0 0 30 30" fill="none" stroke="#f5b642" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M9 7 L2 15 L9 23"/><path d="M21 7 L28 15 L21 23"/><path d="M17 5 L13 25" stroke-width="2.4"/></svg>
+        <span><h3>Interactive Tools</h3><p>Run code, check answers, and visualize</p></span>
+      </a>
+      <div class="divider" role="separator"></div>
+      <a class="feature" href="menu.html">
+        <svg viewBox="0 0 30 30" fill="#f5b642" stroke="none" aria-hidden="true"><path d="M1 2 H3 V27 H29 V29 H1 Z"/><rect x="7" y="19" width="5" height="7"/><rect x="14" y="12" width="5" height="14"/><rect x="21" y="5" width="5" height="21"/></svg>
+        <span><h3>Track Progress</h3><p>See your practice and improvement</p></span>
+      </a>
+    </nav>
+    <footer class="credit">Created by Jacob Kao, Osbert Huang, Sofia Nguyen, and Thomas Bandy.</footer>
+  </div>
+</div>
+<script>
+  (function drawStrings() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const add = (svg, x1, y1, x2, y2) => {
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      svg.appendChild(line);
+    };
+    const tr = document.getElementById('stringsTR');
+    const bl = document.getElementById('stringsBL');
+    const N = 16;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      add(tr, t * 418, 0, 424, 55 + t * 335);
+      add(bl, 0, t * 200, 20 + t * 190, 211);
     }
-  </script>
-  <p style="display: none; visibility: hidden;">
-    CS 61A Past Exam Practice, Full Exam Practice, Topic-based Exam Questions, Practice Model, Exam Solutions
-    An all in one comprehensive exam practice suite for Berkeley CS61A. View and review previous exam problems and take guided or full length practice exams. Focus on particular topics or take entire exams. 
-    Uses a bluebook-style digital practice exam designed exclusively for making evaluating and inspecting code as convenient as possible. Includes features like a notepad with a graph creator, evironment diagram editing, optional doctests.
-    Supports python and gleam. Allows you to run the python tutor. Designed by current CS61A students to fulfill all your practice exam needs. The goal is to increase your exam performance with real past exam problems.
-  </p>
-  <!-- End Cloudflare Web Analytics -->
+  })();
+</script>
 </body>
 </html>
