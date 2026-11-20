@@ -28,7 +28,7 @@
   body { min-height: 100vh; min-height: 100dvh; background: var(--page); color: var(--navy); }
   a { color: inherit; }
   :focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
-  .page { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; overflow: hidden; }
+  .page { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; overflow-x: hidden; }
   .wrap { position: relative; z-index: 1; width: 100%; max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; }
   .strings { position: absolute; z-index: 0; pointer-events: none; height: auto; }
   .strings line { stroke: #cfcfd2; stroke-width: 1.1; vector-effect: non-scaling-stroke; }
@@ -71,7 +71,12 @@
     .feature p { font-size: calc(12 * var(--u)); white-space: nowrap; }
     .divider { width: 1.5px; height: calc(26 * var(--u)); margin-top: calc(8 * var(--u)); opacity: 1; flex: none; }
   }
+  @media (min-width: 700px) and (max-aspect-ratio: 4/5) {
+    :root { --u: clamp(0.9px, min(calc(100vw / 680), calc(100dvh / 900)), 1.5px); }
+    .wrap { max-width: 760px; }
+  }
   @media (max-height: 480px) and (orientation: landscape) and (max-width: 759px) { main { padding-top: calc(20 * var(--u)); } }
+  .credit { padding: 0 calc(16 * var(--u)) calc(12 * var(--u)); text-align: center; color: var(--grey); font: 400 calc(11 * var(--u))/1.4 var(--sans); }
   @media (prefers-reduced-motion: reduce) { .cta { transition: none; } }
 </style>
 </head>
@@ -128,6 +133,7 @@
         <span><h3>Track Progress</h3><p>See your practice and improvement</p></span>
       </a>
     </nav>
+    <footer class="credit">Created by Jacob Kao, Osbert Huang, Sofia Nguyen, and Thomas Bandy.</footer>
   </div>
 </div>
 <script>
