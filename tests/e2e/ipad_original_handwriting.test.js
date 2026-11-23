@@ -45,7 +45,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
     const at = (sel, dx, dy) => page.$eval(sel, (e, dx, dy) => { const r = e.getBoundingClientRect(); return [r.left + dx, r.top + dy]; }, dx, dy);
     const go = async (dir, pid) => { await click(`[data-action="${dir}"]`); await page.waitForFunction((g) => document.querySelector('#pane-right').dataset.group === g, {}, pid); await wait(200); };
     const toReview = async () => { await click('.actions [data-action="exam-review"]'); await page.waitForSelector('#review-work .part'); await wait(300); };
-    const reopen = async (id) => { await page.goto(APP_URL); await wait(250); if (await page.$('[data-action="enter"]')) await click('[data-action="enter"]'); await click(`[data-action="open-attempt"][data-id="${id}"]`); await toReview(); };
+    const reopen = async (id) => { await page.goto(APP_URL); await wait(250); if (await page.$('[data-action="enter"]')) await click('[data-action="enter"]'); await click('[data-action="progress"]'); await click(`.mh-card [data-action="open-attempt"][data-id="${id}"]`); await toReview(); };
     const tamper = async (fn) => { await page.evaluate((k, f) => { const s = JSON.parse(localStorage.getItem(k)); new Function('s', f)(s); localStorage.setItem(k, JSON.stringify(s)); Storage.prototype.setItem = function () {}; }, KEY, fn); };
     const paths = (sel) => page.$$eval(`${sel} .orig-ink .orig-svg path`, (p) => p.length).catch(() => 0);
     return { click, st, stroke, line, at, go, toReview, reopen, tamper, paths };

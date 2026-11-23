@@ -99,8 +99,8 @@ const pick = (s) => JSON.stringify(FIELDS.map((k) => s[k]));
   // Reload and Exam History.
   await P.toHome();
   ok(JSON.stringify((await P.st()).attempts.find((a) => a.id === id1)) === snap1, 'after a reload the submitted attempt is unchanged');
-  await P.click(`[data-action="open-attempt"][data-id="${id1}"]`);
-  ok(!!(await pad.$('.actions [data-action="exam-review"]')), 'it opens from Exam History');
+  await P.click('[data-action="progress"]'); await P.click(`.mh-card [data-action="open-attempt"][data-id="${id1}"]`);
+  ok(!!(await pad.$('.actions [data-action="exam-review"]')), 'it opens from My History');
 
   // Review: open it and edit the workspace.
   await P.click('.actions [data-action="exam-review"]'); await pad.waitForSelector('#review-work .part'); await wait(200);
@@ -160,7 +160,7 @@ const pick = (s) => JSON.stringify(FIELDS.map((k) => s[k]));
   // ── An older attempt with no handwriting field still loads and reviews ──
   await P.tamper("const o = JSON.parse(JSON.stringify(s.attempts[0])); o.id = 'xlegacy'; o.aid = undefined; delete o.handwriting; s.attempts.unshift(o);");
   if (await pad.$('[data-action="enter"]')) await P.click('[data-action="enter"]');
-  await P.click('[data-action="open-attempt"][data-id="xlegacy"]');
+  await P.click('[data-action="progress"]'); await P.click('.mh-card [data-action="open-attempt"][data-id="xlegacy"]');
   await P.click('.actions [data-action="exam-review"]'); await pad.waitForSelector('#review-work .part'); await wait(200);
   const legacy = await pad.evaluate((k) => JSON.parse(localStorage.getItem(k)).attempts.find((a) => a.id === 'xlegacy'), KEY);
   ok(legacy && !('handwriting' in legacy) && (await pad.$$eval('#review-work .part', (p) => p.length)) > 0, 'an attempt saved without handwriting still opens in Exam History and Review, unchanged');

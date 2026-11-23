@@ -44,7 +44,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
     const line = ([x, y], dx, dy, n = 8) => Array.from({ length: n + 1 }, (_, i) => [x + dx * i / n, y + dy * i / n]);
     const at = (sel, dx, dy) => page.$eval(sel, (e, dx, dy) => { const r = e.getBoundingClientRect(); return [r.left + dx, r.top + dy]; }, dx, dy);
     const go = async (dir, pid) => { await click(`[data-action="${dir}"]`); await page.waitForFunction((g) => document.querySelector('#pane-right').dataset.group === g, {}, pid); await wait(200); };
-    const results = async (id) => { await page.goto(APP_URL); await wait(250); if (await page.$('[data-action="enter"]')) await click('[data-action="enter"]'); await click(`[data-action="open-attempt"][data-id="${id}"]`); await page.waitForSelector('.exam-results'); };
+    const results = async (id) => { await page.goto(APP_URL); await wait(250); if (await page.$('[data-action="enter"]')) await click('[data-action="enter"]'); await click('[data-action="progress"]'); await click(`.mh-card [data-action="open-attempt"][data-id="${id}"]`); await page.waitForSelector('.exam-results'); };
     const toReview = async () => { await click('.actions [data-action="exam-review"]'); await page.waitForSelector('#review-work .part'); await wait(300); };
     const text = (sel) => page.$eval(sel, (e) => e.textContent.replace(/\s+/g, ' ').trim());
     return { click, st, stroke, line, at, go, results, toReview, text };
@@ -157,6 +157,22 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   ok((dS.reviews[id].diagrams['fa24-2'] || []).some((a) => a.text === '7') && JSON.stringify(dS.attempts[0]) === orig, 'desktop: a label on the left diagram is saved in the review workspace; the attempt is unchanged');
   ok(await desk.$eval(right, (f) => Array.from(f.querySelectorAll('.dg-text')).map((i) => i.value).includes('42') && !Array.from(f.querySelectorAll('.dg-text')).some((i) => i.value === '7')), 'desktop: the submitted diagram on the right still shows its own labels');
   ok(desk.errors.length === 0, `desktop: no console errors (${desk.errors.join(' | ')})`);
+
+  // ── My Progress: a part answered only in handwriting counts as answered ──
+  // Fill every other part of the attempt, so the handwritten sp25-4d is the only part without a typed answer.
+  await desk.goto(APP_URL); await wait(200);
+  const mp = await desk.evaluate((k, aid) => {
+    const s = JSON.parse(localStorage.getItem(k));
+    const a = s.attempts.find((x) => x.id === aid);
+    a.ids.filter((q) => q !== 'sp25-4d' && (a.answers[q] === undefined || a.answers[q] === '')).forEach((q) => { a.answers[q] = /^sp25-4[ef]$/.test(q) ? 0 : 'x'; });
+    localStorage.setItem(k, JSON.stringify(s)); Storage.prototype.setItem = function () {};
+    return { untyped: a.ids.filter((q) => a.answers[q] === undefined || a.answers[q] === '') };
+  }, KEY, id);
+  await desk.goto(APP_URL); await wait(200);
+  if (await desk.$('[data-action="enter"]')) { await desk.$eval('[data-action="enter"]', (b) => b.click()); await wait(300); }
+  await desk.$eval('[data-action="progress"]', (b) => b.click()); await desk.waitForSelector('.mh-card');
+  const card = await desk.$eval(`.mh-card [data-id="${id}"]`, (b) => b.closest('.mh-card').dataset.status);
+  ok(mp.untyped.join() === 'sp25-4d' && card === 'completed', `My History: an exam whose only untyped part was answered in handwriting is Completed (${card})`);
 
   await browser.close();
   console.log(fails ? `\n${fails} failed` : '\nAll Review UX checks passed');

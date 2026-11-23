@@ -172,7 +172,7 @@ const EXAM = { version: 5, prefs: { mode: 'exam' }, examPrefs: { kind: 'custom',
   ok(JSON.stringify((await P.st()).attempts[0]) === orig, 'the original submission (answers, handwriting, grades) is unchanged');
   await pad.goto(APP_URL); await wait(200);
   await P.click('[data-action="enter"]');
-  await P.click(`[data-action="open-attempt"][data-id="${id}"]`);
+  await P.click('[data-action="progress"]'); await P.click(`.mh-card [data-action="open-attempt"][data-id="${id}"]`);
   await P.toReview();
   ok((await pad.$$eval('#ink-right path', (p) => p.length)) === 1 && (await pad.$$eval('#problem-article .annot-layer path', (p) => p.length)) === pens0 + 2, 'after a reload the review drawings are back on both panes');
   ok(JSON.stringify((await P.st()).attempts[0]) === orig, '…and the original is still unchanged');
