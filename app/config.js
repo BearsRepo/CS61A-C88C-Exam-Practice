@@ -13,7 +13,9 @@ window.CS61A_CONFIG = {
   supabase: {
     url: "https://fckbutkslyslzhfjutyf.supabase.co",
     publishableKey: 'sb_publishable_xVYlTCg5atItNHdOIjBq9g_OqCUZ4Vn', // sb_publishable_…
-    hosts: ['jacobkao-cal.github.io', 'localhost', '127.0.0.1'],
+    // Both published hostnames while the site moves to the BearsRepo organization (same Supabase project, so the
+    // same anonymous users on either), plus a local server.
+    hosts: ['jacobkao-cal.github.io', 'bearsrepo.github.io', 'localhost', '127.0.0.1'],
   },
   // Usage tracking (analytics.js, Supabase Phase 2). Runs only where sign-in runs. Set enabled: false to stop sending
   // anything (the safe rollback); the tables and their data stay as they are.
