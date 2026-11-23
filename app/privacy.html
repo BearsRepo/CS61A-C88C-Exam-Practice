@@ -156,15 +156,23 @@
 
     <p class="policy-back"><a href="index.html">← Back to CS 61A &amp; C88C Exam Practice</a></p>
   </main>
-  <!-- Cloudflare Web Analytics: as on the main page, only on the published site -->
+  <!-- Cloudflare Web Analytics: as on the main page, only on the published site(s) -->
   <script>
-    if (location.hostname === 'jacobkao-cal.github.io') {
+    (() => {
+      // One Cloudflare Web Analytics site, and so one beacon token, per published hostname. A hostname without a
+      // token (bearsrepo.github.io until its Cloudflare site exists) loads nothing. Keep in step with menu.html.
+      const CF_TOKENS = {
+        'jacobkao-cal.github.io': '629fadce777742a0838d877beeb3f5d5',
+        'bearsrepo.github.io': '', // the token of the Cloudflare site for bearsrepo.github.io, once it is created
+      };
+      const token = Object.prototype.hasOwnProperty.call(CF_TOKENS, location.hostname) && CF_TOKENS[location.hostname];
+      if (!token) return;
       const cf = document.createElement('script');
       cf.type = 'module';
       cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-      cf.setAttribute('data-cf-beacon', '{"token": "629fadce777742a0838d877beeb3f5d5"}');
+      cf.setAttribute('data-cf-beacon', JSON.stringify({ token }));
       document.body.appendChild(cf);
-    }
+    })();
   </script>
 </body>
 </html>

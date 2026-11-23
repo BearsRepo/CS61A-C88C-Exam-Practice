@@ -31,7 +31,7 @@ window.CS61A_CONFIG = {
   supabase: {
     url: 'https://<project-ref>.supabase.co',
     publishableKey: 'sb_publishable_…',
-    hosts: ['jacobkao-cal.github.io', 'localhost', '127.0.0.1'],
+    hosts: ['jacobkao-cal.github.io', 'bearsrepo.github.io', 'localhost', '127.0.0.1'],
   },
 };
 ```

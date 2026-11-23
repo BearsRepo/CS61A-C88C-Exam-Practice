@@ -261,8 +261,8 @@ function installFake() {
   global.window = {};
   require(path.join(APP_DIR, 'config.js'));
   const shipped = window.CS61A_CONFIG.supabase;
-  ok(!/sb_secret_|service_role/.test(fs.readFileSync(path.join(APP_DIR, 'config.js'), 'utf8').replace(/\/\/.*$/gm, '')) && JSON.stringify(shipped.hosts) === JSON.stringify(['jacobkao-cal.github.io', 'localhost', '127.0.0.1']) && shipped.allowAutomation !== true,
-    'shipped config.js: no secret key, hosts are the site + local server, automation not allowed');
+  ok(!/sb_secret_|service_role/.test(fs.readFileSync(path.join(APP_DIR, 'config.js'), 'utf8').replace(/\/\/.*$/gm, '')) && JSON.stringify(shipped.hosts) === JSON.stringify(['jacobkao-cal.github.io', 'bearsrepo.github.io', 'localhost', '127.0.0.1']) && shipped.allowAutomation !== true,
+    'shipped config.js: no secret key, hosts are both published sites (old and BearsRepo) + local server, automation not allowed');
 
   // ── The real vendored supabase-js, against mocked Supabase responses ──
   libLoads.length = 0;

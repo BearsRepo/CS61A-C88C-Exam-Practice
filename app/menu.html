@@ -38,16 +38,24 @@
   <script src="auth.js"></script>
   <script src="analytics.js"></script>
   <script src="app.js"></script>
-  <!-- Cloudflare Web Analytics: aggregate visits/page views only. Added only on the published site, so local copies
+  <!-- Cloudflare Web Analytics: aggregate visits/page views only. Added only on the published site(s), so local copies
        and the test suite send nothing (Cloudflare rejects other origins and logs console errors). -->
   <script>
-    if (location.hostname === 'jacobkao-cal.github.io') {
+    (() => {
+      // One Cloudflare Web Analytics site, and so one beacon token, per published hostname. A hostname without a
+      // token (bearsrepo.github.io until its Cloudflare site exists) loads nothing. Keep in step with privacy.html.
+      const CF_TOKENS = {
+        'jacobkao-cal.github.io': '629fadce777742a0838d877beeb3f5d5',
+        'bearsrepo.github.io': '', // the token of the Cloudflare site for bearsrepo.github.io, once it is created
+      };
+      const token = Object.prototype.hasOwnProperty.call(CF_TOKENS, location.hostname) && CF_TOKENS[location.hostname];
+      if (!token) return;
       const cf = document.createElement('script');
       cf.type = 'module';
       cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-      cf.setAttribute('data-cf-beacon', '{"token": "629fadce777742a0838d877beeb3f5d5"}');
+      cf.setAttribute('data-cf-beacon', JSON.stringify({ token }));
       document.body.appendChild(cf);
-    }
+    })();
   </script>
   <p style="display: none; visibility: hidden;">
     CS 61A Past Exam Practice, Full Exam Practice, Topic-based Exam Questions, Practice Model, Exam Solutions
