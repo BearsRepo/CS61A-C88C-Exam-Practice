@@ -64,6 +64,7 @@ window.EXPORTER = (function(){
       if (!data) return;
       const entries = Object.entries(data);
       for (const [key, value] of entries) localStorage.setItem(key, value);
+      navigation.reload();
     } catch(e) {}
   }
 
