@@ -3214,7 +3214,7 @@
     const mode = p.mode === 'exam' ? 'exam' : 'practice';
     const modeBtn = (m, title, sub) => `<button class="mode-opt" id="mode-${m}" data-action="mode" data-v="${m}" aria-pressed="${mode === m}"><b>${title}</b><span>${sub}</span></button>`;
     return `<main class="home">
-      <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div><div class="home-actions">${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div></div>
+      <div class="home-head"><div><button class="home-brand" data-action="landing" title="Back to the welcome page"><h1>CS 61A &amp; C88C Exam Practice</h1></button><p class="tagline">Past-exam questions, one at a time. Pick topics, set a timer, check your work.</p></div><div class="home-actions">${EXPORTER ? `<button class="btn btn-sm btn-home btn-exporter" data-action="import-progress">Import Progress</button><button class="btn btn-sm btn-home btn-exporter" data-action="export-progress">Export Progress</button>` : ''} ${TOUR ? `<button class="btn btn-sm btn-home btn-feedback" data-action="replay-tour">${icon('tour')}Replay the tutorial</button>` : ''}</div></div>
       ${storageWarningHTML()}
       ${examResumeHTML()}
       ${resume}
@@ -4921,6 +4921,8 @@
       // landing & home
       case 'enter': ui.screen = 'home'; window.scrollTo(0, 0); break;
       case 'replay-tour': if (TOUR) TOUR.replay(); return;
+      case 'import-progress': if (EXPORTER) EXPORTER.importProgress(); return;
+      case 'export-progress': if (EXPORTER) EXPORTER.exportProgress(); return;
       case 'landing': window.location.href = 'index.html'; return;
       case 'menu': ui.menu = ui.menu === btn.dataset.id ? null : btn.dataset.id; break;
       case 'topics-all': langView(p).sections.forEach((sec) => { p[sec.topicsPref] = sec.topicList.filter((t) => sec.questions.some((x) => x.topics.includes(t.id))).map((t) => t.id); }); break;
