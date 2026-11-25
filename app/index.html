@@ -51,6 +51,7 @@
   .ipad-note-title { font-weight: 600; font-size: max(15px, calc(17 * var(--u))); line-height: 1.2; color: #b52b38; }
   .ipad-note-steps { margin-top: clamp(4px, calc(5 * var(--u)), 6px); font-weight: 400; font-size: max(13px, calc(14 * var(--u))); line-height: 1.35; color: var(--grey); }
   .ipad-note-steps strong { font-weight: 600; color: #123361; white-space: nowrap; }
+  .ipad-note-steps .share-icon { display: inline-block; width: 1.05em; height: 1.05em; vertical-align: -0.18em; }
   .viewer { width: 100%; aspect-ratio: 481 / 323; border-radius: calc(14 * var(--u)); background: var(--navy); box-shadow: calc(4 * var(--u)) calc(8 * var(--u)) calc(14 * var(--u)) rgba(0,0,0,.2); overflow: hidden; }
   .viewer iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--navy); }
   .features { margin-top: auto; padding: 0 calc(24 * var(--u)) calc(44 * var(--u)); display: flex; flex-direction: column; gap: calc(18 * var(--u)); }
@@ -121,7 +122,7 @@
         </div>
         <div class="ipad-note">
           <p class="ipad-note-title">You can practice on your iPad too!</p>
-          <p class="ipad-note-steps">Safari / Chrome → Share → <strong>Add to Home Screen</strong></p>
+          <p class="ipad-note-steps">Safari / Chrome → <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Share"><title>Share</title><path d="M8.5 9.5H7a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 7 20.5h10a1.5 1.5 0 0 0 1.5-1.5v-8A1.5 1.5 0 0 0 17 9.5h-1.5"/><path d="M12 14V3.5M8.75 6.75 12 3.5l3.25 3.25"/></svg> → <strong>Add to Home Screen</strong></p>
         </div>
       </section>
       <div class="viewer">
