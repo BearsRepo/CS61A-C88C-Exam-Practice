@@ -39,31 +39,13 @@
   <script src="auth.js"></script>
   <script src="analytics.js"></script>
   <script src="app.js"></script>
-  <!-- Cloudflare Web Analytics: aggregate visits/page views only. Added only on the published site(s), so local copies
-       and the test suite send nothing (Cloudflare rejects other origins and logs console errors). -->
-  <script>
-    (() => {
-      // One Cloudflare Web Analytics site, and so one beacon token, per published hostname. A hostname without a
-      // token (bearsrepo.github.io until its Cloudflare site exists) loads nothing. Keep in step with privacy.html.
-      const CF_TOKENS = {
-        'jacobkao-cal.github.io': '629fadce777742a0838d877beeb3f5d5',
-        'bearsrepo.github.io': '', // the token of the Cloudflare site for bearsrepo.github.io, once it is created
-      };
-      const token = Object.prototype.hasOwnProperty.call(CF_TOKENS, location.hostname) && CF_TOKENS[location.hostname];
-      if (!token) return;
-      const cf = document.createElement('script');
-      cf.type = 'module';
-      cf.src = 'https://static.cloudflareinsights.com/beacon.min.js';
-      cf.setAttribute('data-cf-beacon', JSON.stringify({ token }));
-      document.body.appendChild(cf);
-    })();
-  </script>
+  <!-- Cloudflare Web Analytics (aggregate visits/page views only): web_analytics.js picks the token for this hostname. -->
+  <script src="web_analytics.js"></script>
   <p style="display: none; visibility: hidden;">
     CS 61A Past Exam Practice, Full Exam Practice, Topic-based Exam Questions, Practice Model, Exam Solutions
     An all in one comprehensive exam practice suite for Berkeley CS61A. View and review previous exam problems and take guided or full length practice exams. Focus on particular topics or take entire exams. 
     Uses a bluebook-style digital practice exam designed exclusively for making evaluating and inspecting code as convenient as possible. Includes features like a notepad with a graph creator, evironment diagram editing, optional doctests.
     Supports python and gleam. Allows you to run the python tutor. Designed by current CS61A students to fulfill all your practice exam needs. The goal is to increase your exam performance with real past exam problems.
   </p>
-  <!-- End Cloudflare Web Analytics -->
 </body>
 </html>
