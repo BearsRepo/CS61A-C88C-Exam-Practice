@@ -47,7 +47,22 @@ const EXCLUDED = ['fa25-1', 'sp25-1', 'fa25-2', 'sp25-2', 'sp25-2c', 'sp25-3b', 
   'fa21f-1a', 'fa21f-4a', 'fa21f-4b', 'fa21f-4c', 'fa21f-5a', 'fa21f-5b', 'fa21f-5c',
   // fa20f-4b: the wrong choice filter(traverse, offspring_trees) for (e) behaves exactly like offspring_trees (filter
   // calls traverse on every tree while filtering, and nothing is left to loop over).
-  'fa20f-4b', 'fa20f-1', 'fa20f-2b', 'fa20f-4c', 'fa20f-5a', 'fa20f-5b'];
+  'fa20f-4b', 'fa20f-1', 'fa20f-2b', 'fa20f-4c', 'fa20f-5a', 'fa20f-5b',
+  // Data C88C finals: WWPD, environment-diagram, order-of-growth and conceptual questions; fa25 Q4 (its Model class
+  // can't run as printed), sp25 Q3(b) (methods without their class), and out-of-scope mutation questions.
+  'c88-fa24f-1', 'c88-fa24f-3c',
+  'c88-fa25f-1a', 'c88-fa25f-1b', 'c88-fa25f-1c', 'c88-fa25f-1d', 'c88-fa25f-2', 'c88-fa25f-4a', 'c88-fa25f-4b', 'c88-fa25f-6',
+  'c88-fa25f-7b', 'c88-fa25f-8',
+  'c88-sp25f-1a', 'c88-sp25f-1b', 'c88-sp25f-1c', 'c88-sp25f-1d', 'c88-sp25f-2', 'c88-sp25f-3b', 'c88-sp25f-4', 'c88-sp25f-6g',
+  'c88-sp25f-7a', 'c88-sp25f-7b', 'c88-sp25f-7c', 'c88-sp25f-7d', 'c88-sp25f-7e',
+  // Data C88C Spring 2024 Final: conceptual, WWPD, environment-diagram, debugging and order-of-growth questions; Q5 asks for whole methods (self-check)
+  'c88-sp24f-1a', 'c88-sp24f-1b', 'c88-sp24f-1c', 'c88-sp24f-1e', 'c88-sp24f-2', 'c88-sp24f-3', 'c88-sp24f-4a', 'c88-sp24f-4b', 'c88-sp24f-4c', 'c88-sp24f-5', 'c88-sp24f-9a', 'c88-sp24f-9b', 'c88-sp24f-9d', 'c88-sp24f-9e',
+  // Data C88C Spring 2023 Final: conceptual, WWPD, environment-diagram and order-of-growth questions, and out-of-scope mutation questions
+  'c88-sp23f-1a', 'c88-sp23f-1b', 'c88-sp23f-1c', 'c88-sp23f-1d', 'c88-sp23f-1e', 'c88-sp23f-2', 'c88-sp23f-3', 'c88-sp23f-4', 'c88-sp23f-8', 'c88-sp23f-9', 'c88-sp23f-12a', 'c88-sp23f-12b', 'c88-sp23f-12c', 'c88-sp23f-12d',
+  // Data C88C Fall 2023 Final: WWPD, environment-diagram, debugging and order-of-growth questions; Q4 (its snippets use mpgs before defining it)
+  'c88-fa23f-1a', 'c88-fa23f-1d', 'c88-fa23f-1e', 'c88-fa23f-1f', 'c88-fa23f-1g', 'c88-fa23f-2', 'c88-fa23f-3a', 'c88-fa23f-3b', 'c88-fa23f-4', 'c88-fa23f-10',
+  // Data C88C Fall 2023 Final Q6 and Q7: out-of-scope mutation questions
+  'c88-fa23f-6', 'c88-fa23f-7'];
 
 let problems = 0;
 const fail = (m) => { console.log(`FAIL  ${m}`); problems++; };

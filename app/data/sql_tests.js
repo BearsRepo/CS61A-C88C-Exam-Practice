@@ -172,6 +172,161 @@ INSERT INTO family VALUES ('P', 'C1'), ('Q', 'C1'), ('P', 'C2'), ('C2', 'G'), ('
 INSERT INTO family VALUES ('P', 'C'), ('C', 'Y'), ('P', 'Y');` },
       ],
     },
+    // ── Data C88C Fall 2024 Final ──
+    'c88-fa24f-2a': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["brand"], expect: [["Bibigo Mandu"], ["Surasang Gyoza"], ["Trader Joe's Soup Dumplings"]], ordered: true },
+        { name: "Heaviest pack or biggest count is not the thickest dumpling", origin: 'added', input: "", columns: ["brand"], expect: [["Tiny"], ["Thick"], ["Mid"]], ordered: true, data: `CREATE TABLE dumplings(brand, weight, count);
+INSERT INTO dumplings VALUES ('Heavy', 40.0, 40.0), ('Thick', 30.0, 10.0), ('Tiny', 4.0, 1.0), ('Mid', 20.0, 10.0), ('Many', 50.0, 100.0);
+CREATE TABLE prices(brand, storeA, storeB);
+INSERT INTO prices VALUES ('Heavy', 9.0, 8.0), ('Thick', 5.0, 6.0), ('Tiny', 2.0, 1.5), ('Mid', 4.0, 4.0), ('Many', 10.0, 2.0);` },
+      ],
+    },
+    'c88-fa24f-2b': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["brand"], expect: [["Wei Chuan Pork and Cabbage"], ["Bibigo Mandu"], ["Twin Marquis"], ["Mila Soup Dumpling"]], ordered: true },
+        { name: "Equal prices are not cheaper; cost per ounce, not price, sets the order", origin: 'added', input: "", columns: ["brand"], expect: [["Many"], ["Heavy"], ["Tiny"]], ordered: true, data: `CREATE TABLE dumplings(brand, weight, count);
+INSERT INTO dumplings VALUES ('Heavy', 40.0, 40.0), ('Thick', 30.0, 10.0), ('Tiny', 4.0, 1.0), ('Mid', 20.0, 10.0), ('Many', 50.0, 100.0);
+CREATE TABLE prices(brand, storeA, storeB);
+INSERT INTO prices VALUES ('Heavy', 9.0, 8.0), ('Thick', 5.0, 6.0), ('Tiny', 2.0, 1.5), ('Mid', 4.0, 4.0), ('Many', 10.0, 2.0);` },
+      ],
+    },
+    // ── Data C88C Fall 2025 and Spring 2025 Finals ──
+    'c88-fa25f-9a': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["name", "rent", "location", "single", "distance"], expect: [["Standard", 1400, "South", 0, 0.2], ["Modera", 1300, "North", 0, 0.6], ["Edgewater", 2500, "San Francisco", 0, 13.9], ["NEMA", 2800, "San Francisco", 1, 11.7], ["Blake", 1200, "Downtown", 1, 1.0], ["Panoramic", 1100, "South", 0, 0.5], ["Hearst", 800, "North", 1, 0.6]] },
+      ],
+    },
+    'c88-fa25f-9b': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["staff_name", "in_state", "apartment_name", "budget_surplus"], expect: [["Alicia", 0, "Identity", 200], ["Dhruv", 0, "Dwight", 0], ["Grace B", 1, "Berk", 300], ["Grace X", 0, "Identity", 1000], ["Grace X", 0, "Blake", 700], ["Maryam", 1, "Modera", 700], ["Mike Baller", 1, "NEMA", 200], ["Mira", 1, "Berk", 200], ["Orazaly", 0, "Hearst", 300], ["Rebecca", 1, "Dwight", 500], ["Reema", 1, "Hearst", 350], ["Thompson", 0, "Panoramic", 200]], ordered: true },
+      ],
+    },
+    'c88-fa25f-9c': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["in_state", "average_budget_surplus"], expect: [[0, 392.0], [1, 367.5]] },
+      ],
+    },
+    'c88-sp25f-8a': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["pid", "name", "start", "end"], expect: [["0182", "Mira", "San Francisco", "Honolulu"], ["1029", "Ramya", "San Francisco", "Vancouver"], ["2718", "Alicia", "Taipei", "Irvine"], ["3413", "Dhruv", "Chicago", "Honolulu"], ["3791", "Edwin", "San Diego", "Seoul"], ["6371", "Isabelle", "Los Angeles", "San Francisco"], ["8888", "Ethan", "San Francisco", "Bali"], ["9201", "John Amongus", "Philadelphia", "Phoenix"]] },
+        { name: "A round trip is left out", origin: 'added', input: "", columns: ["pid", "name", "start", "end"], expect: [["1", "Ana", "San Francisco", "X"], ["2", "Ben", "San Francisco", "Y"], ["3", "Cal", "Oakland", "Z"], ["4", "Dee", "San Francisco", "W"], ["6", "Fay", "Oakland", "V"], ["7", "Gus", "Oakland", "U"], ["8", "Hal", "Oakland", "T"]], data: `CREATE TABLE first_flight(pid, name, airline, start, end, international, duration);
+INSERT INTO first_flight VALUES ('1', 'Ana', 'Alpha', 'San Francisco', 'B', FALSE, 1), ('2', 'Ben', 'Alpha', 'San Francisco', 'C', TRUE, 5),
+  ('3', 'Cal', 'Beta', 'Oakland', 'D', TRUE, 9), ('4', 'Dee', 'Alpha', 'San Francisco', 'E', TRUE, 2),
+  ('5', 'Eve', 'Beta', 'Oakland', 'F', FALSE, 3), ('6', 'Fay', 'Gamma', 'Oakland', 'G', FALSE, 4),
+  ('7', 'Gus', 'Gamma', 'Oakland', 'H', FALSE, 4), ('8', 'Hal', 'Gamma', 'Oakland', 'I', FALSE, 4);
+CREATE TABLE second_flight(pid, start, end, international, duration);
+INSERT INTO second_flight VALUES ('1', 'B', 'X', FALSE, 1), ('2', 'C', 'Y', FALSE, 0.5), ('3', 'D', 'Z', FALSE, 1), ('4', 'E', 'W', TRUE, 10),
+  ('5', 'F', 'Oakland', FALSE, 1), ('6', 'G', 'V', FALSE, 1), ('7', 'H', 'U', FALSE, 1), ('8', 'I', 'T', FALSE, 1);` },
+      ],
+    },
+    'c88-sp25f-8b': {
+      cases: [
+        { name: "The rows printed in the exam (Ramya and Reema tie, so any order is accepted)", origin: 'exam', input: "", columns: ["name", "trip_length"], expect: [["Ethan", 18.5], ["Mira", 15], ["Grace X", 11.0], ["Lia", 9.0], ["Ramya", 3], ["Reema", 3.0]] },
+        { name: "Longest trip first; only trips starting in San Francisco", origin: 'added', input: "", columns: ["name", "trip_length"], expect: [["Dee", 12], ["Ben", 5.5], ["Ana", 2]], ordered: true, data: `CREATE TABLE first_flight(pid, name, airline, start, end, international, duration);
+INSERT INTO first_flight VALUES ('1', 'Ana', 'Alpha', 'San Francisco', 'B', FALSE, 1), ('2', 'Ben', 'Alpha', 'San Francisco', 'C', TRUE, 5),
+  ('3', 'Cal', 'Beta', 'Oakland', 'D', TRUE, 9), ('4', 'Dee', 'Alpha', 'San Francisco', 'E', TRUE, 2),
+  ('5', 'Eve', 'Beta', 'Oakland', 'F', FALSE, 3), ('6', 'Fay', 'Gamma', 'Oakland', 'G', FALSE, 4),
+  ('7', 'Gus', 'Gamma', 'Oakland', 'H', FALSE, 4), ('8', 'Hal', 'Gamma', 'Oakland', 'I', FALSE, 4);
+CREATE TABLE second_flight(pid, start, end, international, duration);
+INSERT INTO second_flight VALUES ('1', 'B', 'X', FALSE, 1), ('2', 'C', 'Y', FALSE, 0.5), ('3', 'D', 'Z', FALSE, 1), ('4', 'E', 'W', TRUE, 10),
+  ('5', 'F', 'Oakland', FALSE, 1), ('6', 'G', 'V', FALSE, 1), ('7', 'H', 'U', FALSE, 1), ('8', 'I', 'T', FALSE, 1);` },
+      ],
+    },
+    'c88-sp25f-8c': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["airline", "COUNT(*)"], expect: [["United", 3]] },
+        { name: "Exactly 2 international flights is enough", origin: 'added', input: "", columns: ["airline", "COUNT(*)"], expect: [["Alpha", 2]], data: `CREATE TABLE first_flight(pid, name, airline, start, end, international, duration);
+INSERT INTO first_flight VALUES ('1', 'Ana', 'Alpha', 'San Francisco', 'B', FALSE, 1), ('2', 'Ben', 'Alpha', 'San Francisco', 'C', TRUE, 5),
+  ('3', 'Cal', 'Beta', 'Oakland', 'D', TRUE, 9), ('4', 'Dee', 'Alpha', 'San Francisco', 'E', TRUE, 2),
+  ('5', 'Eve', 'Beta', 'Oakland', 'F', FALSE, 3), ('6', 'Fay', 'Gamma', 'Oakland', 'G', FALSE, 4),
+  ('7', 'Gus', 'Gamma', 'Oakland', 'H', FALSE, 4), ('8', 'Hal', 'Gamma', 'Oakland', 'I', FALSE, 4);
+CREATE TABLE second_flight(pid, start, end, international, duration);
+INSERT INTO second_flight VALUES ('1', 'B', 'X', FALSE, 1), ('2', 'C', 'Y', FALSE, 0.5), ('3', 'D', 'Z', FALSE, 1), ('4', 'E', 'W', TRUE, 10),
+  ('5', 'F', 'Oakland', FALSE, 1), ('6', 'G', 'V', FALSE, 1), ('7', 'H', 'U', FALSE, 1), ('8', 'I', 'T', FALSE, 1);` },
+      ],
+    },
+    // ── Data C88C Spring 2024 Final ──
+    'c88-sp24f-10a': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["name", "msg_pref"], expect: [["Karim", "messenger"], ["Sean", "instagram"], ["Ethan", "slack"], ["Nicholas", "text"]] },
+      ],
+    },
+    'c88-sp24f-10b': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["name", "snack_pref"], expect: [["Angela", "fruit"], ["John", "fruit"], ["Michelle", "chips"], ["Richik", "fruit"], ["Satleen", "chips"]], ordered: true },
+        { name: "Names stored out of order", origin: 'added', input: "", columns: ["name", "snack_pref"], expect: [["Amy", "chips"], ["Bo", "chips"], ["Cy", "fruit"], ["Di", "fruit"], ["Max", "cookies"], ["Zed", "fruit"]], ordered: true, data: `CREATE TABLE staff(name, drink_pref, msg_pref, snack_pref, fav_game);
+INSERT INTO staff VALUES ('Zed', 'tea', 'text', 'fruit', 'Big'), ('Yan', 'soda', 'email', 'chips', 'Small'), ('Amy', 'soda', 'slack', 'chips', 'Big'),
+  ('Max', 'tea', 'text', 'cookies', 'Huge'), ('Bo', 'soda', 'text', 'chips', 'Huge'), ('Cy', 'soda', 'text', 'fruit', 'Huge'), ('Di', 'tea', 'text', 'fruit', 'Big');
+CREATE TABLE games(name, company, genre, max_players);
+INSERT INTO games VALUES ('Big', 'Riot', 'Zany', 10), ('Small', 'Riot', 'Arcade', 2), ('Huge', 'Mojang', 'Arcade', 50);` },
+      ],
+    },
+    'c88-sp24f-10c': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["genre", "total_staff"], expect: [["Party", 6], ["Indie", 5], ["FPS", 2], ["Moba", 2]], ordered: true },
+        { name: "The bigger genre comes first even though its name is later", origin: 'added', input: "", columns: ["genre", "total_staff"], expect: [["Arcade", 4], ["Zany", 3]], ordered: true, data: `CREATE TABLE staff(name, drink_pref, msg_pref, snack_pref, fav_game);
+INSERT INTO staff VALUES ('Zed', 'tea', 'text', 'fruit', 'Big'), ('Yan', 'soda', 'email', 'chips', 'Small'), ('Amy', 'soda', 'slack', 'chips', 'Big'),
+  ('Max', 'tea', 'text', 'cookies', 'Huge'), ('Bo', 'soda', 'text', 'chips', 'Huge'), ('Cy', 'soda', 'text', 'fruit', 'Huge'), ('Di', 'tea', 'text', 'fruit', 'Big');
+CREATE TABLE games(name, company, genre, max_players);
+INSERT INTO games VALUES ('Big', 'Riot', 'Zany', 10), ('Small', 'Riot', 'Arcade', 2), ('Huge', 'Mojang', 'Arcade', 50);` },
+      ],
+    },
+    'c88-sp24f-10d': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["fav_game", "drink_pref", "staff_count"], expect: [["Mario Party", "soda", 3], ["Valorant", "water", 2]], ordered: true },
+        { name: "Only pairs with more than one person", origin: 'added', input: "", columns: ["fav_game", "drink_pref", "staff_count"], expect: [["Huge", "soda", 2], ["Big", "tea", 2]], data: `CREATE TABLE staff(name, drink_pref, msg_pref, snack_pref, fav_game);
+INSERT INTO staff VALUES ('Zed', 'tea', 'text', 'fruit', 'Big'), ('Yan', 'soda', 'email', 'chips', 'Small'), ('Amy', 'soda', 'slack', 'chips', 'Big'),
+  ('Max', 'tea', 'text', 'cookies', 'Huge'), ('Bo', 'soda', 'text', 'chips', 'Huge'), ('Cy', 'soda', 'text', 'fruit', 'Huge'), ('Di', 'tea', 'text', 'fruit', 'Big');
+CREATE TABLE games(name, company, genre, max_players);
+INSERT INTO games VALUES ('Big', 'Riot', 'Zany', 10), ('Small', 'Riot', 'Arcade', 2), ('Huge', 'Mojang', 'Arcade', 50);` },
+      ],
+    },
+    // ── Data C88C Spring 2023 Final ──
+    'c88-sp23f-13a': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["name", "year"], expect: [["Jade", "Freshman"]] },
+      ],
+    },
+    'c88-sp23f-13b': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["animal", "avg_age"], expect: [["Prairie Dog", 20.0], ["Cat", 19.5], ["Capybara", 19.0], ["Frog", 18.0]], ordered: true },
+      ],
+    },
+    'c88-sp23f-13c': {
+      cases: [
+        { name: "The rows printed in the exam (bark and meow tie, so either order is accepted)", origin: 'exam', input: "", columns: ["sound", "COUNT(*)"], expect: [["ribbit", 1], ["bark", 2], ["meow", 2]] },
+        { name: "Smallest count first", origin: 'added', input: "", columns: ["sound", "COUNT(*)"], expect: [["meow", 2], ["hoot", 3]], ordered: true, data: `CREATE TABLE friends(name, age, year, animal);
+INSERT INTO friends VALUES ('A', 20, 'Senior', 'Owl'), ('B', 22, 'Senior', 'Owl'), ('C', 19, 'Junior', 'Owl'), ('D', 18, 'Freshman', 'Cat'), ('E', 18, 'Freshman', 'Cat');
+CREATE TABLE animals(animal, sound, size, color);
+INSERT INTO animals VALUES ('Cat', 'meow', 'small', 'black'), ('Owl', 'hoot', 'small', 'brown');` },
+      ],
+    },
+    // ── Data C88C Fall 2023 Final ──
+    'c88-fa23f-11c': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["name", "food_order"], expect: [["Rebecca", "rice"], ["Miha", "chicken"], ["Christy", "soup"], ["Ramya", "tofu"], ["Ananyaa", "tofu"]] },
+      ],
+    },
+    'c88-fa23f-11d': {
+      cases: [
+        { name: "The rows printed in the exam (Lakers, Mavericks and Warriors tie, so any order of them is accepted)", origin: 'exam', input: "", columns: ["team", "total_staff"], expect: [["Clippers", 3], ["Lakers", 2], ["Mavericks", 2], ["Warriors", 2], ["Suns", 1]] },
+        { name: "Most popular team first", origin: 'added', input: "", columns: ["team", "total_staff"], expect: [["Bees", 3], ["Cats", 2], ["Ants", 1]], ordered: true, data: `CREATE TABLE staff(name, number, frequent_word, food_order, fav_player);
+INSERT INTO staff VALUES ('A', 1, 'x', 'rice', 'P1'), ('B', 1, 'x', 'rice', 'P2'), ('C', 1, 'x', 'rice', 'P2'), ('D', 1, 'x', 'rice', 'P2'), ('E', 1, 'x', 'rice', 'P3'), ('F', 1, 'x', 'rice', 'P3');
+CREATE TABLE players(name, team, juice, food_order);
+INSERT INTO players VALUES ('P1', 'Ants', 'apple', 'rice'), ('P2', 'Bees', 'grape', 'soup'), ('P3', 'Cats', 'apple', 'rice');` },
+      ],
+    },
+    // ── Data C88C Fall 2023 Final (Q11(b), corrected by the official errata) ──
+    'c88-fa23f-11b': {
+      cases: [
+        { name: "The rows printed in the exam", origin: 'exam', input: "", columns: ["name", "fav_player"], expect: [["Ananyaa", "Kawhi Leonard"], ["Christy", "Stephen Curry"], ["Lily", "Lebron James"], ["Michelle", "Luka Doncic"]], ordered: true },
+        { name: "Names stored out of order; another player with the same food order does not count", origin: 'added', input: "", columns: ["name", "fav_player"], expect: [["Max", "P2"], ["Zoe", "P1"]], ordered: true, data: `CREATE TABLE staff(name, number, frequent_word, food_order, fav_player);
+INSERT INTO staff VALUES ('Zoe', 1, 'x', 'soup', 'P1'), ('Amy', 1, 'x', 'rice', 'P1'), ('Max', 1, 'x', 'rice', 'P2'), ('Bo', 1, 'x', 'soup', 'P2');
+CREATE TABLE players(name, team, juice, food_order);
+INSERT INTO players VALUES ('P1', 'Ants', 'apple', 'soup'), ('P2', 'Bees', 'grape', 'rice'), ('P3', 'Cats', 'apple', 'soup');` },
+      ],
+    },
   };
   return { version: 1, suites };
 })();

@@ -127,9 +127,42 @@ window.CS61A_SCOPE = {
     'fa20f-2b': { status: 'out', reason: 'Uses nonlocal', source: 'inferred' },
     'fa20f-5a': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
     'fa20f-5b': { status: 'out', reason: 'Scheme (replaced by Gleam)', source: 'inferred' },
+    // Data C88C Fall 2024 Final (no Ed post covers it; the CS 61A rules above are applied)
+    'c88-fa24f-3c': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'c88-fa24f-4e': { status: 'out', reason: 'Mutates a tree', source: 'inferred' },
+    // Data C88C Fall 2025 and Spring 2025 Finals (the CS 61A rules above are applied)
+    'c88-fa25f-6': { status: 'out', reason: 'Mutates a tree', source: 'inferred' },
+    'c88-sp25f-1d': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'c88-sp25f-4': { status: 'out', reason: 'Mutates a linked list', source: 'inferred' },
+    'c88-sp25f-7a': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'c88-sp25f-7b': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'c88-sp25f-7c': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'c88-sp25f-7d': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'c88-sp25f-7e': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    // Data C88C Spring 2024 Final (the CS 61A rules above are applied)
+    'c88-sp24f-9a': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    'c88-sp24f-9b': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    'c88-sp24f-9d': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    'c88-sp24f-9e': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    // Data C88C Spring 2023 Final (the CS 61A rules above are applied)
+    'c88-sp23f-4': { status: 'out', reason: "Mutates a linked list", source: 'inferred' },
+    'c88-sp23f-8': { status: 'out', reason: "Mutates a tree", source: 'inferred' },
+    'c88-sp23f-9': { status: 'out', reason: "Mutates a linked list", source: 'inferred' },
+    'c88-sp23f-12a': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    'c88-sp23f-12b': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    'c88-sp23f-12c': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    'c88-sp23f-12d': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    // Data C88C Fall 2023 Final (the CS 61A rules above are applied)
+    'c88-fa23f-10': { status: 'out', reason: "Orders of growth", source: 'inferred' },
+    // Data C88C Fall 2023 Final Q6 and Q7
+    'c88-fa23f-6': { status: 'out', reason: "Mutates a tree", source: 'inferred' },
+    'c88-fa23f-7': { status: 'out', reason: "Mutates a linked list", source: 'inferred' },
   },
 
   questions: {
+    // Data C88C Fall 2025 Final: order-of-growth parts of otherwise in-scope questions
+    'c88-fa25f-1.13': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
+    'c88-fa25f-8.4': { status: 'out', reason: 'Orders of growth', source: 'inferred' },
     // Fall 2025
     'fa25-1c': { status: 'out', reason: 'Orders of growth', source: 'ed' },
     // Spring 2025

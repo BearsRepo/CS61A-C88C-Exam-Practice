@@ -360,6 +360,65 @@ def wins(states, k):
 `;
   const LLAMA_NOTE = 'These tests provide the course’s Tree class and originals, the four offspring trees built from the exam’s llama diagram (the exam assumes both are defined).';
 
+  // ── Data C88C Fall 2024 Final ──
+  const C88_FA24_DATE = "2026-11-20";
+  // Official solutions of C88C fa24 Q4(a)–(c), which Q4(c) and Q4(d) call (copied from the exam solutions).
+  const C88_FA24_COUNT_NODES = `def count_nodes(tree):
+    return sum([count_nodes(b) for b in tree.branches]) +1` + '\n';
+  const C88_FA24_MAX_CHILDREN = `def max_children_at_depth(tree):
+    def helper(node, depth, depth_dict):
+        if depth not in depth_dict:
+            depth_dict[depth] = 0
+        depth_dict[depth] = max(depth_dict[depth], len(node.branches))
+        for b in node.branches:
+            helper(b, depth + 1, depth_dict)
+    depth_dict = {}
+    helper(tree, 0, depth_dict)
+    return depth_dict` + '\n';
+  const C88_FA24_SYMMETRICAL = `def symmetrical(tree):
+    depth_dict = max_children_at_depth(tree)
+    nodes_in_layer, total_nodes = 1, 1
+    for d in range(len(depth_dict)):
+        multiplier = depth_dict[d]
+        total_nodes = total_nodes + nodes_in_layer * multiplier
+        nodes_in_layer = nodes_in_layer * multiplier
+    return total_nodes` + '\n';
+  // The exam's hint says to assume dictionaries are unordered, but Python 3.7+ keeps insertion order (here depth
+  // order), so `for d in depth_dict` would happen to work. Q4(c)'s tests use a copy that returns the same dictionary
+  // with its keys in reverse order, so only an answer that doesn't depend on dictionary order passes.
+  const C88_FA24_MAX_CHILDREN_UNORDERED = C88_FA24_MAX_CHILDREN.replace('    return depth_dict\n', '    return dict(reversed(list(depth_dict.items())))  # same dict, keys in another order\n');
+
+  // ── Data C88C Fall 2025 and Spring 2025 Finals ──
+  const C88_2025_DATE = '2026-11-24';
+  // Official solution of C88C fa25 Q5(a), which Q5(b)'s doctests call (copied from the exam solutions).
+  const C88_FA25_ZIGZAG = `def number_to_zigzag(num):
+  if num < 10:
+    return Link(num)
+  last = num % 10
+  smaller = number_to_zigzag(num // 10)
+  return Link(last, Link(smaller))
+`;
+  // The Link class of C88C fa25 Q7: the course's Link class plus an __iter__ method that returns a LinkIterator.
+  const C88_FA25_ITER_LINK = LINK + `    def __iter__(self):
+        return LinkIterator(self)
+`;
+
+  // C88C sp24 Q7: the official solution reads a tree's label as t.value, so the tests' Tree class answers to both.
+  const C88_SP24_TREE = TREE + `    @property
+    def value(self):
+        return self.label
+`;
+  // The Tree class of C88C Spring 2023 (and other C88C semesters): the label is called value.
+  const C88_VALUE_TREE = `class Tree:
+    def __init__(self, value, branches=()):
+        self.value = value
+        for branch in branches:
+            assert isinstance(branch, Tree)
+        self.branches = list(branches)
+    def is_leaf(self):
+        return not self.branches
+`;
+  const C88_VALUE_TREE_NOTE = 'These tests provide the C88C Tree class of that semester, whose label is called value (the exam uses it but does not print it).';
   const suites = [
     {
       id: 'fa25-3-tests', problem: 'fa25-3', verified: true,
@@ -2523,6 +2582,266 @@ True`),
 (True, False, True)
 >>> related('Jackie', 'Jess', originals), related('Jaidyn', 'Jan', originals)
 (True, False)`),
+      ],
+    },
+    // ── Data C88C Fall 2024 Final ──
+    {
+      id: 'c88-fa24f-3a-tests', problem: 'c88-fa24f-3a', verified: true,
+      verification: verification({ passing: 3, failing: 22 }, C88_FA24_DATE),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> lst = Link(\"h\", Link(\"e\", Link(\"y\", Link(\" \", Link(\"h\")))))\n>>> num_words(lst)\n2\n>>> lst = Link(\" \", Link(\"h\", Link(\"i\", Link(\" \"))))\n>>> num_words(lst)\n1"),
+        added(">>> num_words(Link.empty), num_words(Link(\" \")), num_words(Link(\"a\"))\n(0, 0, 1)"),
+        added(">>> lst = Link(\"a\", Link(\" \", Link(\" \", Link(\"b\", Link(\"c\", Link(\" \", Link(\"d\")))))))\n>>> num_words(lst)  # two spaces in a row, words of 1 and 2 letters\n3"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-3b-tests', problem: 'c88-fa24f-3b', verified: true,
+      verification: verification({ passing: 4, failing: 12 }, C88_FA24_DATE),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> lst = Link(\"h\", Link(\"e\", Link(\"y\", Link(\" \", Link(\"h\", Link(\"i\"))))))\n>>> exists_in(lst, \"hey\")\nTrue\n>>> exists_in(lst, \"hi\")\nTrue\n>>> exists_in(lst, \"hello\")\nFalse\n>>> exists_in(lst, \"y\")\nFalse"),
+        added(">>> lst = Link(\"h\", Link(\"e\", Link(\"y\", Link(\" \", Link(\"h\", Link(\"i\"))))))\n>>> exists_in(lst, \"he\"), exists_in(lst, \"h\"), exists_in(lst, \"ey\")  # parts of a word don't count\n(False, False, False)"),
+        added(">>> lst = Link(\"a\", Link(\"b\", Link(\" \", Link(\" \", Link(\"c\", Link(\" \"))))))\n>>> exists_in(lst, \"ab\"), exists_in(lst, \"c\"), exists_in(lst, \"abc\"), exists_in(lst, \"b\")\n(True, True, False, False)"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-4a-tests', problem: 'c88-fa24f-4a', verified: true,
+      verification: verification({ passing: 2, failing: 8 }, C88_FA24_DATE),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> t1 = Tree(0, [Tree(1), Tree(1)])\n>>> count_nodes(t1)\n3"),
+        added(">>> count_nodes(Tree(5))\n1\n>>> count_nodes(Tree(0, [Tree(1, [Tree(2, [Tree(3)])]), Tree(1, [Tree(2), Tree(2)])]))\n7"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-4b-tests', problem: 'c88-fa24f-4b', verified: true,
+      verification: verification({ passing: 2, failing: 9 }, C88_FA24_DATE),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> max_children_at_depth(Tree(0, [Tree(1, [Tree(2, [Tree(3)])]), Tree(1, [Tree(2), Tree(2)])])) == {0: 2, 1: 2, 2: 1, 3: 0}  # the asymmetric tree in the problem\nTrue"),
+        added(">>> max_children_at_depth(Tree(1)) == {0: 0}\nTrue\n>>> max_children_at_depth(Tree(1, [Tree(2), Tree(3, [Tree(4), Tree(5), Tree(6)]), Tree(7, [Tree(8)])])) == {0: 3, 1: 3, 2: 0}\nTrue"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-4c-tests', problem: 'c88-fa24f-4c', verified: true,
+      verification: verification({ passing: 1, failing: 8 }, C88_FA24_DATE),
+      provenance: EXAM, setup: TREE + '\n' + C88_FA24_MAX_CHILDREN_UNORDERED, setupNote: "These tests provide the course’s Tree class and the official max_children_at_depth from part (b). As the exam’s hint says, don’t rely on dictionary order: the tests’ copy returns its dictionary with the keys in reverse order.", setupFrom: [],
+      cases: [
+        exam(">>> symmetrical(Tree(0, [Tree(1, [Tree(2, [Tree(3)])]), Tree(1, [Tree(2), Tree(2)])]))  # the tree in the problem: 1 + 2 + 4 + 4\n11"),
+        added(">>> symmetrical(Tree(1)), symmetrical(Tree(1, [Tree(2), Tree(3), Tree(4)]))\n(1, 4)\n>>> symmetrical(Tree(1, [Tree(2, [Tree(3, [Tree(4), Tree(5)])])]))  # 1 + 1 + 1 + 2\n5"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-4d-tests', problem: 'c88-fa24f-4d', verified: true,
+      verification: verification({ passing: 1, failing: 3 }, C88_FA24_DATE),
+      provenance: EXAM, setup: TREE + '\n' + C88_FA24_COUNT_NODES + '\n' + C88_FA24_MAX_CHILDREN + '\n' + C88_FA24_SYMMETRICAL, setupNote: "These tests provide the course’s Tree class and the official count_nodes, max_children_at_depth and symmetrical from the earlier parts.", setupFrom: ["c88-fa24f-4a", "c88-fa24f-4b", "c88-fa24f-4c"],
+      cases: [
+        exam(">>> imbalance(Tree(0, [Tree(1, [Tree(2, [Tree(3)])]), Tree(1, [Tree(2), Tree(2)])]))  # 11 - 7\n4"),
+        added(">>> imbalance(Tree(1)), imbalance(Tree(1, [Tree(2), Tree(3)]))\n(0, 0)"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-4e-tests', problem: 'c88-fa24f-4e', verified: true,
+      verification: verification({ passing: 5, failing: 16 }, C88_FA24_DATE),
+      provenance: EXAM, setup: TREE_STR, setupNote: "These tests provide the course’s Tree class, including the __str__ method that print uses (the exam uses it but does not print it).", setupFrom: [],
+      cases: [
+        exam(">>> t3 = Tree(0, [Tree(\"sus\", [Tree(2, [Tree(3)]), Tree(2)]), Tree(1, [Tree(\"sus\")]), Tree(1)])\n>>> _ = eject(t3)  # the exam omits what eject returns\n>>> print(t3)\n0\n  1\n  1"),
+        added(">>> t = Tree(1, [Tree(2, [Tree(\"sus\", [Tree(6)])]), Tree(4, [Tree(3), Tree(2)])])  # the picture in the problem\n>>> eject(t) is t\nTrue\n>>> print(t)\n1\n  2\n  4\n    3\n    2"),
+        added(">>> eject(Tree(\"sus\", [Tree(1)])) is None\nTrue\n>>> leaf = Tree(5)\n>>> eject(leaf) is leaf\nTrue\n>>> t = Tree(1, [Tree(2, [Tree(3, [Tree(\"sus\")]), Tree(\"sus\")])])\n>>> print(eject(t))\n1\n  2\n    3"),
+      ],
+    },
+    {
+      id: 'c88-fa24f-5-tests', problem: 'c88-fa24f-5', verified: true,
+      verification: verification({ passing: 5, failing: 23 }, C88_FA24_DATE),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> data8 = Course(8)\n>>> data8.ID\n8\n>>> list(Course.course_catalog.values()) == [data8]\nTrue\n>>> c88c = Course(88, [8])\n>>> c88c.prereqs\n[8]\n>>> data100 = Course(100, [88, 54])\n>>> math54 = Course(54)\n>>> math54.recommended_next_courses([])\n[]\n>>> math54.recommended_next_courses([88, 100])\n[]\n>>> math54.recommended_next_courses([88])\n[100]"),
+        added(">>> a, b = Course(1), Course(2)\n>>> c = Course(3, [1, 2])\n>>> d = Course(4, [1])\n>>> sorted(Course.course_catalog), Course.course_catalog[3] is c\n([1, 2, 3, 4], True)\n>>> a.recommended_next_courses([]), a.recommended_next_courses([2]), b.recommended_next_courses([1])\n([4], [3, 4], [3])\n>>> a.recommended_next_courses([2, 4]), c.recommended_next_courses([1, 2])\n([3], [])"),
+        added(">>> x, y, z = Course(10), Course(20), Course(30)\n>>> w = Course(40, [10, 20, 30])\n>>> x.recommended_next_courses([20]), x.recommended_next_courses([20, 30])  # every other prereq is needed\n([], [40])"),
+      ],
+    },
+    // ── Data C88C Fall 2025 and Spring 2025 Finals ──
+    {
+      id: 'c88-fa25f-3-tests', problem: 'c88-fa25f-3', verified: true,
+      verification: verification({ passing: 3, failing: 14 }, C88_2025_DATE),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> gift_dict1 = {\"Target\": \"socks\", \"Nordstrom\": \"lipstick\"}\n>>> find_gift(\"socks\")(gift_dict1)\n'Target'\n>>> gift_dict2 = {\"Target\": \"socks\", \"Nordstrom\": {\"Makeup\": \"lipstick\", \"Clothes\": \"shirt\"}}\n>>> find_gift(\"shirt\")(gift_dict2)\n'Nordstrom -> Clothes'"),
+        exam(">>> gift_dict3 = {\n...    \"4th Street\": {\"Apple Store\": {\"Phones\": \"iPhone 14\" , \"Macs\": \"MacBook Pro\"}},\n...    \"Target\": \"socks\",\n...    \"Nordstrom\": { \"Makeup\": \"lipstick\", \"Clothes\": \"shirt\" }\n... }\n>>> find_gift(\"MacBook Pro\")(gift_dict3)\n'4th Street -> Apple Store -> Macs'\n>>> find_gift(\"socks\")(gift_dict3)\n'Target'\n>>> find_gift(\"lipstick\")(gift_dict3)\n'Nordstrom -> Makeup'"),
+        added(">>> d = {\"Mall\": {\"Shoes\": \"boots\"}, \"Corner\": {\"Deli\": {\"Back\": \"bagel\"}}, \"Home\": \"cat\"}\n>>> find_gift(\"bagel\")(d), find_gift(\"cat\")(d), find_gift(\"boots\")(d)  # a dictionary searched first may not have it\n('Corner -> Deli -> Back', 'Home', 'Mall -> Shoes')"),
+      ],
+    },
+    {
+      id: 'c88-fa25f-5a-tests', problem: 'c88-fa25f-5a', verified: true,
+      verification: verification({ passing: 1, failing: 10 }, C88_2025_DATE),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> number_to_zigzag(1234)\nLink(4, Link(Link(3, Link(Link(2, Link(Link(1)))))))\n>>> number_to_zigzag(67)\nLink(7, Link(Link(6)))"),
+        exam(">>> number_to_zigzag(5)\nLink(5)\n>>> number_to_zigzag(10)\nLink(0, Link(Link(1)))"),
+        added(">>> number_to_zigzag(0)\nLink(0)\n>>> number_to_zigzag(100)\nLink(0, Link(Link(0, Link(Link(1)))))"),
+      ],
+    },
+    {
+      id: 'c88-fa25f-5b-tests', problem: 'c88-fa25f-5b', verified: true,
+      verification: verification({ passing: 4, failing: 10 }, C88_2025_DATE),
+      provenance: EXAM, setup: LINK + '\n' + C88_FA25_ZIGZAG, setupNote: "These tests provide the course’s Link class and the official number_to_zigzag from part (a).", setupFrom: ["c88-fa25f-5a"],
+      cases: [
+        exam(">>> zig = number_to_zigzag(12034)\n>>> sum_zigzag(zig)\n10\n>>> zag = number_to_zigzag(1)\n>>> sum_zigzag(zag)\n1"),
+        added(">>> sum_zigzag(Link.empty), sum_zigzag(number_to_zigzag(0)), sum_zigzag(number_to_zigzag(9876))\n(0, 0, 30)"),
+      ],
+    },
+    {
+      id: 'c88-fa25f-7a-tests', problem: 'c88-fa25f-7a', verified: true,
+      verification: verification({ passing: 2, failing: 10 }, C88_2025_DATE),
+      provenance: EXAM, setup: C88_FA25_ITER_LINK, setupNote: "These tests provide the course’s Link class with the __iter__ method shown in the problem.", setupFrom: [],
+      cases: [
+        exam(">>> lnk = Link(1, Link(2, Link(3)))\n>>> for lnk in lnk:\n...     print(lnk)\n1\n2\n3"),
+        added(">>> it = iter(Link(1, Link(2)))\n>>> iter(it) is it\nTrue\n>>> next(it), next(it)\n(1, 2)\n>>> next(it)\nTraceback (most recent call last):\nStopIteration"),
+        added(">>> list(Link(5)), list(Link('a', Link('b', Link('c'))))\n([5], ['a', 'b', 'c'])"),
+      ],
+    },
+    {
+      id: 'c88-sp25f-3a-tests', problem: 'c88-sp25f-3a', verified: true,
+      verification: verification({ passing: 2, failing: 6 }, C88_2025_DATE),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> s = Spacecraft(\"Fondor\", 1000)\n>>> s.craft_type, s.payload_capacity\n('Fondor', 1000)\n>>> s.status_report()\nAll systems nominal"),
+        exam(">>> r1 = Rocket(\"Apollo\", \"Orbiter\", 1000, 3000)\n>>> r1.name\n'Apollo'\n>>> r1.craft_type\n'Orbiter'\n>>> r1.payload_capacity\n1000\n>>> r1.thrust\n3000"),
+        added(">>> r2 = Rocket(\"Artemis\", \"Orion\", 100, 500)\n>>> r2.name, r2.craft_type, r2.payload_capacity, r2.thrust\n('Artemis', 'Orion', 100, 500)\n>>> r2.status_report()\nRocket systems nominal"),
+      ],
+    },
+    {
+      id: 'c88-sp25f-5-tests', problem: 'c88-sp25f-5', verified: true,
+      verification: verification({ passing: 1, failing: 13 }, C88_2025_DATE),
+      provenance: EXAM, setup: TREE, setupNote: TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> target = ['I', 'enjoy', 'DataC88C']\n>>> t1 = Tree('I', [Tree('enjoy', [Tree('DataC88C')])])\n>>> contains_phrase(t1, target)\nTrue"),
+        exam(">>> target = ['I', 'enjoy', 'DataC88C']\n>>> t2 = Tree('I', [Tree('love', [Tree('Stanford'), Tree('DataC88C')]), Tree('enjoy', [Tree('DataC8'), Tree('DataC88C')])])\n>>> t3 = Tree('Oski', [Tree('and', [Tree('I', [Tree('enjoy', [Tree('DataC88C')])])]), Tree('is', [Tree('a', [Tree('tree')])])])\n>>> t4 = Tree('Go', [Tree('I', [Tree('enjoy', [Tree('DataC88C', [Tree('Cardinals')])])])])\n>>> [contains_phrase(t, target) for t in [t2, t3, t4]]  # t2, t3 and t4 from the diagram\n[True, True, True]"),
+        exam(">>> target = ['I', 'enjoy', 'DataC88C']\n>>> t5 = Tree('Oski', [Tree('is', [Tree('cool'), Tree('creepy')]), Tree('enjoys', [Tree('DataC8'), Tree('DataC88C')]), Tree('loves', [Tree('Stanford'), Tree('Cal')])])\n>>> t6 = Tree('DataC88C', [Tree('I', [Tree('love', [Tree('Stanford')]), Tree('enjoy', [Tree('DataC8'), Tree('trees', [Tree('DataC88C')])])])])\n>>> [contains_phrase(t, target) for t in [t5, t6]]  # t5 and t6 from the diagram\n[False, False]"),
+        added(">>> contains_phrase(Tree('I', [Tree('enjoy', [Tree('Cal')])]), ['I', 'enjoy', 'DataC88C'])  # the last word differs\nFalse\n>>> contains_phrase(Tree('I', [Tree('enjoy', [Tree('DataC88C')])]), ['enjoy', 'DataC88C'])  # starts below the root\nTrue\n>>> contains_phrase(Tree('enjoy', [Tree('I')]), ['I', 'enjoy'])  # wrong order\nFalse"),
+      ],
+    },
+    {
+      id: 'c88-sp25f-6-tests', problem: 'c88-sp25f-6', verified: true,
+      verification: verification({ passing: 1, failing: 10 }, C88_2025_DATE),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> animals = [(\"Linda\", \"Lion\"), (\"Millie\", \"Monkey\"), (\"Jenny\", \"Jellyfish\"), (\"Laila\", \"Lion\")]\n>>> animal_iter = AnimalMeetings(animals)\n>>> print(next(animal_iter))\nLinda the Lion meets Millie the Monkey\n>>> print(next(animal_iter))\nLinda the Lion meets Jenny the Jellyfish\n>>> print(next(animal_iter))\nMillie the Monkey meets Jenny the Jellyfish\n>>> print(next(animal_iter))\nMillie the Monkey meets Laila the Lion"),
+        added(">>> animals = [(\"Linda\", \"Lion\"), (\"Millie\", \"Monkey\"), (\"Jenny\", \"Jellyfish\"), (\"Laila\", \"Lion\")]\n>>> list(AnimalMeetings(animals))[4:]  # the last pair, then the iterator ends\n['Jenny the Jellyfish meets Laila the Lion']\n>>> len(list(AnimalMeetings(animals)))\n5"),
+        added(">>> list(AnimalMeetings([(\"A\", \"Cat\"), (\"B\", \"Cat\")])), list(AnimalMeetings([])), list(AnimalMeetings([(\"A\", \"Cat\")]))\n([], [], [])\n>>> list(AnimalMeetings([(\"A\", \"Cat\"), (\"B\", \"Cat\"), (\"C\", \"Dog\")]))\n['A the Cat meets C the Dog', 'B the Cat meets C the Dog']"),
+      ],
+    },
+    // ── Data C88C Spring 2024 Final ──
+    {
+      id: 'c88-sp24f-6-tests', problem: 'c88-sp24f-6', verified: true,
+      verification: verification({ passing: 5, failing: 15 }, "2026-11-24"),
+      provenance: EXAM, setup: LINK, setupNote: LINK_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> link_chain(['o_O'], 3)\nLink('o_O', Link('o_O', Link('o_O')))"),
+        exam(">>> link_chain([1, 2], 7)\nLink(1, Link(2, Link(1, Link(2, Link(1, Link(2, Link(1)))))))\n>>> link_chain([], 2) is Link.empty\nTrue"),
+        added(">>> link_chain([1, 2, 3], 0) is Link.empty, link_chain([1, 2, 3], 2), link_chain(['a', 'b'], 1)\n(True, Link(1, Link(2)), Link('a'))"),
+        added(">>> link_chain([1, 2, 3], 5)  # back to the start after 3\nLink(1, Link(2, Link(3, Link(1, Link(2)))))"),
+      ],
+    },
+    {
+      id: 'c88-sp24f-7-tests', problem: 'c88-sp24f-7', verified: true,
+      verification: verification({ passing: 3, failing: 9 }, "2026-11-24"),
+      provenance: EXAM, setup: C88_SP24_TREE, setupNote: "These tests provide the course’s Tree class. The exam’s solution reads labels as t.value, so this Tree class also has value (the same as label).", setupFrom: [],
+      cases: [
+        exam(">>> t = Tree(1, [Tree(2, [Tree(4), Tree(5)]), Tree(6, [Tree(7)])])\n>>> sum_depth_k(t, 0)\n1\n>>> sum_depth_k(t, 1) # 2 + 6\n8\n>>> sum_depth_k(t, 2) # 4 + 5 + 7\n16"),
+        added(">>> t = Tree(1, [Tree(2), Tree(3, [Tree(4), Tree(5, [Tree(6)])])])  # a leaf above the deepest level\n>>> sum_depth_k(t, 2), sum_depth_k(t, 3)\n(9, 6)\n>>> sum_depth_k(Tree(7), 0)\n7"),
+      ],
+    },
+    {
+      id: 'c88-sp24f-8-tests', problem: 'c88-sp24f-8', verified: true,
+      verification: verification({ passing: 1, failing: 10 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> fns = [lambda x: x, lambda x: x + 1, lambda x: 10 - x]\n>>> gen = cyclic_generator(fns, [2, 3, 4])\n>>> [next(gen) for _ in range(4)]\n[2, 4, 6, 2]"),
+        exam(">>> fns = [lambda x: x, lambda x: x + 1, lambda x: 10 - x]\n>>> gen = cyclic_generator(fns, [2, 3, 4, 5])\n>>> [next(gen) for _ in range(7)]\n[2, 4, 6, 5, 3, 7, 4]"),
+        added(">>> gen = cyclic_generator([lambda x: x * 2], [1, 2])\n>>> [next(gen) for _ in range(5)]\n[2, 4, 2, 4, 2]\n>>> gen = cyclic_generator([abs, lambda x: -x, str], [-3])\n>>> [next(gen) for _ in range(4)]\n[3, 3, '-3', 3]"),
+      ],
+    },
+    // ── Data C88C Spring 2023 Final ──
+    {
+      id: 'c88-sp23f-5-tests', problem: 'c88-sp23f-5', verified: true,
+      verification: verification({ passing: 4, failing: 12 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> add = lambda a, b: a + b\n>>> sub = lambda a, b: a - b\n>>> mul = lambda a, b: a * b\n>>> apply = multi_caller([add, sub, mul])\n>>> apply([[2, 5], [10, 5], [11, 8]])\n[7, 5, 88]"),
+        added(">>> multi_caller([])([])\n[]\n>>> multi_caller([pow, max])([[2, 10], [3, 7]])\n[1024, 7]"),
+      ],
+    },
+    {
+      id: 'c88-sp23f-6-tests', problem: 'c88-sp23f-6', verified: true,
+      verification: verification({ passing: 2, failing: 7 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> nested_product([2, 3, [4, 1, [5], 1]])\n120\n>>> nested_product([1, [2, [3]]])\n6\n>>> nested_product([])\n1"),
+        added(">>> nested_product([[[]], 2]), nested_product([0, [5]]), nested_product([[2, 3], [4]]), nested_product([7])\n(2, 0, 24, 7)"),
+      ],
+    },
+    {
+      id: 'c88-sp23f-7-tests', problem: 'c88-sp23f-7', verified: true,
+      verification: verification({ passing: 4, failing: 7 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> dist_dictionary([11.2, 13.4, 6, 78.5, 92.6]) == {0: 0.2, 10: 0.4, 70: 0.2, 90: 0.2}\nTrue"),
+        added(">>> dist_dictionary([55, 51.5]) == {50: 1.0}\nTrue\n>>> dist_dictionary([10, 9.99, 0, 20]) == {10: 0.25, 0: 0.5, 20: 0.25}  # 10 is in bin 10\nTrue"),
+      ],
+    },
+    {
+      id: 'c88-sp23f-10-tests', problem: 'c88-sp23f-10', verified: true,
+      verification: verification({ passing: 3, failing: 15 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> q1 = Question(\"True or False?\", \"False\", 2)\n>>> q1.serial_no\n1000\n>>> q2 = Question(\"True or False?\", \"True\", 1)\n>>> q2.serial_no\n1001\n>>> q1.grade(\"True\")\n0\n>>> q1.grade(\"False\")\n2"),
+        exam(">>> q1 = Question(\"True or False?\", \"False\", 2)\n>>> q2 = Question(\"True or False?\", \"True\", 1)\n>>> final = Exam([q1, q2], [{1000: \"False\", 1001: \"True\"}, {1000: \"False\", 1001: \"False\"}])\n>>> final.scores\n[]\n>>> final.total_score()\n3\n>>> final.grade_submission(final.submissions[0])\n3\n>>> final.scores\n[]\n>>> final.grade_all()\n>>> final.scores\n[3, 2]"),
+        added(">>> qs = [Question(\"a\", \"x\", 5), Question(\"b\", \"y\", 3), Question(\"c\", \"z\", 1)]\n>>> [q.serial_no for q in qs], Question.serial_no\n([1000, 1001, 1002], 1003)\n>>> e = Exam(qs, [{1000: \"x\", 1001: \"n\", 1002: \"z\"}, {1000: \"n\", 1001: \"y\", 1002: \"n\"}, {1000: \"n\", 1001: \"n\", 1002: \"n\"}])\n>>> e.total_score(), e.grade_submission(e.submissions[1])\n(9, 3)\n>>> e.grade_all()\n>>> e.scores\n[6, 3, 0]"),
+      ],
+    },
+    {
+      id: 'c88-sp23f-11-tests', problem: 'c88-sp23f-11', verified: true,
+      verification: verification({ passing: 1, failing: 12 }, "2026-11-24"),
+      provenance: EXAM, setup: C88_VALUE_TREE, setupNote: C88_VALUE_TREE_NOTE, setupFrom: [],
+      cases: [
+        exam(">>> t = Tree(1, [Tree(3, [Tree(4)]), Tree(2), Tree(6, [Tree(5)])])\n>>> for val in tree_sort(t):\n...     print(val)\n1\n2\n3\n4\n5\n6"),
+        added(">>> list(tree_sort(Tree(9, [Tree(3, [Tree(1)]), Tree(5)])))  # the root is the largest\n[1, 3, 5, 9]\n>>> list(tree_sort(Tree(4, [Tree(8, [Tree(2)])])))  # the root is in the middle\n[2, 4, 8]\n>>> list(tree_sort(Tree(7)))\n[7]"),
+        added(">>> list(tree_sort(Tree(10, [Tree(1, [Tree(5)]), Tree(2, [Tree(3)])])))  # the next smallest comes from the second branch\n[1, 2, 3, 5, 10]"),
+      ],
+    },
+    // ── Data C88C Fall 2023 Final ──
+    {
+      id: 'c88-fa23f-5-tests', problem: 'c88-fa23f-5', verified: true,
+      verification: verification({ passing: 1, failing: 9 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> create_movie(\"Inception\", \"Christopher Nolan\", 2010)\n{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}"),
+        exam(">>> movie_catalog = {}\n>>> inception = create_movie(\"Inception\", \"Christopher Nolan\", 2010)\n>>> add_movie_to_catalog(movie_catalog, inception)\n{'Christopher Nolan': [{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}]}"),
+        exam(">>> movie_catalog = {'Christopher Nolan': [{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}]}\n>>> get_movies_by_director(movie_catalog, \"Christopher Nolan\")\n[{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}]\n>>> get_movies_by_director(movie_catalog, \"Quentin Tarantino\")\n[]"),
+        added(">>> c = {}\n>>> _ = add_movie_to_catalog(c, create_movie(\"Up\", \"Pete Docter\", 2009))\n>>> _ = add_movie_to_catalog(c, create_movie(\"Soul\", \"Pete Docter\", 2020))\n>>> _ = add_movie_to_catalog(c, create_movie(\"Heat\", \"Michael Mann\", 1995))\n>>> [m[\"title\"] for m in get_movies_by_director(c, \"Pete Docter\")], sorted(c)\n(['Up', 'Soul'], ['Michael Mann', 'Pete Docter'])"),
+      ],
+    },
+    {
+      id: 'c88-fa23f-8-tests', problem: 'c88-fa23f-8', verified: true,
+      verification: verification({ passing: 6, failing: 17 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> v = Vehicle(10, 10, 15)\n>>> v.pick_up_item('red shell', 1)\n>>> v.weight\n16\n>>> v.items\n['red shell']\n>>> v.pick_up_item('banana', 2)\n>>> v.weight\n18\n>>> v.items\n['red shell', 'banana']"),
+        exam(">>> second_place = Vehicle(5, 5, 5)\n>>> first_place = Vehicle(10, 10, 10)\n>>> vehicles = [second_place, first_place]\n>>> second_place.pick_up_item('green shell', 1)\n>>> second_place.use_item(vehicles)\n>>> second_place.items\n[]\n>>> first_place.speed\n9"),
+        exam(">>> b = Bike(10, 10, 10)\n>>> b.pick_up_item('blue shell', 4)\n>>> b.weight\n14\n>>> b.items\n['blue shell']\n>>> b.acceleration\n8.0"),
+        added(">>> a, b, c = Vehicle(5, 5, 5), Vehicle(6, 6, 6), Vehicle(7, 7, 7)\n>>> b.pick_up_item('banana', 1)\n>>> b.pick_up_item('star', 1)\n>>> b.use_item([a, b, c])\n>>> b.items, a.speed, b.speed, c.speed  # only the vehicle in front of b slows down\n(['banana'], 5, 6, 6)"),
+        added(">>> k = Bike(3, 9, 1)\n>>> k.pick_up_item('a', 2)\n>>> k.pick_up_item('b', 6)\n>>> k.weight, k.items, k.acceleration, k.speed\n(9, ['a', 'b'], 5.0, 3)"),
+      ],
+    },
+    {
+      id: 'c88-fa23f-9-tests', problem: 'c88-fa23f-9', verified: true,
+      verification: verification({ passing: 1, failing: 8 }, "2026-11-24"),
+      provenance: EXAM, setup: '', setupNote: '', setupFrom: [],
+      cases: [
+        exam(">>> gen = generate_factors(4)\n>>> [next(gen) for _ in range(7)]\n[1, 2, 4, 1, 2, 4, 1]"),
+        added(">>> gen = generate_factors(10)\n>>> [next(gen) for _ in range(6)]\n[1, 2, 5, 10, 1, 2]\n>>> gen = generate_factors(1)\n>>> [next(gen) for _ in range(3)]\n[1, 1, 1]\n>>> gen = generate_factors(12)\n>>> [next(gen) for _ in range(7)]\n[1, 2, 3, 4, 6, 12, 1]"),
       ],
     },
   ];

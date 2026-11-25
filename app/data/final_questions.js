@@ -4604,4 +4604,3486 @@ SELECT a.parent FROM family AS a, family AS b, family AS c, family AS d, family 
       'fa20f-5i': { accepted: ['(cdr s)'], explanation: 'The rest of `s`.' },
     },
   });
+
+  // ───────────────────────── Data C88C — Fall 2024 Final ─────────────────────────
+  // Source: Data C88C Final, Fall 2024 (official solutions PDF, last updated 2024-12-20).
+  // Ids start with `c88-` (never colliding with CS 61A), and the exam has `course: 'c88c'`.
+  // Points: the PDF gives no points for single blanks of Q2(b), Q3(b), Q4(a), Q4(b) and Q5, so those parts
+  // have `points: null`; each sub-question's total is on its PROBLEMS entry (as for fa25 Q4(b)).
+  // PDF errata: the eject() parts are printed as Q4.1–Q4.5 a second time; they are Q4.11–Q4.15 here.
+  // Q3(c) prints no code; its code is a comment so the scratch editor has something to show.
+
+  const C88_FA24_TABLES = code(`
+dumplings:
+| brand                       | weight | count |
+|-----------------------------|--------|-------|
+| Bibigo Mandu                | 24.0   | 20.0  |
+| Shirakiku Gyoza             | 21.0   | 28.0  |
+| Mila Soup Dumpling          | 8.8    | 9.0   |
+| Twin Marquis                | 16.0   | 21.0  |
+| Surasang Gyoza              | 35.2   | 32.0  |
+| Wei Chuan Pork and Cabbage  | 21.0   | 28.0  |
+| Trader Joe's Soup Dumplings | 6.0    | 6.0   |
+
+prices:
+| brand                       | storeA | storeB |
+|-----------------------------|--------|--------|
+| Bibigo Mandu                | 7.49   | 6.98   |
+| Shirakiku Gyoza             | 5.99   | 6.99   |
+| Mila Soup Dumpling          | 8.49   | 7.99   |
+| Twin Marquis                | 6.49   | 4.99   |
+| Surasang Gyoza              | 4.49   | 6.99   |
+| Wei Chuan Pork and Cabbage  | 8.19   | 5.49   |
+| Trader Joe's Soup Dumplings | 3.49   | 3.99   |
+`);
+  const C88_FA24_SETUP = code(`
+CREATE TABLE dumplings(brand, weight, count);
+INSERT INTO dumplings VALUES
+  ('Bibigo Mandu', 24.0, 20.0), ('Shirakiku Gyoza', 21.0, 28.0), ('Mila Soup Dumpling', 8.8, 9.0),
+  ('Twin Marquis', 16.0, 21.0), ('Surasang Gyoza', 35.2, 32.0), ('Wei Chuan Pork and Cabbage', 21.0, 28.0),
+  ('Trader Joe''s Soup Dumplings', 6.0, 6.0);
+CREATE TABLE prices(brand, storeA, storeB);
+INSERT INTO prices VALUES
+  ('Bibigo Mandu', 7.49, 6.98), ('Shirakiku Gyoza', 5.99, 6.99), ('Mila Soup Dumpling', 8.49, 7.99),
+  ('Twin Marquis', 6.49, 4.99), ('Surasang Gyoza', 4.49, 6.99), ('Wei Chuan Pork and Cabbage', 8.19, 5.49),
+  ('Trader Joe''s Soup Dumplings', 3.49, 3.99);
+`);
+  const C88_SQL_INTRO = 'Shm’s family loves 2 things: frozen dumplings, and great deals! Complete the SQL queries using the two tables below. **Note:** You may use SQL keywords in the blanks.\n\nThe `dumplings` table contains data on different frozen dumpling packs: the net `weight` of each package in ounces, and the `count` of dumplings in each pack. The `prices` table contains data on the prices for each dumpling pack at two different stores, `storeA` and `storeB`. The brands are stored as strings, and all other data are stored as floats.\n\n```\n' + C88_FA24_TABLES + '\n```';
+
+  // Every part of Q1 has the same answer choices except Q1.4.
+  const C88_WWPD_CHOICES = ['[1, 2]', '[3, 4]', '[5, 6]', '[7, 8]', '1', '2', '3', '4', '5', '6', '7', '8', 'None'];
+  const C88_GROWTH = ['Constant', 'Logarithmic', 'Linear', 'Quadratic', 'Exponential'];
+  const C88_LINK_NOTE = 'You may use the `Link` class defined on the midterm and final study guide (`Link.empty`, `first`, `rest`).';
+  const C88_TREE_NOTE = 'You may use the `Tree` class defined on the midterm and final study guide (`label`, `branches`, `is_leaf()`).';
+
+  add({
+    exam: { id: 'c88-fa24f', label: 'C88C Fall 2024 Final', kind: 'final', course: 'c88c', url: 'https://c88c.org/fa25/resources/', complete: true },
+    problems: {
+      'c88-fa24f-1': {
+        exam: 'c88-fa24f', number: '1', title: 'WWPD', points: 10,
+        intro: 'Suppose we have the following Python code. There are no errors that occur when running this program.',
+        code: code(`
+class Foo:
+    a = []
+    def __init__(self, a):
+        self.a = a
+
+    def func(self, a):
+        self.a.append(a)
+        return lambda a: self.a.pop(a)
+
+    def func2(self, a):
+        x = Foo.a.extend(a)
+        print(x)
+        return lambda a: Foo.a.pop(a)
+
+class Bar(Foo):
+    def __init__(self, a):
+        1+2
+
+    def func2(self, a):
+        print(len(self.a))
+        return super().func2(a)
+
+f1 = Foo([])
+x = f1.func([1, 2])
+f1.func([3, 4])
+print(x(1))
+y = f1.func2([5, 6])
+print(y(0))
+f2 = Bar([])
+z = f2.func2([7, 8])
+print(z(0))
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-2a': {
+        exam: 'c88-fa24f', number: '2(a)', title: 'SQL — The Three Thickest Dumplings', points: 5, lang: 'sql',
+        intro: C88_SQL_INTRO + '\n\nFill in the SQL query that displays only the names of the top 3 brands with the best ounces-per-dumpling ratio, in order from highest ratio (i.e. thickest dumplings) to lowest. Your query should work correctly for any data that might appear in the `dumplings` and `prices` tables.\n\n**Hint:** The ratio can be calculated as `weight` divided by `count`.\n\nExpected output for the example given:\n\n```\n| brand                       |\n|-----------------------------|\n| Bibigo Mandu                |\n| Surasang Gyoza              |\n| Trader Joe\'s Soup Dumplings |\n```',
+        sqlSetup: C88_FA24_SETUP,
+        code: code(`
+⟦a⟧;
+`),
+      },
+      'c88-fa24f-2b': {
+        exam: 'c88-fa24f', number: '2(b)', title: 'SQL — Delicious Savings!', points: 6, lang: 'sql',
+        intro: C88_SQL_INTRO + '\n\nShm will be shopping at their favorite grocery store `storeB` later today, and wants to get the best dumpling deals there! Fill in this SQL query that returns ONLY the dumpling brands that are cheaper at `storeB` than at `storeA`, in order from the lowest cost-per-ounce to highest cost-per-ounce (based on the price at `storeB`).\n\nExpected output for the example given:\n\n```\n| brand                      |\n|----------------------------|\n| Wei Chuan Pork and Cabbage |\n| Bibigo Mandu               |\n| Twin Marquis               |\n| Mila Soup Dumpling         |\n```',
+        sqlSetup: C88_FA24_SETUP,
+        code: code(`
+SELECT ⟦a⟧ FROM dumplings as a, prices as b WHERE ⟦b⟧ ORDER BY ⟦c⟧;
+`),
+      },
+      'c88-fa24f-3a': {
+        exam: 'c88-fa24f', number: '3(a)', title: 'Linked Lists — num_words', points: 9,
+        intro: 'Suppose we represent words using a Linked List, where each node contains a letter within the word. For example, the phrase "hey hi" could be stored as shown below.\n\nImplement `num_words`, which returns the number of words that are in a given Linked List. You may assume that words are separated by the space `" "` character.\n\n' + C88_LINK_NOTE,
+        illustration: { src: 'assets/c88-fa24-final-q3-link.png', width: 408, height: 116, alt: 'From the exam: a linked list of the letters "h", "e", "y", " ", "h", "i", one letter per node, each node pointing to the next.' },
+        code: code(`
+def num_words(word_list):
+    """Returns the number of words present in the word_list.
+    A word is defined as a sequence of non-space characters.
+    Each word is separated by spaces.
+    >>> lst = Link("h", Link("e", Link("y", Link(" ", Link("h")))))
+    >>> num_words(lst)
+    2
+    >>> lst = Link(" ", Link("h", Link("i", Link(" "))))
+    >>> num_words(lst)
+    1
+    """
+    count = 0
+    in_word = False
+    while ⟦a⟧:
+        if ⟦b⟧ and ⟦c⟧:
+            count += 1
+            in_word = ⟦d⟧
+        ⟦e⟧:
+            in_word = ⟦f⟧
+        ⟦g⟧
+    return count
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-3b': {
+        exam: 'c88-fa24f', number: '3(b)', title: 'Linked Lists — exists_in', points: 10,
+        intro: 'Implement `exists_in`, which returns whether a word `w` exists inside of a Linked List `word_list`. You may assume that all inputs to `w` are valid words.\n\n' + C88_LINK_NOTE,
+        code: code(`
+def exists_in(word_list, w):
+    """Returns whether a word w exists inside of a linked list word_list.
+
+    A word is defined as a sequence of non-space characters.
+    Each word is separated by a space.
+
+    >>> lst = Link("h", Link("e", Link("y", Link(" ", Link("h", Link("i"))))))
+    >>> exists_in(lst, "hey")
+    True
+    >>> exists_in(lst, "hi")
+    True
+    >>> exists_in(lst, "hello")
+    False
+    >>> exists_in(lst, "y")
+    False
+    """
+    def helper(word_list, current_word):
+        if word_list is Link.empty:
+            return ⟦h⟧
+
+        if ⟦i⟧ == " ":
+            return ⟦j⟧ or ⟦k⟧
+        else:
+            return ⟦l⟧
+
+    return helper(word_list, "")
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-3c': {
+        exam: 'c88-fa24f', number: '3(c)', title: 'Linked Lists — runtime', points: 5,
+        intro: 'Answer the following questions about adding the string `"aloha"` to a given Linked List.',
+        // The exam prints no code here, but the app needs a code block for the scratch editor.
+        code: code(`
+# The exam gives no code for Q3.13 and Q3.14. Use this editor for notes.
+`),
+      },
+      'c88-fa24f-4a': {
+        exam: 'c88-fa24f', number: '4(a)', title: 'Trees — count_nodes', points: 5,
+        intro: 'Implement `count_nodes`, which counts the total number of nodes in a given Tree. You may assume that the Tree is non-empty.\n\n' + C88_TREE_NOTE,
+        code: code(`
+def count_nodes(tree):
+    """Counts the total number of nodes in the tree.
+    >>> t1 = Tree(0, [Tree(1), Tree(1)])
+    >>> count_nodes(t1)
+    3
+    """
+    return ⟦a⟧([⟦b⟧ for b in tree.branches]) ⟦c⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-4b': {
+        exam: 'c88-fa24f', number: '4(b)', title: 'Trees — max_children_at_depth', points: 7,
+        intro: 'We define a Tree to be **symmetric** if every node at depth `d` shares the same number of children. For example, a single node is symmetric, and so is a root with two leaves. The tree shown below is **not** symmetric (i.e. asymmetric). It has:\n\n\n• One node at depth d = 0 with 2 children\n\n• One node at depth d = 1 with 1 child\n\n• One node at depth d = 1 with 2 children\n\n• One node at depth d = 2 with 1 child\n\n• Two nodes at depth d = 2 with 0 children\n\n• One node at depth d = 3 with 0 children\n\nSince not all nodes in depth d = 1 and d = 2 share the same number of children, this tree is considered asymmetric.\n\nLet’s start by implementing `max_children_at_depth`, which returns a dictionary mapping a given depth to the maximum number of children at that depth. For example, the asymmetric tree below should return `{0: 2, 1: 2, 2: 1, 3: 0}`.',
+        illustration: { src: 'assets/c88-fa24-final-q4-asym.png', width: 205, height: 208, alt: 'From the exam: an asymmetric tree. The root has two children. The left child has one child, which has one child (depth 3). The right child has two leaf children.' },
+        code: code(`
+def max_children_at_depth(tree):
+    def helper(node, depth, depth_dict):
+        if ⟦d⟧:
+            depth_dict[depth] = 0
+        depth_dict[depth] = max(depth_dict[depth], ⟦e⟧)
+        for b in node.branches:
+            helper(⟦f⟧)
+    depth_dict = {}
+    helper(tree, 0, depth_dict)
+    return depth_dict
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-4c': {
+        exam: 'c88-fa24f', number: '4(c)', title: 'Trees — symmetrical', points: 5,
+        intro: 'Next, implement `symmetrical`, which uses `max_children_at_depth` to determine how many nodes would be in a **symmetrical** Tree with the maximum number of children at each depth.\n\nFor example, the first tree below would look like the second tree if it was symmetrical with the maximum number of children at each depth. Therefore, `symmetrical` would return (1) + (1 * 2) + (2 * 2) + (4 * 1) = 1 + 2 + 4 + 4 = 11 nodes.',
+        illustration: { src: 'assets/c88-fa24-final-q4-sym.png', width: 330, height: 420, alt: 'From the exam: top, the asymmetric tree labelled d = 0 (max children = 2), d = 1 (max children = 2), d = 2 (max children = 1), d = 3 (max children = 0). Bottom, its symmetrical version: a root with 2 children, each with 2 children, each of those with 1 child, 11 nodes in all.' },
+        code: code(`
+def symmetrical(tree):
+    depth_dict = max_children_at_depth(tree)
+    nodes_in_layer, total_nodes = 1, 1
+    for d in ⟦g⟧:
+        multiplier = depth_dict[d]
+        total_nodes = ⟦h⟧
+        nodes_in_layer = ⟦i⟧
+    return total_nodes
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-4d': {
+        exam: 'c88-fa24f', number: '4(d)', title: 'Trees — imbalance', points: 3,
+        intro: 'Finally, let’s put it all together! Implement `imbalance`, which returns the minimum number of nodes we would need to add to a given Tree to make it symmetrical. You may use any of the functions implemented earlier (`count_nodes`, `max_children_at_depth`, `symmetrical`), assuming a correct implementation.\n\nFor example, the trees from `symmetrical` would have an imbalance of 4, since the original tree had 7 nodes, and the symmetrical version of that tree has 11 nodes.',
+        code: code(`
+def imbalance(tree):
+    return ⟦j⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-4e': {
+        exam: 'c88-fa24f', number: '4(e)', title: 'Trees — eject', points: 8,
+        intro: 'Oh no! It looks like some imposters have invaded our Tree. Implement `eject`, which removes all nodes containing the label `"sus"` (imposter nodes) from a given Tree. All subtrees under imposter nodes are also removed as well. The picture below shows a Tree before (left) and after (right) ejecting the imposter nodes.\n\n**Clarification:** The output of the expression `eject(t3)` in the doctest has been omitted.\n\nThe PDF numbers these parts Q4.1–Q4.5 a second time; they are Q4.11–Q4.15 here.',
+        illustration: { src: 'assets/c88-fa24-final-q4-eject.png', width: 445, height: 155, alt: 'From the exam: before, a tree with root 1 and children 2 and 4; 2 has a child "sus", which has a child 6; 4 has children 3 and 2. After, the same tree without the "sus" node and the 6 below it.' },
+        code: code(`
+def eject(t):
+    """Ejects imposter nodes (and all nodes under them) from t.
+    >>> t3 = Tree(0, [Tree("sus", [Tree(2, [Tree(3)]), Tree(2)]),
+                   Tree(1, [Tree("sus")]),
+                   Tree(1)])
+    >>> print(t3)
+    0
+      sus
+        2
+          3
+        2
+      1
+        sus
+      1
+    >>> eject(t3)
+    >>> print(t3)
+    0
+      1
+      1
+    """
+    if t.label == "sus":
+        return ⟦k⟧
+    elif t.is_leaf():
+        return ⟦l⟧
+    else:
+        ⟦m⟧ = [⟦n⟧ for b in t.branches if ⟦o⟧]
+        return t
+`),
+        lineNumbers: true,
+      },
+      'c88-fa24f-5': {
+        exam: 'c88-fa24f', number: '5', title: 'OOP — Course', points: 15,
+        intro: 'Suppose we want to map out all of the courses within the Data Science curriculum. Implement the `Course` class with the following specifications:\n\nThe `Course` class contains a class attribute `course_catalog`, which is a dictionary with course IDs (integers) as keys and `Course` instances as values. Every time a new `Course` is created, we modify this class attribute.\n\nEach `Course` has the following instance attributes:\n\n\n• `ID`: an integer uniquely identifying the course\n\n• `prereqs`: a list of IDs representing the courses that must be taken before this one\n\nAdditionally, implement the `recommended_next_courses` method, which receives a list of course IDs `courses_taken`, and returns a list of recommended next course IDs, determined by the following criteria:\n\n\n• This course is a prerequisite for the potential next course.\n\n• Every prerequisite for the potential course has been satisfied.\n\n• This potential next course has not been taken yet.\n\n**Note:** For `recommended_next_courses`, `courses_taken` will not include the current course ID when called.\n\n**Hint:** The dictionary `values()` method returns an object that provides access to the dictionary’s values. You can use a `for` loop to traverse the object returned by this method.\n\nBelow is an example use case of the class:\n\n```\n>>> data8 = Course(8)\n>>> data8.ID\n8\n>>> list(Course.course_catalog.values())\n[<__main__.Course object at 0x102ee46e0>] #The Data 8 Course Instance\n>>> c88c = Course(88, [8])\n>>> c88c.prereqs\n[8]\n>>> data100 = Course(100, [88, 54])\n>>> math54 = Course(54)\n>>> math54.recommended_next_courses([])\n[]\n>>> math54.recommended_next_courses([88, 100])\n[]\n>>> math54.recommended_next_courses([88])\n[100]\n```',
+        code: code(`
+class Course:
+    ⟦a⟧
+
+    def __init__(self, ID, prereqs = []):
+        ⟦b⟧ = ⟦c⟧
+        ⟦d⟧ = ⟦e⟧
+        ⟦f⟧
+
+    def recommended_next_courses(self, courses_taken):
+        """
+        Returns a list of recommended next course IDs after this course.
+        See problem description for more details.
+        Note: courses_taken will not include the current course ID
+        """
+        return [course.ID for course in ⟦g⟧
+                #Is this course a prereq?
+                if ⟦h⟧
+                #Is every prereq satisfied?
+                and ⟦i⟧ (
+                    [⟦j⟧
+                     for prereq in ⟦k⟧
+                     if ⟦l⟧]
+                )
+                #We haven't taken this course yet.
+                and course.ID ⟦m⟧]
+`),
+        lineNumbers: true,
+      },
+    },
+    questions: [
+      // Q1 WWPD
+      { id: 'c88-fa24f-1.1', problem: 'c88-fa24f-1', label: 'Q1.1', points: 2, topics: ['oop', 'lists', 'hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is printed out after line 26: `print(x(1))`?', choices: C88_WWPD_CHOICES },
+      { id: 'c88-fa24f-1.2', problem: 'c88-fa24f-1', label: 'Q1.2', points: 2, topics: ['oop', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is printed out after line 27: `y = f1.func2([5, 6])`?', choices: C88_WWPD_CHOICES },
+      { id: 'c88-fa24f-1.3', problem: 'c88-fa24f-1', label: 'Q1.3', points: 2, topics: ['oop', 'lists', 'hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is printed out after line 28: `print(y(0))`?', choices: C88_WWPD_CHOICES },
+      { id: 'c88-fa24f-1.4', problem: 'c88-fa24f-1', label: 'Q1.4', points: 2, topics: ['oop'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is printed out after line 30: `z = f2.func2([7, 8])`?\n\n**Clarification:** Only select what is printed out in LINE 20 when evaluating the call expression `f2.func2([7, 8])`, NOT LINE 12.',
+        choices: ['0', '1', '2', '3', '4', '5', '6', '7', '8', 'None'] },
+      { id: 'c88-fa24f-1.5', problem: 'c88-fa24f-1', label: 'Q1.5', points: 2, topics: ['oop', 'lists', 'hof'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is printed out after line 31: `print(z(0))`?', choices: C88_WWPD_CHOICES },
+
+      // Q2 SQL
+      { id: 'c88-fa24f-2a', problem: 'c88-fa24f-2a', label: '(a)', points: 5, topics: ['sql-agg'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Write the whole query.' },
+      { id: 'c88-fa24f-2b.a', problem: 'c88-fa24f-2b', label: '(a)', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'What should go in (a)?' },
+      { id: 'c88-fa24f-2b.b', problem: 'c88-fa24f-2b', label: '(b)', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'What should go in (b)?' },
+      { id: 'c88-fa24f-2b.c', problem: 'c88-fa24f-2b', label: '(c)', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'What should go in (c)?' },
+
+      // Q3 Linked lists
+      { id: 'c88-fa24f-3.1', problem: 'c88-fa24f-3a', label: 'Q3.1', points: 2, topics: ['links'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'What should go in BLANK ONE?' },
+      { id: 'c88-fa24f-3.2', problem: 'c88-fa24f-3a', label: 'Q3.2', points: 1, topics: ['links'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK TWO?',
+        choices: ['word_list != " "', 'word_list == " "', 'word_list.first != " "', 'word_list.first == " "', 'word_list.rest != " "', 'word_list.rest == " "'] },
+      { id: 'c88-fa24f-3.3', problem: 'c88-fa24f-3a', label: 'Q3.3', points: 1, topics: ['links'], difficulty: 'easy', blank: 'c',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK THREE?', choices: ['in_word', 'not in_word', 'True', 'False'] },
+      { id: 'c88-fa24f-3.4', problem: 'c88-fa24f-3a', label: 'Q3.4', points: 1, topics: ['links'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK FOUR?', choices: ['in_word', 'True', 'False'] },
+      { id: 'c88-fa24f-3.5', problem: 'c88-fa24f-3a', label: 'Q3.5', points: 1, topics: ['links'], difficulty: 'medium', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK FIVE?',
+        choices: ['else', 'elif word_list != " "', 'elif word_list == " "', 'elif word_list.first != " "', 'elif word_list.first == " "', 'elif word_list.rest != " "', 'elif word_list.rest == " "'] },
+      { id: 'c88-fa24f-3.6', problem: 'c88-fa24f-3a', label: 'Q3.6', points: 1, topics: ['links'], difficulty: 'easy', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK SIX?', choices: ['in_word', 'True', 'False'] },
+      { id: 'c88-fa24f-3.7', problem: 'c88-fa24f-3a', label: 'Q3.7', points: 2, topics: ['links'], difficulty: 'easy', blank: 'g',
+        type: 'short_answer', prompt: 'What should go in BLANK SEVEN?' },
+      { id: 'c88-fa24f-3.8', problem: 'c88-fa24f-3b', label: 'Q3.8', points: null, topics: ['links', 'recursion'], difficulty: 'easy', blank: 'h',
+        type: 'short_answer', prompt: 'Fill in blank Q3.8.' },
+      { id: 'c88-fa24f-3.9', problem: 'c88-fa24f-3b', label: 'Q3.9', points: null, topics: ['links'], difficulty: 'easy', blank: 'i',
+        type: 'short_answer', prompt: 'Fill in blank Q3.9.' },
+      { id: 'c88-fa24f-3.10', problem: 'c88-fa24f-3b', label: 'Q3.10', points: null, topics: ['links', 'recursion'], difficulty: 'medium', blank: 'j',
+        type: 'short_answer', prompt: 'Fill in blank Q3.10.' },
+      { id: 'c88-fa24f-3.11', problem: 'c88-fa24f-3b', label: 'Q3.11', points: null, topics: ['links', 'recursion'], difficulty: 'medium', blank: 'k',
+        type: 'short_answer', prompt: 'Fill in blank Q3.11.' },
+      { id: 'c88-fa24f-3.12', problem: 'c88-fa24f-3b', label: 'Q3.12', points: null, topics: ['links', 'recursion'], difficulty: 'hard', blank: 'l',
+        type: 'short_answer', prompt: 'Fill in blank Q3.12.' },
+      { id: 'c88-fa24f-3.13', problem: 'c88-fa24f-3c', label: 'Q3.13', points: 2.5, topics: ['efficiency', 'links'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'Suppose we would like to add the String `"aloha"` to the **start** of a given Linked List. What would the fastest runtime of this algorithm be, with respect to the number of elements in the Linked List?', choices: C88_GROWTH },
+      { id: 'c88-fa24f-3.14', problem: 'c88-fa24f-3c', label: 'Q3.14', points: 2.5, topics: ['efficiency', 'links'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'Suppose we would like to add the String `"aloha"` to the **end** of a given Linked List. What would the fastest runtime of this algorithm be, with respect to the number of elements in the Linked List?', choices: C88_GROWTH },
+
+      // Q4 Trees
+      { id: 'c88-fa24f-4.1', problem: 'c88-fa24f-4a', label: 'Q4.1', points: null, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q4.1.' },
+      { id: 'c88-fa24f-4.2', problem: 'c88-fa24f-4a', label: 'Q4.2', points: null, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q4.2.' },
+      { id: 'c88-fa24f-4.3', problem: 'c88-fa24f-4a', label: 'Q4.3', points: null, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q4.3.' },
+      { id: 'c88-fa24f-4.4', problem: 'c88-fa24f-4b', label: 'Q4.4', points: null, topics: ['trees', 'fundamentals'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q4.4.' },
+      { id: 'c88-fa24f-4.5', problem: 'c88-fa24f-4b', label: 'Q4.5', points: null, topics: ['trees'], difficulty: 'easy', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank Q4.5.' },
+      { id: 'c88-fa24f-4.6', problem: 'c88-fa24f-4b', label: 'Q4.6', points: null, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank Q4.6 (the arguments of the recursive call).' },
+      { id: 'c88-fa24f-4.7', problem: 'c88-fa24f-4c', label: 'Q4.7', points: 1, topics: ['trees', 'fundamentals'], difficulty: 'medium', blank: 'g',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK ONE?\n\n**Hint:** Assume that dictionaries are unordered in Python.\n\n**Clarification:** The answer to this question is `range(len(depth_dict))`.',
+        choices: ['depth_dict', 'depth_dict.values()', 'range(len(depth_dict))'] },
+      { id: 'c88-fa24f-4.8', problem: 'c88-fa24f-4c', label: 'Q4.8', points: 2, topics: ['trees', 'fundamentals'], difficulty: 'medium', blank: 'h',
+        type: 'short_answer', prompt: 'What should go in BLANK TWO?' },
+      { id: 'c88-fa24f-4.9', problem: 'c88-fa24f-4c', label: 'Q4.9', points: 2, topics: ['trees', 'fundamentals'], difficulty: 'medium', blank: 'i',
+        type: 'short_answer', prompt: 'What should go in BLANK THREE?' },
+      { id: 'c88-fa24f-4.10', problem: 'c88-fa24f-4d', label: 'Q4.10', points: 3, topics: ['trees'], difficulty: 'easy', blank: 'j',
+        type: 'short_answer', prompt: 'Fill in blank Q4.10.' },
+      { id: 'c88-fa24f-4.11', problem: 'c88-fa24f-4e', label: 'Q4.11', points: 1.5, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'k',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK ONE? (printed as Q4.1)', choices: ['0', 'None', 't', 't.label', 'Tree(None)'] },
+      { id: 'c88-fa24f-4.12', problem: 'c88-fa24f-4e', label: 'Q4.12', points: 1.5, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'l',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK TWO? (printed as Q4.2)', choices: ['0', 'None', 't', 't.label', 'Tree(None)'] },
+      { id: 'c88-fa24f-4.13', problem: 'c88-fa24f-4e', label: 'Q4.13', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'm',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK THREE? (printed as Q4.3)', choices: ['t', 't.branches', 't.label'] },
+      { id: 'c88-fa24f-4.14', problem: 'c88-fa24f-4e', label: 'Q4.14', points: 1, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'n',
+        type: 'single_choice', mono: true, prompt: 'What should go in BLANK FOUR? (printed as Q4.4)', choices: ['eject(b)', 'eject(t)', 'eject(t.branches)'] },
+      { id: 'c88-fa24f-4.15', problem: 'c88-fa24f-4e', label: 'Q4.15', points: 2, topics: ['trees', 'recursion'], difficulty: 'hard', blank: 'o',
+        type: 'short_answer', prompt: 'What should go in BLANK FIVE? (printed as Q4.5)' },
+
+      // Q5 OOP
+      { id: 'c88-fa24f-5.1', problem: 'c88-fa24f-5', label: 'Q5.1', points: null, topics: ['oop'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q5.1.' },
+      { id: 'c88-fa24f-5.2', problem: 'c88-fa24f-5', label: 'Q5.2', points: null, topics: ['oop'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q5.2.' },
+      { id: 'c88-fa24f-5.3', problem: 'c88-fa24f-5', label: 'Q5.3', points: null, topics: ['oop'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q5.3.' },
+      { id: 'c88-fa24f-5.4', problem: 'c88-fa24f-5', label: 'Q5.4', points: null, topics: ['oop'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q5.4.' },
+      { id: 'c88-fa24f-5.5', problem: 'c88-fa24f-5', label: 'Q5.5', points: null, topics: ['oop'], difficulty: 'easy', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank Q5.5.' },
+      { id: 'c88-fa24f-5.6', problem: 'c88-fa24f-5', label: 'Q5.6', points: null, topics: ['oop', 'fundamentals'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank Q5.6.' },
+      { id: 'c88-fa24f-5.7', problem: 'c88-fa24f-5', label: 'Q5.7', points: null, topics: ['oop', 'fundamentals'], difficulty: 'medium', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank Q5.7.' },
+      { id: 'c88-fa24f-5.8', problem: 'c88-fa24f-5', label: 'Q5.8', points: null, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'h',
+        type: 'short_answer', prompt: 'Fill in blank Q5.8.' },
+      { id: 'c88-fa24f-5.9', problem: 'c88-fa24f-5', label: 'Q5.9', points: null, topics: ['oop', 'lists'], difficulty: 'easy', blank: 'i',
+        type: 'short_answer', prompt: 'Fill in blank Q5.9.' },
+      { id: 'c88-fa24f-5.10', problem: 'c88-fa24f-5', label: 'Q5.10', points: null, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'j',
+        type: 'short_answer', prompt: 'Fill in blank Q5.10.' },
+      { id: 'c88-fa24f-5.11', problem: 'c88-fa24f-5', label: 'Q5.11', points: null, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'k',
+        type: 'short_answer', prompt: 'Fill in blank Q5.11.' },
+      { id: 'c88-fa24f-5.12', problem: 'c88-fa24f-5', label: 'Q5.12', points: null, topics: ['oop', 'lists'], difficulty: 'hard', blank: 'l',
+        type: 'short_answer', prompt: 'Fill in blank Q5.12.' },
+      { id: 'c88-fa24f-5.13', problem: 'c88-fa24f-5', label: 'Q5.13', points: null, topics: ['oop', 'lists'], difficulty: 'easy', blank: 'm',
+        type: 'short_answer', prompt: 'Fill in blank Q5.13.' },
+    ],
+    answers: {
+      'c88-fa24f-1.1': { correct: 1, explanation: '`f1.a` is the list `[]` passed in. Each call to `func` appends a whole list, so `f1.a` becomes `[[1, 2], [3, 4]]`. `x(1)` pops index 1 and returns `[3, 4]`.' },
+      'c88-fa24f-1.2': { correct: 12, explanation: '`func2` extends the class attribute `Foo.a` (a different list from `f1.a`) and prints `x`. `extend` mutates the list and returns `None`.' },
+      'c88-fa24f-1.3': { correct: 8, explanation: '`Foo.a` is now `[5, 6]`; `y(0)` pops index 0 of `Foo.a`, which is 5.' },
+      'c88-fa24f-1.4': { correct: 1, explanation: '`Bar.__init__` never sets `self.a`, so `self.a` is looked up on the class: `Foo.a`, which is `[6]` after `y(0)`. Line 20 prints its length, 1.' },
+      'c88-fa24f-1.5': { correct: 9, explanation: '`super().func2([7, 8])` extends `Foo.a` to `[6, 7, 8]`; `z(0)` pops index 0, which is 6.' },
+
+      'c88-fa24f-2a': { accepted: ['SELECT brand FROM dumplings ORDER BY weight / count DESC LIMIT 3', 'SELECT brand FROM dumplings ORDER BY weight/count DESC LIMIT 3'], explanation: 'Only `dumplings` is needed. Sort by the ratio `weight / count` from highest to lowest, and keep the first 3 rows.' },
+      'c88-fa24f-2b.a': { accepted: ['a.brand', 'b.brand'], explanation: 'Both tables have a `brand` column, so it must be qualified. After the join condition `a.brand = b.brand`, either one works.' },
+      'c88-fa24f-2b.b': { accepted: ['a.brand = b.brand and b.storeA - b.storeB > 0', 'a.brand = b.brand AND b.storeA > b.storeB', 'a.brand = b.brand AND b.storeB < b.storeA', 'b.brand = a.brand AND b.storeA > b.storeB'], explanation: 'Join the rows that describe the same brand, then keep the brands that cost less at storeB than at storeA.' },
+      'c88-fa24f-2b.c': { accepted: ['b.storeB / a.weight ASC', 'b.storeB / a.weight'], explanation: 'Cost per ounce at storeB is `storeB / weight`; ascending order is the default.' },
+
+      'c88-fa24f-3.1': { accepted: ['word_list is not Link.empty', 'word_list != Link.empty', 'word_list'], explanation: 'Walk the list one node at a time until the end. `Link.empty` is `()`, which is false, so `word_list` alone also works.' },
+      'c88-fa24f-3.2': { correct: 2, explanation: 'A word starts at a non-space letter. Compare the node’s `first` (its letter), not the node itself.' },
+      'c88-fa24f-3.3': { correct: 1, explanation: 'Only count a letter that starts a new word, i.e. when we are not already inside one.' },
+      'c88-fa24f-3.4': { correct: 1, explanation: 'After counting, we are inside a word, so later letters of the same word are not counted.' },
+      'c88-fa24f-3.5': { correct: 4, explanation: 'A space ends the current word. `else` would also run for the second letter of a word and break the count.' },
+      'c88-fa24f-3.6': { correct: 2, explanation: 'After a space we are no longer inside a word.' },
+      'c88-fa24f-3.7': { accepted: ['word_list = word_list.rest'], explanation: 'Move to the next node.' },
+      'c88-fa24f-3.8': { accepted: ['current_word == w', 'w == current_word'], explanation: 'At the end of the list, the last word is complete: check it.' },
+      'c88-fa24f-3.9': { accepted: ['word_list.first'], explanation: 'Look at the letter in the current node.' },
+      'c88-fa24f-3.10': { accepted: ['current_word == w', 'w == current_word'], explanation: 'A space ends a word: check it…' },
+      'c88-fa24f-3.11': { accepted: ['helper(word_list.rest, "")', "helper(word_list.rest, '')"], explanation: '…or keep looking, starting a new empty word after the space.' },
+      'c88-fa24f-3.12': { accepted: ['helper(word_list.rest, current_word + word_list.first)'], explanation: 'Add this letter to the word being built and move on.' },
+      'c88-fa24f-3.13': { correct: 0, explanation: '`Link("aloha", lst)` makes one new node in front: constant time.' },
+      'c88-fa24f-3.14': { correct: 2, explanation: 'To reach the last node you must walk the whole list: linear time.' },
+
+      'c88-fa24f-4.1': { accepted: ['sum'], explanation: 'Add up the node counts of all branches…' },
+      'c88-fa24f-4.2': { accepted: ['count_nodes(b)'], explanation: 'Each branch is a tree: count its nodes recursively.' },
+      'c88-fa24f-4.3': { accepted: ['+1', '+ 1'], explanation: '…and add 1 for the root itself.' },
+      'c88-fa24f-4.4': { accepted: ['depth not in depth_dict', 'not depth in depth_dict'], explanation: 'The first time we reach a depth, start its maximum at 0.' },
+      'c88-fa24f-4.5': { accepted: ['len(node.branches)'], explanation: 'The number of children of this node.' },
+      'c88-fa24f-4.6': { accepted: ['b, depth + 1, depth_dict'], explanation: 'Each child is one level deeper and updates the same dictionary.' },
+      'c88-fa24f-4.7': { correct: 2, explanation: 'Layers must be visited in depth order 0, 1, 2, … and the depths are exactly `0` to `len(depth_dict) - 1`. Looping over the dictionary itself would not guarantee that order (as the hint says), and `.values()` gives counts, not depths.' },
+      'c88-fa24f-4.8': { accepted: ['total_nodes + nodes_in_layer * multiplier'], explanation: 'Each node in this layer gets `multiplier` children, which are all added to the total.' },
+      'c88-fa24f-4.9': { accepted: ['nodes_in_layer * multiplier'], explanation: 'The next layer has `multiplier` nodes for each node of this layer.' },
+      'c88-fa24f-4.10': { accepted: ['symmetrical(tree) - count_nodes(tree)'], explanation: 'Nodes the symmetrical version has, minus the nodes we already have.' },
+      'c88-fa24f-4.11': { correct: 1, explanation: 'An imposter is removed: return `None` so the parent can filter it out.' },
+      'c88-fa24f-4.12': { correct: 2, explanation: 'A leaf that is not an imposter stays as it is.' },
+      'c88-fa24f-4.13': { correct: 1, explanation: 'Mutate the tree by replacing its list of branches.' },
+      'c88-fa24f-4.14': { correct: 0, explanation: 'Eject imposters from each branch.' },
+      'c88-fa24f-4.15': { accepted: ['eject(b) is not None', 'eject(b) != None', 'eject(b)', 'b.label != "sus"', "b.label != 'sus'"], explanation: 'Keep only branches that did not come back as `None`. A `Tree` is always true, so `eject(b)` alone works too, and checking `b.label != "sus"` keeps the same branches.' },
+
+      'c88-fa24f-5.1': { accepted: ['course_catalog = {}'], explanation: 'A class attribute: one dictionary shared by all courses.' },
+      'c88-fa24f-5.2': { accepted: ['self.ID'] },
+      'c88-fa24f-5.3': { accepted: ['ID'] },
+      'c88-fa24f-5.4': { accepted: ['self.prereqs'] },
+      'c88-fa24f-5.5': { accepted: ['prereqs'] },
+      'c88-fa24f-5.6': { accepted: ['Course.course_catalog[ID] = self', 'Course.course_catalog[self.ID] = self', 'self.course_catalog[ID] = self', 'self.course_catalog[self.ID] = self'], explanation: 'Register this instance in the shared catalog. Assigning to a key mutates the class’s dictionary, so `self.course_catalog[...]` works too.' },
+      'c88-fa24f-5.7': { accepted: ['Course.course_catalog.values()', 'self.course_catalog.values()'], explanation: 'Go through every course in the catalog.' },
+      'c88-fa24f-5.8': { accepted: ['self.ID in course.prereqs'], explanation: 'This course must be one of the other course’s prerequisites.' },
+      'c88-fa24f-5.9': { accepted: ['all'], explanation: 'Every other prerequisite must already be taken.' },
+      'c88-fa24f-5.10': { accepted: ['prereq in courses_taken'] },
+      'c88-fa24f-5.11': { accepted: ['course.prereqs'] },
+      'c88-fa24f-5.12': { accepted: ['prereq != self.ID'], explanation: '`courses_taken` does not include this course, so skip it when checking the prerequisites.' },
+      'c88-fa24f-5.13': { accepted: ['not in courses_taken'] },
+    },
+  });
+  // ───────────────────────── Data C88C — Fall 2025 Final ─────────────────────────
+  // Source: Data C88C Final, Fall 2025 (official solutions PDF, last updated 2025-12-23). 110 points; Q10 ("Just for
+  // fun", 0 points, drawing) is not transcribed.
+  // Points: the PDF gives 8 points for Q9.3–Q9.9 together, so those parts have `points: null`. Q3.5 is one 2-point
+  // question covering blanks (e.1) and (e.2); it is split into two 1-point parts here.
+  // Correction: in Q9's staff table Grace X has single = FALSE, but the exam's expected output (Grace X with Identity
+  // and Blake, both single rooms) and the expected averages (392 = 98% of 400) both need TRUE. The table here uses TRUE.
+  // Q4's Model class can't run as printed (`self.fact_iterator = # you do not need to know ...`), so it has no tests.
+  const C88_FA25_STAFF_SETUP = code(`
+CREATE TABLE staff(id, name, location, single, budget, in_state);
+INSERT INTO staff VALUES
+  ('SD57', 'Dhruv', 'Downtown', FALSE, 2000, FALSE), ('SA13', 'Reema', 'North', TRUE, 1150, TRUE),
+  ('DM51', 'Mike Baller', 'San Francisco', TRUE, 3000, TRUE), ('SA17', 'Cynthia', 'South', FALSE, 1000, TRUE),
+  ('GA13', 'Mira', 'South', TRUE, 1200, TRUE), ('YS20', 'Alicia', 'Downtown', TRUE, 1100, FALSE),
+  ('BD28', 'Grace B', 'South', TRUE, 1300, TRUE), ('BK28', 'Orazaly', 'North', TRUE, 1100, FALSE),
+  ('PV12', 'Thompson', 'South', FALSE, 1300, FALSE), ('SM21', 'Isabelle', 'South', FALSE, 1000, TRUE),
+  ('SG53', 'Maryam', 'North', FALSE, 2000, TRUE), ('KH39', 'Grace X', 'Downtown', TRUE, 1900, FALSE),
+  ('PM31', 'Rebecca', 'Downtown', FALSE, 2500, TRUE);
+CREATE TABLE apartments(name, rent, location, single, distance);
+INSERT INTO apartments VALUES
+  ('Dwight', 2000, 'Downtown', FALSE, 0.9), ('Identity', 900, 'Downtown', TRUE, 0.8), ('Standard', 1400, 'South', FALSE, 0.2),
+  ('Modera', 1300, 'North', FALSE, 0.6), ('Hillside', 1200, 'North', TRUE, 0.7), ('Den', 1500, 'South', FALSE, 0.3),
+  ('Edgewater', 2500, 'San Francisco', FALSE, 13.9), ('NEMA', 2800, 'San Francisco', TRUE, 11.7),
+  ('Blake', 1200, 'Downtown', TRUE, 1.0), ('Panoramic', 1100, 'South', FALSE, 0.5), ('Hearst', 800, 'North', TRUE, 0.6),
+  ('Berk', 1000, 'South', TRUE, 0.5);
+`);
+  const C88_FA25_PREFERRED = code(`
+SELECT s.name AS staff_name, s.in_state AS in_state, a.name AS apartment_name, s.budget - a.rent AS budget_surplus
+  FROM staff AS s JOIN apartments AS a ON s.location = a.location AND s.single = a.single
+  WHERE s.budget - a.rent >= 0 ORDER BY staff_name ASC, budget_surplus DESC
+`);
+  const C88_FA25_TABLES = code(`
+staff:
+| id   | name        | location      | single | budget | in_state |
+|------|-------------|---------------|--------|--------|----------|
+| SD57 | Dhruv       | Downtown      | FALSE  | 2000   | FALSE    |
+| SA13 | Reema       | North         | TRUE   | 1150   | TRUE     |
+| DM51 | Mike Baller | San Francisco | TRUE   | 3000   | TRUE     |
+| SA17 | Cynthia     | South         | FALSE  | 1000   | TRUE     |
+| GA13 | Mira        | South         | TRUE   | 1200   | TRUE     |
+| YS20 | Alicia      | Downtown      | TRUE   | 1100   | FALSE    |
+| BD28 | Grace B     | South         | TRUE   | 1300   | TRUE     |
+| BK28 | Orazaly     | North         | TRUE   | 1100   | FALSE    |
+| PV12 | Thompson    | South         | FALSE  | 1300   | FALSE    |
+| SM21 | Isabelle    | South         | FALSE  | 1000   | TRUE     |
+| SG53 | Maryam      | North         | FALSE  | 2000   | TRUE     |
+| KH39 | Grace X     | Downtown      | TRUE*  | 1900   | FALSE    |
+| PM31 | Rebecca     | Downtown      | FALSE  | 2500   | TRUE     |
+
+apartments:
+| name      | rent | location      | single | distance |
+|-----------|------|---------------|--------|----------|
+| Dwight    | 2000 | Downtown      | FALSE  | 0.9      |
+| Identity  | 900  | Downtown      | TRUE   | 0.8      |
+| Standard  | 1400 | South         | FALSE  | 0.2      |
+| Modera    | 1300 | North         | FALSE  | 0.6      |
+| Hillside  | 1200 | North         | TRUE   | 0.7      |
+| Den       | 1500 | South         | FALSE  | 0.3      |
+| Edgewater | 2500 | San Francisco | FALSE  | 13.9     |
+| NEMA      | 2800 | San Francisco | TRUE   | 11.7     |
+| Blake     | 1200 | Downtown      | TRUE   | 1.0      |
+| Panoramic | 1100 | South         | FALSE  | 0.5      |
+| Hearst    | 800  | North         | TRUE   | 0.6      |
+| Berk      | 1000 | South         | TRUE   | 0.5      |
+`);
+  const C88_FA25_SQL_INTRO = 'It’s the start of apartment hunting season at Berkeley, and members of C88C staff are struggling to find apartment-mates for next year. Dhruv and Reema want to use SQL to identify everyone’s preferences. All of the data is shown below.\n\n`staff`: a unique `id` (string) for every person, their `name` (string), preferred `location` (string), whether they want a `single` or double room (boolean, `TRUE` for a single), `budget` (integer), and `in_state` status (boolean, `TRUE` for an in-state student).\n\n`apartments`: each potential housing option with columns `rent` (integer), `location` (string), `single` (`TRUE` means single rooms, `FALSE` double rooms), and `distance` in miles to campus (float).\n\n```\n' + C88_FA25_TABLES + '\n```\n\n*The exam prints FALSE for Grace X’s `single`, but its expected results only work with TRUE, so TRUE is used here. SQLite stores TRUE and FALSE as 1 and 0.';
+  const C88_BIG_O = ['O(1)', 'O(log(n))', 'O(n)', 'O(n^2)', 'O(2^n)'];
+
+  add({
+    exam: { id: 'c88-fa25f', label: 'C88C Fall 2025 Final', kind: 'final', course: 'c88c', url: 'https://c88c.org/fa25/resources/', complete: true },
+    problems: {
+      'c88-fa25f-1a': {
+        exam: 'c88-fa25f', number: '1.1–1.3', title: 'Potpourri of Python — lists and map', points: 3,
+        intro: 'For each of these questions, assume that the code is executed in a fresh Python interpreter. If any of the code results in an error, select "Error".\n\nEach question starts with these two lists:',
+        code: code(`
+>>> siblings = ['pj', 'teddy', 'toby', 'charlie', 'gabe']
+>>> duncan = ['bobs', 'bugs', 'be', 'gone']
+`),
+      },
+      'c88-fa25f-1b': {
+        exam: 'c88-fa25f', number: '1.4–1.6', title: 'Potpourri of Python — dim sum loop', points: 5,
+        intro: 'Assume the following code is executed, for parts 1.4 to 1.6. Recall that `string.split()` splits a string into a list of words, separated by a space. e.g., `\'hello world\'.split()` returns `[\'hello\', \'world\']`.',
+        code: code(`
+food = [ 'siu mai', 'cha siu bao', 'egg tart', 'pineapple bun',
+   'cheung fun', 'ha gau', 'xiao long bao' ]
+i = 0
+item = None
+while i < len(food):
+    parts = food[i].split()
+    if len(parts) == 3:
+        item = food[i]
+    i += len(parts)
+`),
+      },
+      'c88-fa25f-1c': {
+        exam: 'c88-fa25f', number: '1.7–1.10', title: 'Potpourri of Python — map objects', points: 6,
+        intro: 'Assume the following code is executed (for Q1.7 and Q1.8):',
+        code: code(`
+>>> m = map(lambda x: x * x, range(2, 3))
+>>> m
+<map object at 0x10534e5f0>
+`),
+      },
+      'c88-fa25f-1d': {
+        exam: 'c88-fa25f', number: '1.11–1.13', title: 'Potpourri of Python — reverse', points: 4,
+        intro: 'In lecture, we saw a function called `reverse`, which correctly reverses a string. A slightly modified version of the function is shown below (and is also correct). However, it has an unexpected behavior when called with a list argument.',
+        code: code(`
+def reverse(s):
+    if not s:
+        return ''
+    return reverse(s[1:]) + s[:1]
+`),
+      },
+      'c88-fa25f-2': {
+        exam: 'c88-fa25f', number: '2', title: 'An Inconvenient Truth: Environment Diagrams', points: 12,
+        intro: 'Fill in the blanks to complete the environment diagram. Assume code has been fully run before filling in blanks. The blanks with no labels have no questions associated with them and are not scored. If more than one blank shares the same label (e.g., (c)), they have the same answer.',
+        illustration: { src: 'assets/c88-fa25-final-q2.png', width: 473, height: 310, alt: 'From the exam: an environment diagram. Global binds movies, new_movies, a (func a(predicate) [parent = Global]), c (lambda(x) [parent = blank (a)]), G and R (blank (f)). Frame f1: a [parent = Global] binds predicate, d (lambda(x) [parent = blank (c)]), b (func b(genre) [parent = f1]) and its return value. Frame f2: b [parent = f1] binds genre (blank (b)), key, and return value (blank (f)). Frames f3 and f4 are lambdas [parent = blank (c)] with x "horror" returning blank (g) and x "comedy" returning blank (h).' },
+        code: code(`
+def a(predicate):
+    d = lambda x: x[0] == "c"
+    def b(genre):
+        for key in movies:
+            if d(key):
+                movies[key].append(new_movies[genre][0])
+            else:
+                movies[key].pop()
+        return "movies"
+    return b
+
+movies = {"horror": ["IT", "Conjuring"], "comedy": ["Elf", "Home Alone"]}
+new_movies = {"horror": ["Annabelle", "Until Dawn"], "comedy": ["Hangover", "Ted"]}
+
+c = lambda x: print("value")
+
+G = a(c)
+R = G("comedy")
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-3': {
+        exam: 'c88-fa25f', number: '3', title: 'Christmas Gifts', points: 12,
+        intro: 'Sarah wants to figure out where to buy a Christmas gift. Implement a higher order function:\n\n• The outer function, `find_gift`, takes in a string `gift` representing the item Sarah is looking for and returns the inner function.\n\n• The inner function, `search`, takes in an arbitrarily nested dictionary `gift_dict` representing the locations of gifts and returns a string representing the path to the desired gift.\n\nEach key of `gift_dict` is the location of a gift (string). Each value is either the name of an item in that location (string), or another dictionary structured the same way. You may assume `gift_dict` will never be empty and the gift will always appear exactly once in `gift_dict`, either directly or inside a nested dictionary.\n\n**Hint:** The built-in function `isinstance` checks if an item is of a certain data type. For example, `isinstance([1, 2, 3], list)` returns `True`.\n\n```\n>>> gift_dict1 = {"Target": "socks", "Nordstrom": "lipstick"}\n>>> find_gift("socks")(gift_dict1)\n\'Target\'\n\n>>> gift_dict2 = {\n...     "Target": "socks",\n...     "Nordstrom": {"Makeup": "lipstick", "Clothes": "shirt"}\n... }\n>>> find_gift("shirt")(gift_dict2)\n\'Nordstrom -> Clothes\'\n\n>>> gift_dict3 = {\n...    "4th Street": {\n...        "Apple Store": {"Phones": "iPhone 14" , "Macs": "MacBook Pro"}\n...    },\n...    "Target": "socks",\n...    "Nordstrom": { "Makeup": "lipstick", "Clothes": "shirt" }\n... }\n>>> find_gift("MacBook Pro")(gift_dict3)\n\'4th Street -> Apple Store -> Macs\'\n>>> find_gift("socks")(gift_dict3)\n\'Target\'\n>>> find_gift("lipstick")(gift_dict3)\n\'Nordstrom -> Makeup\'\n```',
+        code: code(`
+def find_gift(gift):
+    def search(gift_dict):
+        for store in gift_dict:
+            current_gift = ⟦a⟧
+            if ⟦b⟧:
+                return store
+            if ⟦c⟧:
+                location = ⟦d⟧
+                if location:
+                    return f"{⟦e1⟧} -> {⟦e2⟧}"
+    return ⟦f⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-4a': {
+        exam: 'c88-fa25f', number: '4(a)', title: 'A Model for Learning — Model', points: 6,
+        intro: 'Polly recently got a job interview for Ngoogle and needs to review some machine learning concepts. To do so, she created a class, `Model`, to help her prep. Read through the doctests and provided code to answer the following questions.\n\n**Note:** Use the `finished_learning` method to check if Polly has more facts to learn for a topic (she only needs to learn 3 facts for each), instead of hard coding this functionality yourself.',
+        code: code(`
+class Model:
+  """
+  >>> lin_reg = Model("Linear Regression")
+  >>> lin_reg.num_facts_learned
+  0
+  >>> lin_reg.finished_learning()
+  False
+
+  >>> for _ in range(3):
+  ...   lin_reg.learn()
+  Fact: Linear Regression predicts a continuous numeric value.
+  Fact: It assumes a roughly linear relationship between features and the target.
+  Fact: A common loss function is Mean Squared Error.
+  >>> lin_reg.num_facts_learned
+  3
+
+  >>> lin_reg.learn()
+  No more learning! Polly mastered Linear Regression.
+  >>> lin_reg.finished_learning()
+  True
+  >>> lin_reg.learn()
+  No more learning! Polly mastered Linear Regression.
+
+  >>> dec_trees = Model("Decision Trees")
+  >>> dec_trees.num_facts_learned
+  0
+  >>> dec_trees.learn()
+  Fact: A Decision Tree predicts by following a path of feature-based questions.
+  >>> dec_trees.num_facts_learned
+  1
+  """
+  def __init__(self, name):
+    self.name = name
+    self.num_facts_learned = ⟦a⟧
+    # This is an iterator that returns 3 facts (strings) one at a time
+    self.fact_iterator = # you do not need to know how this is implemented
+
+  def finished_learning(self):
+    return self.num_facts_learned == 3
+
+  def learn(self):
+    """
+    Polly learns the next fact, if any remain.
+    """
+    if ⟦b⟧:
+      print(f"No more learning! Polly mastered {⟦c⟧}.")
+    else:
+      print(f"Fact: {⟦d⟧}")
+      ⟦e⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-4b': {
+        exam: 'c88-fa25f', number: '4(b)', title: 'A Model for Learning — NeuralNetwork', points: 4,
+        intro: 'When Polly tries to learn about neural networks her brain feels fried! Implement the `NeuralNetwork` class that inherits from `Model` (part (a)) and overrides the `learn` method.\n\n**Note:** Your implementation must **avoid repetition** as much as possible.',
+        code: code(`
+class NeuralNetwork(Model):
+  """
+  >>> neural_net = NeuralNetwork("Neural Networks")
+
+  >>> neural_net.learn()
+  Fact: Neural Networks use layers of connected neurons.
+
+  >>> neural_net.learn()
+  Fact: Neural Networks can learn very complex patterns in data.
+
+  >>> neural_net.learn()
+  Fact: Neurons apply weights, bias, and an activation.
+  Polly's brain feels fried.
+
+  >>> neural_net.learn()
+  No more learning! Polly mastered Neural Networks.
+  Polly's brain feels fried.
+  """
+  def learn(self):
+    ⟦f⟧
+    ⟦g⟧:
+      print(⟦h⟧)
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-5a': {
+        exam: 'c88-fa25f', number: '5(a)', title: 'Zigzag Linked Lists — number_to_zigzag', points: 4,
+        intro: 'Implement the function `number_to_zigzag`, which takes in a non-negative integer `num` and **returns** a zigzagged Linked List with digits of `num` encoded within it in **reverse order**. In a zigzagged Linked List, each digit of the number is stored in a staggered structure: every node’s `rest` attribute points to another `Link` whose `first` attribute holds the next node in the sequence (see the diagram).',
+        illustration: { src: 'assets/c88-fa25-final-q5.png', width: 280, height: 470, alt: 'From the exam: zigzag linked lists. 1234 becomes a node 4 whose rest is a link whose first is node 3, whose rest is a link whose first is node 2, and so on up to node 1. 10 becomes node 0 then (through a link) node 1. 67 becomes node 7 then node 6. 5 is a single node 5.' },
+        code: code(`
+def number_to_zigzag(num):
+  """Takes a non-negative integer num and returns a zigzagged linked list
+  of its digits in reverse order.
+  >>> number_to_zigzag(1234)
+  Link(4, Link(Link(3, Link(Link(2, Link(Link(1)))))))
+  >>> number_to_zigzag(67)
+  Link(7, Link(Link(6)))
+  >>> number_to_zigzag(5)
+  Link(5)
+  >>> number_to_zigzag(10)
+  Link(0, Link(Link(1)))
+  """
+  if ⟦a⟧:
+    return Link(num)
+  last = ⟦b⟧
+  smaller = number_to_zigzag(⟦c⟧)
+  return Link(last, ⟦d⟧)
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-5b': {
+        exam: 'c88-fa25f', number: '5(b)', title: 'Zigzag Linked Lists — sum_zigzag', points: 8,
+        intro: 'Next, implement the function `sum_zigzag`, which takes in a zigzagged Linked List and returns the sum of all digits stored in it. You may use `number_to_zigzag` from part (a).',
+        code: code(`
+def sum_zigzag(zigzag):
+  """Takes a zigzagged linked list and returns the sum of its digits.
+  >>> zig = number_to_zigzag(12034)
+  >>> sum_zigzag(zig)
+  10
+  >>> zag = number_to_zigzag(1)
+  >>> sum_zigzag(zag)
+  1
+  """
+  if ⟦e⟧:
+    return 0
+  if ⟦f⟧:
+    return zigzag.first
+  else:
+    return ⟦g⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-6': {
+        exam: 'c88-fa25f', number: '6', title: 'Sadly, These Aren’t Christmas Trees', points: 12,
+        intro: 'Grace’s favorite number is `k`, and she wants to count how many nodes in a tree `t` have exactly `k` branches. Maryam wants to add her favorite number `v` to the tree while also ensuring that every node has exactly `k` branches. Implement `count_add_k(t, k, v)` which does both of the following:\n\n1. **Returns** the number of nodes in the **original tree** `t` that have exactly `k` branches\n\n2. **Mutates** `t` so that any node with more than `k` branches keeps only its first `k` branches, and any node with fewer than `k` branches adds leaves with value `v` until it has exactly `k` branches.\n\nFor example, with `k = 2`, the tree `t` below (top) has one node with exactly k branches (the node with label 3). After applying `count_add_k(t, 2, 0)`, 1 is returned, and the tree is mutated to the tree below it. The nodes with dashed borders were added, and the branch containing the nodes 6 and 7 was removed.',
+        illustration: { src: 'assets/c88-fa25-final-q6.png', width: 390, height: 446, alt: 'From the exam: top, a tree with root 1 and children 2, 3 and 6; 3 has children 4 and 5; 6 has child 7. Bottom, after count_add_k(t, 2, 0): root 1 with children 2 and 3; 2 has two added leaves 0 and 0; 3 has children 4 and 5, each with two added leaves 0 and 0.' },
+        code: code(`
+def count_add_k(t, k, v):
+    """
+    Return how many nodes in the original tree t that have exactly k branches.
+    Also mutate t so that every node has exactly k branches.
+
+    Note that t is the same tree shown in the diagram.
+
+    >>> t = Tree(1, [Tree(2), Tree(3, [Tree(4), Tree(5)]), Tree(6, [Tree(7)])])
+    >>> count_add_k(t, 2, 0)
+    1
+    >>> t
+    Tree(1, [
+        Tree(2, [ Tree(0), Tree(0) ]),
+        Tree(3, [
+            Tree(4, [ Tree(0), Tree(0) ]),
+            Tree(5, [ Tree(0), Tree(0) ])
+          ]
+        )
+      ]
+    )
+    """
+    if ⟦a⟧:
+        count = 1
+    else:
+        count = 0
+
+    for b in ⟦b⟧:
+        count += ⟦c⟧
+
+    if len(t.branches) > k:
+        t.branches = ⟦d⟧
+    while ⟦e⟧:
+        ⟦f⟧
+    return count
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-7a': {
+        exam: 'c88-fa25f', number: '7(a)', title: 'LinkIterator', points: 6,
+        intro: 'In C88C, the implementation of the `Link` class is not iterable. To allow us to iterate through linked lists easily, you decide to make our `Link` class iterable! Below is the updated `Link` class. It now has an `__iter__` method, which returns a `LinkIterator` object.\n\n```\nclass Link:\n    empty = ()\n\n    def __init__(self, first, rest=empty):\n        assert rest is Link.empty or isinstance(rest, Link)\n        self.first = first\n        self.rest = rest\n\n    def __iter__(self):\n        return LinkIterator(self)\n```\n\nImplement the `LinkIterator` class, so that you can use a for loop to iterate over all elements of a linked list without manually accessing `first` and `rest`.',
+        code: code(`
+class LinkIterator:
+  """
+  >>> lnk = Link(1, Link(2, Link(3)))
+  >>> for lnk in lnk:
+  ...     print(lnk)
+  1
+  2
+  3
+  """
+  def __init__(self, link):
+      self.current = link
+
+  def __iter__(self):
+      ⟦a⟧
+
+  def __next__(self):
+      if ⟦b⟧:
+          raise StopIteration
+      value = ⟦c⟧
+      self.current = ⟦d⟧
+      ⟦e⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-7b': {
+        exam: 'c88-fa25f', number: '7(b)', title: 'LinkIterator — iterables and generators', points: 4,
+        intro: 'Assume the `Link` class has been updated and `LinkIterator` has been implemented correctly (part (a)).',
+        code: code(`
+lnk = Link(1, Link(2, Link(3)))
+def odd_gen(lnk):
+    for elem in lnk:
+        if elem % 2 != 0:
+            yield elem
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-8': {
+        exam: 'c88-fa25f', number: '8', title: 'Pythonic SQL', points: 10,
+        intro: 'Recall that SQL is a declarative programming language, which means that the programmer describes the output they want rather than a series of steps to achieve that output. Rebecca has implemented some basic SQL functionality in Python, but she needs your help to fix a bug!\n\nThe `Row` class (which has no bugs) represents the data in a single row of a `Table`:\n\n```\n>>> columns = [\'english_word\', \'spanish_word\']\n>>> values = [\'hello\', \'hola\']\n>>> row = Row(columns, values)\n>>> row[\'english_word\']\n\'hello\'\n```\n\nThe `Table` class represents a SQL table made up of 1 or more rows. Its `__init__` method (which has no bugs) takes in a list of column names `columns` and a 2D list of `row_values`:\n\n```\ndef __init__(self, columns: list[str], row_values: list):\n    """\n    >>> columns = [\'actor\', \'character\', \'tv_show\']\n    >>> row_values = [\n    ...     [\'Ella Purnell\', \'Jinx\', \'Arcane\'],\n    ...     [\'Ella Purnell\', \'Lucy MacLean\', \'Fallout\'],\n    ...     [\'Hailee Steinfeld\', \'Vi\', \'Arcane\'],\n    ...     [\'Hailee Steinfeld\', \'Kate Bishop\', \'Hawkeye\'],\n    ...     [\'Pedro Pascal\', \'Joel Miller\', \'The Last of Us\'],\n    ...     [\'Caleb McLaughlin\', \'Lucas Sinclair\', \'Stranger Things\'],\n    ... ]\n    >>> characters = Table(columns, row_values)\n    """\n    self.columns = columns\n    self.rows = [ Row(columns, values) for values in row_values ]\n```\n\nThe `select` method (which has no bugs) takes in a list of column names and returns a new `Table`, equivalent to `SELECT ... FROM ...`. For example, `characters.select([\'actor\', \'character\'])` is equivalent to `SELECT actor, character FROM characters;`\n\nThe **buggy** `select_where` method below takes in a list of column names and a one-argument function `predicate` which takes in a `Row` object and returns `True` if that row should be included in the output. This is equivalent to `SELECT ... FROM ... WHERE ...` in SQL.',
+        code: code(`
+def select_where(self, columns: list[str], predicate):
+  """
+  Doctest below is equivalent to:
+  SELECT actor, character FROM characters WHERE actor = 'Ella Purnell';
+
+  >>> characters.select_where(
+  ...   ['actor', 'character'],
+  ...   lambda row: row['actor'] == 'Ella Purnell'
+  ... )
+  actor | character
+  -----------------
+  Ella Purnell | Jinx
+  Ella Purnell | Lucy MacLean
+  """
+  selected_table = self.select(columns)
+  filtered_row_values = []
+  for row in selected_table.rows:
+      if predicate(row):
+          filtered_row_values.append([row[col] for col in columns])
+  filtered_table = Table(columns, filtered_row_values)
+  return filtered_table
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-9a': {
+        exam: 'c88-fa25f', number: '9.1–9.2', title: 'Apartment Hunting — GROUP BY and LIKE', points: 3, lang: 'sql',
+        intro: C88_FA25_SQL_INTRO,
+        sqlSetup: C88_FA25_STAFF_SETUP,
+        code: code(`
+SELECT * FROM apartments WHERE ⟦a⟧;
+`),
+      },
+      'c88-fa25f-9b': {
+        exam: 'c88-fa25f', number: '9.3–9.9', title: 'Apartment Hunting — matching apartments', points: 8, lang: 'sql',
+        intro: C88_FA25_SQL_INTRO + '\n\nDhruv and Reema want to write a SQL query to identify all staff who have a potential apartment option, given the following criteria:\n\n1. The staff member’s `location` and the apartment’s `location` are the same.\n\n2. The staff member’s room preference (`single`) and the apartment’s room options (`single`) are the same.\n\n3. The apartment’s `rent` must be less than or equal to the staff member’s `budget`.\n\nYour query should return the columns `staff_name`, `in_state`, `apartment_name`, `budget_surplus` (the difference between a staff member’s `budget` and the apartment’s `rent`). The `staff_name` column should be in alphabetical order, and, for each person, the `budget_surplus` is ordered from largest to smallest.\n\n```\n| staff_name  | in_state | apartment_name | budget_surplus |\n|-------------|----------|----------------|----------------|\n| Alicia      | FALSE    | Identity       | 200            |\n| Dhruv       | FALSE    | Dwight         | 0              |\n| Grace B     | TRUE     | Berk           | 300            |\n| Grace X     | FALSE    | Identity       | 1000           |\n| Grace X     | FALSE    | Blake          | 700            |\n| Maryam      | TRUE     | Modera         | 700            |\n| Mike Baller | TRUE     | NEMA           | 200            |\n| Mira        | TRUE     | Berk           | 200            |\n| Orazaly     | FALSE    | Hearst         | 300            |\n| Rebecca     | TRUE     | Dwight         | 500            |\n| Reema       | TRUE     | Hearst         | 350            |\n| Thompson    | FALSE    | Panoramic      | 200            |\n```',
+        sqlSetup: C88_FA25_STAFF_SETUP,
+        code: code(`
+SELECT
+  s.name AS staff_name,
+  s.in_state AS in_state,
+  a.name AS apartment_name,
+  ⟦a⟧ AS budget_surplus
+FROM staff AS s
+JOIN ⟦b⟧ AS a
+ON ⟦c⟧ AND ⟦d⟧
+WHERE ⟦e⟧
+ORDER BY ⟦f⟧ ASC, ⟦g⟧ DESC;
+`),
+        lineNumbers: true,
+      },
+      'c88-fa25f-9c': {
+        exam: 'c88-fa25f', number: '9.10–9.11', title: 'Apartment Hunting — rent increase', points: 3, lang: 'sql',
+        intro: C88_FA25_SQL_INTRO + '\n\nAssume the query from Q9.3–Q9.9 is correct and its output table is stored as `preferred` (columns `staff_name`, `in_state`, `apartment_name`, `budget_surplus`).\n\nThe evil landlord twins, Arnav and Arvind, decide to increase everyone’s rent! With this new policy, each staffer’s `budget_surplus` should now be reduced to 98% of its original value. Return a table that computes the average budget surplus for in-state and out-of-state staffers after the rent increase.\n\n```\n| in_state | average_budget_surplus |\n|----------|------------------------|\n| FALSE    | 392                    |\n| TRUE     | 367.5                  |\n```',
+        sqlSetup: C88_FA25_STAFF_SETUP + '\nCREATE TABLE preferred AS ' + C88_FA25_PREFERRED + ';',
+        code: code(`
+SELECT in_state, ⟦a⟧(⟦b⟧) AS average_budget_surplus
+FROM preferred
+GROUP BY in_state;
+`),
+      },
+    },
+    questions: [
+      { id: 'c88-fa25f-1.1', problem: 'c88-fa25f-1a', label: 'Q1.1', points: 1, topics: ['lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the output of the last line?\n\n```\n>>> siblings.append(siblings.extend([ w for w in duncan if len(w) % 2 == 0 ]))\n>>> len(siblings)\n```', choices: ['5', '7', '8', '9', '10', 'Error'] },
+      { id: 'c88-fa25f-1.2', problem: 'c88-fa25f-1a', label: 'Q1.2', points: 1, topics: ['hof', 'lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the output of the last line?\n\n```\n>>> list(map(lambda x: len(siblings[x]) + len(duncan[x]), range(len(duncan))))\n```', choices: ['[6, 9, 6, 11]', '[6, 7, 4, 9]', '[6, 9, 8, 11]', '[2, 5, 4, 7]', 'Error'] },
+      { id: 'c88-fa25f-1.3', problem: 'c88-fa25f-1a', label: 'Q1.3', points: 1, topics: ['hof', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the output of the last line? (*Yes, the last line is different from before.*)\n\n```\n>>> list(map(lambda x: len(siblings[x]) + len(duncan[x]), range(len(siblings))))\n```', choices: ['[6, 9, 6, 11, 8]', '[6, 7, 4, 9, Error]', '[6, 9, 6, 11, 0]', '[2, 5, 4, 7, Error]', 'Error'] },
+      { id: 'c88-fa25f-1.4', problem: 'c88-fa25f-1b', label: 'Q1.4', points: 1, topics: ['fundamentals', 'lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the value of `item` after executing the above code?', choices: ["'siu mai'", "'cha siu bao'", "'egg tart'", "'pineapple bun'", "'cheung fun'", "'ha gau'", "'xiao long bao'", 'Error'] },
+      { id: 'c88-fa25f-1.5', problem: 'c88-fa25f-1b', label: 'Q1.5', points: 2, topics: ['fundamentals', 'lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'What is the final value of `i` after executing the above code?' },
+      { id: 'c88-fa25f-1.6', problem: 'c88-fa25f-1b', label: 'Q1.6', points: 2, topics: ['fundamentals', 'lists'], difficulty: 'hard',
+        type: 'multi_select', mono: true, prompt: 'Which of the following modifications to the above code would cause it to result in an infinite loop? Consider each answer option independently; that is, only one change is made at a time. **Select all that apply.**',
+        choices: ['Changing i += len(parts) to i += 1', 'Changing if len(parts) == 3: to if len(parts) >= 1:', 'Changing i += len(parts) to i -= 1', 'Changing while i < len(food): to while i > len(food):', 'Adding the line food.extend(food) right after the line i += len(parts)', 'None of the above'] },
+      { id: 'c88-fa25f-1.7', problem: 'c88-fa25f-1c', label: 'Q1.7', points: 1, topics: ['iterators', 'hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the output of `>>> next(m)`?', choices: ['0', '4', '6', '9', 'Error'] },
+      { id: 'c88-fa25f-1.8', problem: 'c88-fa25f-1c', label: 'Q1.8', points: 1, topics: ['iterators'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Continuing from the previous question, what is the output of an additional call to `next(m)`?', choices: ['0', '4', '6', '8', '9', '16', 'Error'] },
+      { id: 'c88-fa25f-1.9', problem: 'c88-fa25f-1c', label: 'Q1.9', points: 2, topics: ['iterators'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Given that we can call `next()` on the result of a `map` or `filter` function, what type of object is returned by `map` and `filter` in Python 3?', choices: ['list', 'set', 'iterator', 'dictionary', 'generator function', 'Error'] },
+      { id: 'c88-fa25f-1.10', problem: 'c88-fa25f-1c', label: 'Q1.10', points: 2, topics: ['hof', 'sql-joins'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Considering the `WHERE` statement in SQL, which of the following Python functions is most similar in functionality to `WHERE`?', choices: ['map', 'filter', 'reduce', 'zip', 'range', 'Error', 'None of the above'] },
+      { id: 'c88-fa25f-1.11', problem: 'c88-fa25f-1d', label: 'Q1.11', points: 1, topics: ['recursion', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What happens when we call `reverse([1, 2, 3])`?', choices: ['[1, 2, 3]', '[3, 2, 1]', '123', "'321'", 'Error'] },
+      { id: 'c88-fa25f-1.12', problem: 'c88-fa25f-1d', label: 'Q1.12', points: 2, topics: ['recursion', 'lists'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Which of the following modifications would allow `reverse` to correctly reverse both strings and lists?',
+        choices: ['Change the base case to return `s` instead of `\'\'`', 'Change the condition in the base case to `if len(s) == 0:` instead of `if not s:`', 'Change the recursive case to use `s[0]` instead of `s[:1]`', 'Change the recursive case to use `s.pop()` instead of `s[:1]`', 'Change the recursive case to use `s[-1]` instead of `s[:1]`', 'Use `append` instead of the `+` operator', 'It is not possible to modify the function to handle both types'] },
+      { id: 'c88-fa25f-1.13', problem: 'c88-fa25f-1d', label: 'Q1.13', points: 1, topics: ['efficiency', 'recursion'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the runtime of `reverse`, given the input `n` is the length of the string or list being reversed?', choices: C88_BIG_O },
+
+      { id: 'c88-fa25f-2.1', problem: 'c88-fa25f-2', label: 'Q2.1', points: 1, topics: ['env', 'hof'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-fa25f-2.2', problem: 'c88-fa25f-2', label: 'Q2.2', points: 1, topics: ['env'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-fa25f-2.3', problem: 'c88-fa25f-2', label: 'Q2.3', points: 1, topics: ['env', 'hof'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-fa25f-2.4', problem: 'c88-fa25f-2', label: 'Q2.4', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'After the last successful iteration, what is the value of `movies["horror"]`?', choices: ['["IT", "Conjuring"]', '["IT"]', '["Conjuring"]', '["IT", "Conjuring", "Annabelle"]', '[]'] },
+      { id: 'c88-fa25f-2.5', problem: 'c88-fa25f-2', label: 'Q2.5', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'After the last successful iteration, what is the value of `movies["comedy"]`?' },
+      { id: 'c88-fa25f-2.6', problem: 'c88-fa25f-2', label: 'Q2.6', points: 2, topics: ['env'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'c88-fa25f-2.7', problem: 'c88-fa25f-2', label: 'Q2.7', points: 1.5, topics: ['env', 'hof'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'Fill in blank (g).' },
+      { id: 'c88-fa25f-2.8', problem: 'c88-fa25f-2', label: 'Q2.8', points: 1.5, topics: ['env', 'hof'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'Fill in blank (h).' },
+
+      { id: 'c88-fa25f-3.1', problem: 'c88-fa25f-3', label: 'Q3.1', points: 2, topics: ['hof', 'fundamentals'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-fa25f-3.2', problem: 'c88-fa25f-3', label: 'Q3.2', points: 2, topics: ['hof'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-fa25f-3.3', problem: 'c88-fa25f-3', label: 'Q3.3', points: 2, topics: ['recursion'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-fa25f-3.4', problem: 'c88-fa25f-3', label: 'Q3.4', points: 2, topics: ['recursion', 'hof'], difficulty: 'hard', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'c88-fa25f-3.5a', problem: 'c88-fa25f-3', label: 'Q3.5 (e.1)', points: 1, topics: ['recursion'], difficulty: 'medium', blank: 'e1',
+        type: 'short_answer', prompt: 'Fill in blank (e.1). (The PDF grades (e.1) and (e.2) together as one 2-point question.)' },
+      { id: 'c88-fa25f-3.5b', problem: 'c88-fa25f-3', label: 'Q3.5 (e.2)', points: 1, topics: ['recursion'], difficulty: 'medium', blank: 'e2',
+        type: 'short_answer', prompt: 'Fill in blank (e.2).' },
+      { id: 'c88-fa25f-3.6', problem: 'c88-fa25f-3', label: 'Q3.6', points: 2, topics: ['hof'], difficulty: 'easy', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+
+      { id: 'c88-fa25f-4.1', problem: 'c88-fa25f-4a', label: 'Q4.1', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-fa25f-4.2', problem: 'c88-fa25f-4a', label: 'Q4.2', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-fa25f-4.3', problem: 'c88-fa25f-4a', label: 'Q4.3', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-fa25f-4.4', problem: 'c88-fa25f-4a', label: 'Q4.4', points: 2, topics: ['oop', 'iterators'], difficulty: 'medium', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'c88-fa25f-4.5', problem: 'c88-fa25f-4a', label: 'Q4.5', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'c88-fa25f-4.6', problem: 'c88-fa25f-4b', label: 'Q4.6', points: 2, topics: ['oop'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'c88-fa25f-4.7', problem: 'c88-fa25f-4b', label: 'Q4.7', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank (g).' },
+      { id: 'c88-fa25f-4.8', problem: 'c88-fa25f-4b', label: 'Q4.8', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'h',
+        type: 'short_answer', prompt: 'Fill in blank (h).' },
+
+      { id: 'c88-fa25f-5.1', problem: 'c88-fa25f-5a', label: 'Q5.1', points: 1, topics: ['links', 'recursion'], difficulty: 'easy', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Select all options that could fill in blank (a).', choices: ['num < 10', 'num <= 10', 'num < 0', 'num <= 0', 'num == 0'] },
+      { id: 'c88-fa25f-5.2', problem: 'c88-fa25f-5a', label: 'Q5.2', points: 1, topics: ['recursion', 'fundamentals'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-fa25f-5.3', problem: 'c88-fa25f-5a', label: 'Q5.3', points: 1, topics: ['recursion', 'fundamentals'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-fa25f-5.4', problem: 'c88-fa25f-5a', label: 'Q5.4', points: 1, topics: ['links'], difficulty: 'medium', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'c88-fa25f-5.5', problem: 'c88-fa25f-5b', label: 'Q5.5', points: 3, topics: ['links'], difficulty: 'hard', blank: 'e',
+        type: 'multi_select', mono: true, prompt: 'Select all options that could fill in blank (e). **Hint:** Be sure to check the reference sheets for the definition of the `Link` class.', choices: ['zigzag is Link.empty', 'zigzag is not Link.empty', 'not zigzag', 'len(zigzag) == 0', 'not isinstance(zigzag, Link)', 'isinstance(zigzag, Link)'] },
+      { id: 'c88-fa25f-5.6', problem: 'c88-fa25f-5b', label: 'Q5.6', points: 2, topics: ['links'], difficulty: 'medium', blank: 'f',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (f).', choices: ['zigzag == Link.empty', 'zigzag.first is Link.empty', 'zigzag.rest is Link.empty', 'zigzag.rest is not Link.empty', 'isinstance(zigzag.rest, Link)'] },
+      { id: 'c88-fa25f-5.7', problem: 'c88-fa25f-5b', label: 'Q5.7', points: 3, topics: ['links', 'recursion'], difficulty: 'hard', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank (g).' },
+
+      { id: 'c88-fa25f-6.1', problem: 'c88-fa25f-6', label: 'Q6.1', points: 2, topics: ['trees'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-fa25f-6.2', problem: 'c88-fa25f-6', label: 'Q6.2', points: 1, topics: ['trees'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-fa25f-6.3', problem: 'c88-fa25f-6', label: 'Q6.3', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-fa25f-6.4', problem: 'c88-fa25f-6', label: 'Q6.4', points: 2, topics: ['trees', 'lists'], difficulty: 'medium', blank: 'd',
+        type: 'multi_select', mono: true, prompt: 'Select all options that could fill in blank (d).', choices: ['t.branches[:k]', 't.branches[k:]', 't.branches[:]', '[t[i] for i in range(k)]', '[t.branches[i] for i in range(k)]'] },
+      { id: 'c88-fa25f-6.5', problem: 'c88-fa25f-6', label: 'Q6.5', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'c88-fa25f-6.6', problem: 'c88-fa25f-6', label: 'Q6.6', points: 2, topics: ['trees'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'c88-fa25f-6.7', problem: 'c88-fa25f-6', label: 'Q6.7', points: 1, topics: ['efficiency', 'trees'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the runtime of `count_add_k`, given the input `n` is the number of nodes in the tree? (Assume that the value of `k` is negligible compared to `n`, e.g. treat `k` like a small constant.)', choices: C88_BIG_O },
+
+      { id: 'c88-fa25f-7.1', problem: 'c88-fa25f-7a', label: 'Q7.1', points: 1, topics: ['iterators'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['yield self', 'return self', 'return iter(self)'] },
+      { id: 'c88-fa25f-7.2', problem: 'c88-fa25f-7a', label: 'Q7.2', points: 2, topics: ['iterators', 'links'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-fa25f-7.3', problem: 'c88-fa25f-7a', label: 'Q7.3', points: 1, topics: ['iterators', 'links'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-fa25f-7.4', problem: 'c88-fa25f-7a', label: 'Q7.4', points: 1, topics: ['iterators', 'links'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'c88-fa25f-7.5', problem: 'c88-fa25f-7a', label: 'Q7.5', points: 1, topics: ['iterators'], difficulty: 'easy', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'c88-fa25f-7.6', problem: 'c88-fa25f-7b', label: 'Q7.6', points: 2, topics: ['iterators'], difficulty: 'medium',
+        type: 'multi_select', prompt: 'Assuming the `Link` class has been updated correctly, given the linked list `lnk = Link(1, Link(2, Link(3)))`, select all following statements that are true.', choices: ['`lnk` is an iterator', '`lnk` is an iterable', '`iter(lnk)` returns an iterator object that can be used with `next`', 'You can call `next(lnk)` to get the first element of `lnk`'] },
+      { id: 'c88-fa25f-7.7', problem: 'c88-fa25f-7b', label: 'Q7.7', points: 2, topics: ['generators', 'iterators'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Select the sequence of function calls that will output 1 then 3.', choices: ['gen = odd_gen(lnk); next(gen); next(gen)', 'odd_gen(lnk); next(odd_gen); next(odd_gen)', 'iter = iter(lnk); next(iter); next(iter)', 'None of the above'] },
+
+      { id: 'c88-fa25f-8.1', problem: 'c88-fa25f-8', label: 'Q8.1', points: 2, topics: ['hof', 'sql-joins'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Suppose we are working with the `characters` table defined above. What is the equivalent SQL statement for:\n\n`characters.select_where([\'character\'], lambda row: \'Pedro\' in row[\'actor\'])`',
+        choices: ["SELECT character FROM characters WHERE actor = 'Pedro';", "SELECT character FROM characters WHERE actor LIKE '%Pedro%';", "SELECT character FROM characters WHERE actor LIKE 'Pedro%';", "SELECT character FROM characters WHERE 'Pedro' IN actor;"] },
+      { id: 'c88-fa25f-8.2', problem: 'c88-fa25f-8', label: 'Q8.2', points: 2, topics: ['oop', 'hof'], difficulty: 'hard',
+        type: 'multi_select', mono: true, prompt: 'Which of the following **will cause an error** with the buggy implementation of `Table`? Select all that apply.',
+        choices: ["characters.select_where(['actor'], lambda row: 'Pedro' in row['actor'])", "characters.select_where(['actor', 'tv_show'], lambda row: 'Caleb' in row['actor'] or 'Hawkeye' == row['tv_show'])", "characters.select_where(['actor', 'tv_show'], lambda row: len(row['character']) > 4)", 'None of the above'] },
+      { id: 'c88-fa25f-8.3', problem: 'c88-fa25f-8', label: 'Q8.3', points: 4, topics: ['oop', 'sql-joins'], difficulty: 'hard',
+        type: 'code', prompt: 'Describe the bug in the `select_where` method in 1-2 sentences. You do not need to propose a fix nor do you need to provide line numbers, unless it helps clarify your explanation.' },
+      { id: 'c88-fa25f-8.4', problem: 'c88-fa25f-8', label: 'Q8.4', points: 2, topics: ['efficiency'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Consider just the loop in `select_where` (from `filtered_row_values = []` to the `append` line). Let *c* be the number of columns in the table and *r* be the number of rows in the table. Assume that the `predicate` function and `append` method each take O(1) time. What is the (worst-case) runtime of that code snippet?',
+        choices: ['O(1)', 'O(log(c))', 'O(log(r))', 'O(c)', 'O(r)', 'O(c * r)', 'O(c^2)', 'O(r^2)'] },
+
+      { id: 'c88-fa25f-9.1', problem: 'c88-fa25f-9a', label: 'Q9.1', points: 2, topics: ['sql-agg'], difficulty: 'easy',
+        type: 'multi_select', mono: true, prompt: 'Which column in the `staff` table would preserve the original number of rows when used in a `GROUP BY` clause? Select all that apply and consider each answer option independently, e.g. there is only 1 column in each hypothetical `GROUP BY` clause.', choices: ['id', 'name', 'location', 'single', 'budget', 'in_state'] },
+      { id: 'c88-fa25f-9.2', problem: 'c88-fa25f-9a', label: 'Q9.2', points: 1, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Select the statement to complete the query to correctly return all apartments that contain the letter "a" anywhere in their name.', choices: ["name LIKE '%a%'", "name LIKE '%a'", "name LIKE 'a%'", "name LIKE '_a_'", "name LIKE '_a'", "name LIKE 'a_'"] },
+      { id: 'c88-fa25f-9.3', problem: 'c88-fa25f-9b', label: 'Q9.3', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q9.3.' },
+      { id: 'c88-fa25f-9.4', problem: 'c88-fa25f-9b', label: 'Q9.4', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q9.4.' },
+      { id: 'c88-fa25f-9.5', problem: 'c88-fa25f-9b', label: 'Q9.5', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q9.5. (The conditions in Q9.5–Q9.7 could be in any order; for this site, put the location condition here.)' },
+      { id: 'c88-fa25f-9.6', problem: 'c88-fa25f-9b', label: 'Q9.6', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q9.6. (Put the room-type condition here.)' },
+      { id: 'c88-fa25f-9.7', problem: 'c88-fa25f-9b', label: 'Q9.7', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank Q9.7. (Put the budget condition here.)' },
+      { id: 'c88-fa25f-9.8', problem: 'c88-fa25f-9b', label: 'Q9.8', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank Q9.8.' },
+      { id: 'c88-fa25f-9.9', problem: 'c88-fa25f-9b', label: 'Q9.9', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'g',
+        type: 'short_answer', prompt: 'Fill in blank Q9.9.' },
+      { id: 'c88-fa25f-9.10', problem: 'c88-fa25f-9c', label: 'Q9.10', points: 1, topics: ['sql-agg'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-fa25f-9.11', problem: 'c88-fa25f-9c', label: 'Q9.11', points: 2, topics: ['sql-agg'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+    ],
+    answers: {
+      'c88-fa25f-1.1': { correct: 4, explanation: '`extend` adds the even-length words of `duncan` (all four) to `siblings` and returns `None`; `append` then adds that `None`. 5 + 4 + 1 = 10.' },
+      'c88-fa25f-1.2': { correct: 0, explanation: 'For indexes 0 to 3: 2 + 4, 5 + 4, 4 + 2, 7 + 4.' },
+      'c88-fa25f-1.3': { correct: 4, explanation: '`duncan[4]` raises an `IndexError`. `list` stops at the error, so no list is displayed at all.' },
+      'c88-fa25f-1.4': { correct: 6, explanation: '`i` jumps by the number of words: 0 → 2 (skipping cha siu bao) → 4 → 6, where `\'xiao long bao\'` has 3 words.' },
+      'c88-fa25f-1.5': { accepted: ['9'], explanation: 'After index 6 (3 words), `i` becomes 9, which ends the loop.' },
+      'c88-fa25f-1.6': { correct: [4], explanation: 'Doubling `food` after every step makes the list grow faster than `i`. `i -= 1` eventually indexes past the start of the list (an error, not an infinite loop); the others end the loop.' },
+      'c88-fa25f-1.7': { correct: 1, explanation: '`range(2, 3)` holds only 2, and 2 * 2 is 4.' },
+      'c88-fa25f-1.8': { correct: 6, explanation: 'The map object is used up, so `next` raises `StopIteration`.' },
+      'c88-fa25f-1.9': { correct: 2, explanation: '`map` and `filter` return lazy iterators.' },
+      'c88-fa25f-1.10': { correct: 1, explanation: '`WHERE` keeps only the rows that satisfy a condition, like `filter` keeps the items for which a function returns a true value.' },
+      'c88-fa25f-1.11': { correct: 4, explanation: 'The base case returns the string `\'\'`, and `\'\' + [3]` raises a `TypeError`.' },
+      'c88-fa25f-1.12': { correct: 0, explanation: 'Returning `s` in the base case returns an empty value of the same type (`\'\'` or `[]`), so the `+` always joins two values of the same type.' },
+      'c88-fa25f-1.13': { correct: 2, explanation: 'The official answer: one recursive call per element. (Strictly, each slice `s[1:]` copies the rest of the sequence, so a stricter count gives O(n^2).)' },
+      'c88-fa25f-2.1': { accepted: ['Global'], explanation: 'The lambda bound to `c` is created in the global frame.' },
+      'c88-fa25f-2.2': { accepted: ['"comedy"'], explanation: '`G` is `b`, called with `"comedy"`.' },
+      'c88-fa25f-2.3': { accepted: ['f1'], explanation: '`d` is created when `a` runs, in frame f1.' },
+      'c88-fa25f-2.4': { correct: 1, explanation: '`"horror"` doesn’t start with "c", so its last element is popped once.' },
+      'c88-fa25f-2.5': { accepted: ['["Elf", "Home Alone", "Hangover"]'], explanation: '`"comedy"` starts with "c", so the first new comedy movie is appended.' },
+      'c88-fa25f-2.6': { accepted: ['"movies"'], explanation: '`b` returns the string `"movies"`, and that string is what `R` is bound to.' },
+      'c88-fa25f-2.7': { accepted: ['False'], explanation: '`d("horror")`: `"h" == "c"` is `False`.' },
+      'c88-fa25f-2.8': { accepted: ['True'], explanation: '`d("comedy")`: `"c" == "c"` is `True`.' },
+      'c88-fa25f-3.1': { accepted: ['gift_dict[store]'], explanation: 'The value stored at this location.' },
+      'c88-fa25f-3.2': { accepted: ['current_gift == gift', 'gift == current_gift'], explanation: 'Found the gift directly in this location.' },
+      'c88-fa25f-3.3': { accepted: ['isinstance(current_gift, dict)', 'type(current_gift) == dict'], explanation: 'Only a nested dictionary can be searched further.' },
+      'c88-fa25f-3.4': { accepted: ['search(current_gift)'], explanation: 'Search the nested dictionary; it returns the path inside it, or `None`.' },
+      'c88-fa25f-3.5a': { accepted: ['store'], explanation: 'The path starts with this location…' },
+      'c88-fa25f-3.5b': { accepted: ['location'], explanation: '…followed by the path found inside it.' },
+      'c88-fa25f-3.6': { accepted: ['search'], explanation: '`find_gift` returns the inner function itself, not a call to it.' },
+      'c88-fa25f-4.1': { accepted: ['0'], explanation: 'A new model has learned nothing yet.' },
+      'c88-fa25f-4.2': { accepted: ['self.finished_learning()'], explanation: 'Use the method rather than checking `== 3` again.' },
+      'c88-fa25f-4.3': { accepted: ['self.name'] },
+      'c88-fa25f-4.4': { accepted: ['next(self.fact_iterator)'], explanation: 'Each call to `next` gives the next fact.' },
+      'c88-fa25f-4.5': { accepted: ['self.num_facts_learned += 1', 'self.num_facts_learned = self.num_facts_learned + 1'] },
+      'c88-fa25f-4.6': { accepted: ['super().learn()', 'Model.learn(self)'], explanation: 'Reuse `Model`’s `learn` instead of repeating it.' },
+      'c88-fa25f-4.7': { accepted: ['if self.finished_learning()'], explanation: 'From the third fact on, Polly’s brain is fried.' },
+      'c88-fa25f-4.8': { accepted: ['"Polly\'s brain feels fried."'] },
+      'c88-fa25f-5.1': { correct: [0], explanation: 'A one-digit number is the base case. `num <= 10` would make 10 a single node; the others never stop for numbers that have more than one digit.' },
+      'c88-fa25f-5.2': { accepted: ['num % 10'], explanation: 'The last digit goes first (reverse order).' },
+      'c88-fa25f-5.3': { accepted: ['num // 10'], explanation: 'The number without its last digit.' },
+      'c88-fa25f-5.4': { accepted: ['Link(smaller)'], explanation: 'The `rest` is a new link whose `first` is the rest of the zigzag.' },
+      'c88-fa25f-5.5': { correct: [0, 2, 4], explanation: '`Link.empty` is `()`, which is false and not a `Link`. A `Link` has no `len`, so `len(zigzag)` raises an error.' },
+      'c88-fa25f-5.6': { correct: 2, explanation: 'The last node has no `rest`.' },
+      'c88-fa25f-5.7': { accepted: ['zigzag.first + sum_zigzag(zigzag.rest.first)', 'sum_zigzag(zigzag.rest.first) + zigzag.first'], explanation: 'The next node is `zigzag.rest.first`.' },
+      'c88-fa25f-6.1': { accepted: ['len(t.branches) == k'], explanation: 'Count this node before changing it.' },
+      'c88-fa25f-6.2': { accepted: ['t.branches'] },
+      'c88-fa25f-6.3': { accepted: ['count_add_k(b, k, v)'], explanation: 'Count (and fix) every branch recursively.' },
+      'c88-fa25f-6.4': { correct: [0, 4], explanation: 'Keep the first `k` branches. `t[i]` fails because a `Tree` can’t be indexed.' },
+      'c88-fa25f-6.5': { accepted: ['len(t.branches) < k', 'k > len(t.branches)'] },
+      'c88-fa25f-6.6': { accepted: ['t.branches.append(Tree(v))', 't.branches += [Tree(v)]', 't.branches = t.branches + [Tree(v)]'], explanation: 'Add a leaf labeled `v`.' },
+      'c88-fa25f-6.7': { correct: 2, explanation: 'Each node is visited once with O(k) work, and k is a constant.' },
+      'c88-fa25f-7.1': { correct: 1, explanation: 'An iterator’s `__iter__` returns the iterator itself.' },
+      'c88-fa25f-7.2': { accepted: ['self.current is Link.empty', 'self.current == Link.empty'], explanation: 'Stop at the end of the list.' },
+      'c88-fa25f-7.3': { accepted: ['self.current.first'] },
+      'c88-fa25f-7.4': { accepted: ['self.current.rest'] },
+      'c88-fa25f-7.5': { accepted: ['return value'] },
+      'c88-fa25f-7.6': { correct: [1, 2], explanation: '`Link` has `__iter__` but no `__next__`: it is an iterable, not an iterator.' },
+      'c88-fa25f-7.7': { correct: 0, explanation: 'Calling the generator function makes a generator; each `next` gives the next odd element. `odd_gen` itself is a function, and `iter = iter(lnk)` would give 1 then 2.' },
+      'c88-fa25f-8.1': { correct: 1, explanation: '`in` checks for the substring anywhere, like `LIKE \'%Pedro%\'`.' },
+      'c88-fa25f-8.2': { correct: [2], explanation: '`select` runs first, so the predicate can only see the selected columns; the third one reads `character`, which was not selected.' },
+      'c88-fa25f-8.3': { accepted: ['The select_where method has the wrong order of execution for SQL statements. It performs the SELECT clause first and then filters rows using WHERE, but this could possibly cause columns to be removed from the table that are needed when filtering.'], explanation: 'Official answer shown. Self-check: the key idea is that SQL filters rows (`WHERE`) before choosing columns (`SELECT`).' },
+      'c88-fa25f-8.4': { correct: 5, explanation: 'The loop runs once per row (r times), and the list comprehension runs once per column (c times).' },
+      'c88-fa25f-9.1': { correct: [0, 1], explanation: 'Every `id` and every `name` is different, so each group has one row.' },
+      'c88-fa25f-9.2': { correct: 0, explanation: '`%` matches any number of characters (including none) on both sides.' },
+      'c88-fa25f-9.3': { accepted: ['s.budget - a.rent'] },
+      'c88-fa25f-9.4': { accepted: ['apartments'] },
+      'c88-fa25f-9.5': { accepted: ['s.location = a.location', 'a.location = s.location'] },
+      'c88-fa25f-9.6': { accepted: ['s.single = a.single', 'a.single = s.single'] },
+      'c88-fa25f-9.7': { accepted: ['s.budget - a.rent >= 0', 's.budget >= a.rent', 'a.rent <= s.budget'] },
+      'c88-fa25f-9.8': { accepted: ['staff_name', 's.name'] },
+      'c88-fa25f-9.9': { accepted: ['budget_surplus', 's.budget - a.rent'] },
+      'c88-fa25f-9.10': { accepted: ['AVG'] },
+      'c88-fa25f-9.11': { accepted: ['budget_surplus * 0.98', '0.98 * budget_surplus'], explanation: '98% of each surplus, averaged per group.' },
+    },
+  });
+
+  // ───────────────────────── Data C88C — Spring 2025 Final ─────────────────────────
+  // Source: Data C88C Final, Spring 2025 (official solutions PDF, last updated 2025-11-10). 75 points, including 1 point
+  // for signing the honor code, which is not transcribed (so the parts here total 74). Q9 ("Just for fun", 0 points,
+  // drawing) is not transcribed either.
+  // Points: the PDF gives points for Q3.1–Q3.3 (4), Q4.1–Q4.5 (7), Q8.2–Q8.5 (4), Q8.6–Q8.9 (4) and Q8.11–Q8.13 (3) as
+  // groups, so those parts have `points: null`.
+  // Correction: Q8.4's official answer is printed as `first.pid = second_flight.pid`, which fails in SQLite (once a
+  // table has an alias, only the alias can be used). The answer key uses `first.pid = second.pid`, as the PDF's own
+  // alternate solution does.
+  // Q5's official solution also returns True when one extra word sits inside the phrase (its `elif` restarts the search
+  // with the whole target below a partial match). The course's exam page confirms this (feedback = Tree('A', [Tree('Foo',
+  // [Tree('B', [Tree('C')])])]) with target ['A', 'B', 'C'] returns True), so the tests use only the exam's own examples.
+  const C88_SP25_FLIGHTS_SETUP = code(`
+CREATE TABLE first_flight(pid, name, airline, start, end, international, duration);
+INSERT INTO first_flight VALUES
+  ('3791', 'Edwin', 'Alaska', 'San Diego', 'Tokyo', TRUE, 11.5), ('3413', 'Dhruv', 'United', 'Chicago', 'San Francisco', FALSE, 4),
+  ('9221', 'Mike Baller', 'Southwest', 'Los Angeles', 'New York City', FALSE, 5), ('9201', 'John Amongus', 'Spirit', 'Philadelphia', 'Pittsburgh', FALSE, 1),
+  ('0182', 'Mira', 'United', 'San Francisco', 'Tahiti', TRUE, 9), ('2718', 'Alicia', 'American', 'Taipei', 'San Francisco', TRUE, 11.5),
+  ('0192', 'Grace B', 'American', 'Honolulu', 'Los Angeles', FALSE, 5.5), ('6628', 'Reema', 'Delta', 'San Francisco', 'Los Angeles', FALSE, 1.5),
+  ('0987', 'Lia', 'United', 'San Francisco', 'Mexico City', TRUE, 4.5), ('1029', 'Ramya', 'Southwest', 'San Francisco', 'Seattle', FALSE, 2),
+  ('6371', 'Isabelle', 'United', 'Los Angeles', 'London', TRUE, 11), ('8888', 'Ethan', 'American', 'San Francisco', 'Los Angeles', FALSE, 1.5),
+  ('0123', 'Grace X', 'Southwest', 'San Francisco', 'New York City', FALSE, 5.5), ('1231', 'Rebecca', 'United', 'Miami', 'San Francisco', FALSE, 6);
+CREATE TABLE second_flight(pid, start, end, international, duration);
+INSERT INTO second_flight VALUES
+  ('1231', 'San Francisco', 'Miami', FALSE, 6), ('3791', 'Tokyo', 'Seoul', TRUE, 2.5), ('9221', 'New York City', 'Los Angeles', FALSE, 5),
+  ('2718', 'San Francisco', 'Irvine', FALSE, 1.5), ('3413', 'San Francisco', 'Honolulu', FALSE, 5.5), ('0192', 'Los Angeles', 'Honolulu', FALSE, 5.5),
+  ('6628', 'Los Angeles', 'San Francisco', FALSE, 1.5), ('0182', 'Tahiti', 'Honolulu', TRUE, 6), ('0987', 'Mexico City', 'San Francisco', TRUE, 4.5),
+  ('1029', 'Seattle', 'Vancouver', TRUE, 1), ('6371', 'London', 'San Francisco', TRUE, 11), ('8888', 'Los Angeles', 'Bali', TRUE, 17),
+  ('0123', 'New York City', 'San Francisco', FALSE, 5.5), ('9201', 'Pittsburgh', 'Phoenix', FALSE, 4.5);
+`);
+  const C88_SP25_TABLES = code(`
+first_flight:
+| pid  | name         | airline   | start         | end           | international | duration |
+|------|--------------|-----------|---------------|---------------|---------------|----------|
+| 3791 | Edwin        | Alaska    | San Diego     | Tokyo         | TRUE          | 11.5     |
+| 3413 | Dhruv        | United    | Chicago       | San Francisco | FALSE         | 4        |
+| 9221 | Mike Baller  | Southwest | Los Angeles   | New York City | FALSE         | 5        |
+| 9201 | John Amongus | Spirit    | Philadelphia  | Pittsburgh    | FALSE         | 1        |
+| 0182 | Mira         | United    | San Francisco | Tahiti        | TRUE          | 9        |
+| 2718 | Alicia       | American  | Taipei        | San Francisco | TRUE          | 11.5     |
+| 0192 | Grace B      | American  | Honolulu      | Los Angeles   | FALSE         | 5.5      |
+| 6628 | Reema        | Delta     | San Francisco | Los Angeles   | FALSE         | 1.5      |
+| 0987 | Lia          | United    | San Francisco | Mexico City   | TRUE          | 4.5      |
+| 1029 | Ramya        | Southwest | San Francisco | Seattle       | FALSE         | 2        |
+| 6371 | Isabelle     | United    | Los Angeles   | London        | TRUE          | 11       |
+| 8888 | Ethan        | American  | San Francisco | Los Angeles   | FALSE         | 1.5      |
+| 0123 | Grace X      | Southwest | San Francisco | New York City | FALSE         | 5.5      |
+| 1231 | Rebecca      | United    | Miami         | San Francisco | FALSE         | 6        |
+
+second_flight:
+| pid  | start         | end           | international | duration |
+|------|---------------|---------------|---------------|----------|
+| 1231 | San Francisco | Miami         | FALSE         | 6        |
+| 3791 | Tokyo         | Seoul         | TRUE          | 2.5      |
+| 9221 | New York City | Los Angeles   | FALSE         | 5        |
+| 2718 | San Francisco | Irvine        | FALSE         | 1.5      |
+| 3413 | San Francisco | Honolulu      | FALSE         | 5.5      |
+| 0192 | Los Angeles   | Honolulu      | FALSE         | 5.5      |
+| 6628 | Los Angeles   | San Francisco | FALSE         | 1.5      |
+| 0182 | Tahiti        | Honolulu      | TRUE          | 6        |
+| 0987 | Mexico City   | San Francisco | TRUE          | 4.5      |
+| 1029 | Seattle       | Vancouver     | TRUE          | 1        |
+| 6371 | London        | San Francisco | TRUE          | 11       |
+| 8888 | Los Angeles   | Bali          | TRUE          | 17       |
+| 0123 | New York City | San Francisco | FALSE         | 5.5      |
+| 9201 | Pittsburgh    | Phoenix       | FALSE         | 4.5      |
+`);
+  const C88_SP25_SQL_INTRO = 'The Data C88C staff are going on summer break to touch some grass! Below are two tables representing connecting flights taken by various passengers. For this problem, we define a **trip** to be made of two (connecting) **flights**.\n\n• The `first_flight` table records the first connecting flight for each passenger.\n\n• The `second_flight` table records their second connecting flight.\n\n• The `pid` (passenger ID) column uniquely identifies each individual traveler.\n\n```\n' + C88_SP25_TABLES + '\n```\n\nSQLite stores TRUE and FALSE as 1 and 0.';
+  const C88_SP25_GROWTH = ['O(1)', 'O(n)', 'O(log(n))', 'O(n log(n))', 'O(n^2)', 'O(2^n)'];
+  const C88_SP25_RUNTIME_INTRO = 'Select the runtime of the function `f` with respect to the size of the input `n`. You may assume `n` is a large positive integer.';
+
+  add({
+    exam: { id: 'c88-sp25f', label: 'C88C Spring 2025 Final', kind: 'final', course: 'c88c', url: 'https://c88c.org/fa25/resources/', complete: true },
+    problems: {
+      'c88-sp25f-1a': {
+        exam: 'c88-sp25f', number: '1.1–1.2', title: 'Multifandom Potpourri — map and OOP', points: 3,
+        intro: 'What would Python display?',
+        code: code(`
+>>> champs = ["Vi", "Jinx", "Caitlyn", "Ekko", "Jayce", "Viktor"]
+>>> hextech = [champs[c] for c in range(len(champs)) if c % 2 == 0]
+>>> sum(map(len, hextech))
+`),
+      },
+      'c88-sp25f-1b': {
+        exam: 'c88-sp25f', number: '1.3–1.4', title: 'Multifandom Potpourri — white_lotus', points: 4,
+        intro: 'Suppose we have defined the following code. For each part, write each printed line on its own line. If an error occurs after printing, write Error on a new line.',
+        code: code(`
+def white_lotus(group):
+  def hotel(thailand):
+      lotus_iter = iter(group)
+      i = 0
+      while i < thailand:
+        print(next(lotus_iter))
+        i += 1
+  return hotel
+
+group = ["Kate", "Laurie", "Jaclyn"]
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-1c': {
+        exam: 'c88-sp25f', number: '1.5–1.6', title: 'Multifandom Potpourri — max and short-circuiting', points: 2,
+        intro: 'What would Python display?',
+        code: code(`
+>>> ellie = { 4: 5, 2: 3, 6: 1 }
+>>> joel = lambda x: x + ellie[x]
+>>> max(ellie, key=joel)
+
+>>> ('mothma' and 0) or 'luthen' or 5 / 0
+`),
+      },
+      'c88-sp25f-1d': {
+        exam: 'c88-sp25f', number: '1.7', title: 'Multifandom Potpourri — every_other', points: 1,
+        intro: 'Recall the `every_other` function from Discussion 8. It should mutate a linked list so that all the elements with odd indices are removed (using 0-based indexing). Below is a **buggy implementation** of `every_other`.\n\nWhen the doctests are run, we get the following error:\n\n```\nAttributeError: \'tuple\' object has no attribute \'rest\'\n```',
+        code: code(`
+def every_other(s):
+  """
+  >>> s = Link(1, Link(2, Link(3, Link(4))))
+  >>> every_other(s)
+  >>> s
+  Link(1, Link(3))
+  >>> odd_length = Link(5, Link(3, Link(1)))
+  >>> every_other(odd_length)
+  >>> odd_length
+  Link(5, Link(1))
+  >>> singleton = Link(4)
+  >>> every_other(singleton)
+  >>> singleton
+  Link(4)
+  """
+  if s.rest is Link.empty or s is Link.empty:
+      return
+  else:
+      s.rest = s.rest.rest
+      every_other(s.rest)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-2': {
+        exam: 'c88-sp25f', number: '2', title: 'Mutating Magic', points: 11,
+        intro: 'Fill in the blanks to complete the environment diagram. Assume code has been fully run before filling in blanks. The blanks with no labels have no questions associated with them and are not scored. If more than one blank shares the same label (e.g., (d)), they have the same answer.\n\n**Note:** The `insert` list method does not error if the input index is equal to the length of the list.',
+        illustration: { src: 'assets/c88-sp25-final-q2.png', width: 455, height: 284, alt: 'From the exam: an environment diagram. Global binds magic (func magic(lst) [parent = blank (a)]), s (blank (b)), x (func cherry_blossom(list_magic) [parent = blank (d)]), y (blank (e)) and z. Frame f1: magic [parent = blank (a)] binds lst (blank (b)), cherry_blossom, magic_list and its return value. Frames f2, f3 and f4 are lambdas [parent = f1]: f2 has x "pears" and returns blank (c1); f3 and f4 return blanks (c2) and (c3). Frame f5: cherry_blossom [parent = blank (d)] binds list_magic and its return value.' },
+        code: code(`
+def magic(lst):
+    lst.insert(2, "nest")
+    magic_list = list(filter(lambda x: len(x) % 2 == 0, lst))
+    def cherry_blossom(list_magic):
+       list_magic.extend( [magic_list.append("owl"), magic_list.append("flower")] )
+       return list_magic, magic_list  # returns a tuple
+    return cherry_blossom
+
+s = ["pears", "squirrel"]
+x = magic(s)
+y = []
+z = x(y)
+print(z[0])
+print(z[1])
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-3a': {
+        exam: 'c88-sp25f', number: '3(a)', title: 'Interstellar Fleet — Rocket', points: 5,
+        intro: 'Captain Nova is organizing her fleet for an interstellar mission. Help her implement the class `Rocket` that inherits from the `Spacecraft` class. Complete the constructor for the `Rocket` class so that it initializes the same attributes as `Spacecraft`, in addition to two new attributes: `name` and `thrust`.',
+        code: code(`
+class Spacecraft:
+    """
+    >>> s = Spacecraft("Fondor", 1000)
+    >>> s.craft_type
+    'Fondor'
+    >>> s.payload_capacity
+    1000
+    >>> s.status_report()
+    All systems nominal
+    """
+    def __init__(self, craft_type, payload_capacity):
+        self.craft_type = craft_type
+        self.payload_capacity = payload_capacity
+
+    def status_report(self):
+        print("All systems nominal")
+
+class Rocket(Spacecraft):
+    """
+    >>> r1 = Rocket("Apollo", "Orbiter", 1000, 3000)
+    >>> r1.name
+    'Apollo'
+    >>> r1.craft_type
+    'Orbiter'
+    >>> r1.payload_capacity
+    1000
+    >>> r1.thrust
+    3000
+    """
+    def __init__(self, name, craft_type, payload_capacity, thrust):
+        ⟦a⟧
+        ⟦b⟧
+        ⟦c⟧
+
+    def status_report(self):
+        print("Rocket systems nominal")
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-3b': {
+        exam: 'c88-sp25f', number: '3(b)', title: 'Interstellar Fleet — more Rocket methods', points: 4,
+        intro: 'These methods are added to the `Rocket` class from part (a).\n\n`calculate_fuel_needed`: fuel needs are 0.5 units of fuel per unit of `payload_capacity`, and 0.1 units of fuel per unit of `thrust`.\n\n`is_more_powerful_than` takes another rocket, `other_rocket`, and returns `True` if the current rocket’s thrust is strictly greater than the other rocket’s thrust, and `False` otherwise.\n\n`launch_sequence` makes every rocket automatically report its fuel needs when it launches: it prints `"Fuel required: <fuel>"`. Assume that `calculate_fuel_needed` has been implemented correctly. Your solution must minimize the amount of repeated code.',
+        code: code(`
+def calculate_fuel_needed(self):
+    """
+    >>> r1 = Rocket("Apollo", "Orbiter", 1000, 3000)
+    >>> r1.calculate_fuel_needed()
+    800.0
+    """
+    return ⟦d⟧
+
+def is_more_powerful_than(self, other_rocket):
+    """
+    >>> r1 = Rocket("Apollo", "Orbiter", 1000, 3000)
+    >>> r2 = Rocket("Artemis", "Orion", 100, 500)
+    >>> r1.is_more_powerful_than(r2)
+    True
+    """
+    return ⟦e⟧
+
+def launch_sequence(self):
+     """
+     >>> r1 = Rocket("Apollo", "Orbiter", 1000, 3000)
+     >>> r2 = Rocket("Artemis", "Orion", 100, 500)
+     >>> r1.launch_sequence()
+     Fuel required: 800.0
+     >>> r2.launch_sequence()
+     Fuel required: 100.0
+     """
+     ⟦f⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-4': {
+        exam: 'c88-sp25f', number: '4', title: 'Linked List Vectors', points: 7,
+        intro: 'Implement the function `transpose_lnk`, which takes in a linked list `lnk` and **mutates** it such that it becomes transposed: the horizontal structure becomes vertical (see the diagram). When the linked list is transposed, each node’s `rest` attribute now points to a new linked list node containing the original value. The original link’s `first` attribute is replaced with the rest of the transposed linked list. You may assume all values inside the passed in linked list are integers.\n\n**Note:** Assume that `check_lnk` is implemented already and returns `True` if the first linked list is equal to the second one.',
+        illustration: { src: 'assets/c88-sp25-final-q4.png', width: 440, height: 296, alt: 'From the exam: the original linked list 1 → 2 → 3 → 4 → 5, and the mutated version, where each node’s rest points to a new one-node list holding its original value (1, 2, 3, 4, 5) and each node’s first points down to the next node; the last node’s first is empty.' },
+        code: code(`
+def transpose_lnk(lnk):
+  """
+  >>> lnk = Link(1, Link(2, Link(3, Link(4, Link(5)))))
+  >>> five = Link(Link.empty, Link(5))
+  >>> four = Link(five, Link(4))
+  >>> three = Link(four, Link(3))
+  >>> two = Link(three, Link(2))
+  >>> expected = Link(two, Link(1))
+  >>> # The function should not make a new linked list!
+  >>> print(transpose_lnk(lnk))
+  None
+  >>> check_lnk(lnk, expected)
+  True
+  """
+  current = lnk
+  while current is not Link.empty:
+    val = ⟦a⟧
+    ⟦b⟧
+    ⟦c⟧ = Link( ⟦d⟧ )
+    current = ⟦e⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-5': {
+        exam: 'c88-sp25f', number: '5', title: 'Pine-ing for Feedback', points: 8,
+        intro: 'C88C Staff was reviewing responses from the Mid-Semester Feedback Form when a rogue Stanford student tampered with the responses, adding extra words and rearranging sentences into trees! Implement the function `contains_phrase` which takes in two parameters:\n\n1. A tree `feedback` where each node is a string containing a single word\n\n2. A list of words `target` that represents the original response staff wants to find. Any other word not contained in `target` was added by the Stanford student.\n\nThe function returns `True` if every word in `target` appears in `feedback` in order continuously (i.e. along the same branch), without the extra words added by the Stanford student. Otherwise, return `False`.\n\n**Notes:** We consider `\'DataC88C\'` and `\'DataC8\'` to each be single words. The phrase can start at any node (not only the root node) and end at any node (not only a leaf node). Assume `feedback` is non-empty. Assume `len(target) > 1`.\n\nIn the diagram, t1–t4 return `True` and t5–t6 return `False` with `target = [\'I\', \'enjoy\', \'DataC88C\']`.',
+        illustration: { src: 'assets/c88-sp25-final-q5.png', width: 505, height: 520, alt: 'From the exam: six feedback trees. True: t1 is I → enjoy → DataC88C. t2 is I with children love (children Stanford, DataC88C) and enjoy (children DataC8, DataC88C). t3 is Oski with children and → I → enjoy → DataC88C, and is → a → tree. t4 is Go → I → enjoy → DataC88C → Cardinals. False: t5 is Oski with children is (cool, creepy), enjoys (DataC8, DataC88C) and loves (Stanford, Cal). t6 is DataC88C → I, with children love → Stanford and enjoy (children DataC8, and trees → DataC88C).' },
+        code: code(`
+def contains_phrase(feedback, target):
+    """
+    Most doctests omitted due to length, see the diagram above!
+    >>> target = ['I', 'enjoy', 'DataC88C']
+    >>> t1 = Tree('I', [Tree('enjoy', [Tree('DataC88C')])])
+    >>> contains_phrase(t1, target)
+    True
+    """
+    if feedback.is_leaf():
+        return len(target) == 1 and ⟦a⟧
+    elif ⟦b⟧:
+        return feedback.label == target[0]
+
+    for b in feedback.branches:
+        if ⟦c⟧ and contains_phrase(⟦d⟧):
+            return True
+        elif contains_phrase(⟦e⟧):
+            return True
+    return False
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-6': {
+        exam: 'c88-sp25f', number: '6', title: 'Animal Party', points: 9,
+        intro: 'A group of animals is getting together to socialize! The `AnimalMeetings` class is an iterator that takes in a list of `(name, breed)` tuples via its `__init__` method. Complete the `__next__` method so that it iterates through the list and returns a string describing each animal’s introduction at the party. When `next` is called on the iterator, it should return all **unique** pairs of animals of **different** breeds.\n\n**Notes:** Each pair should be returned only once regardless of order, meaning you should NOT return both "Linda the Lion meets Jenny the Jellyfish" and "Jenny the Jellyfish meets Linda the Lion". Your implementation must iterate through the list from beginning to end, producing pairs in that order.\n\n**Hint:** As you build unique pairs, think about how to systematically move through the list without repeating or flipping combinations. How might the relationship between your two indices help you do that? What conditions help you avoid going out of bounds?',
+        code: code(`
+class AnimalMeetings:
+  """
+  >>> animals = [
+  ...     ("Linda", "Lion"),
+  ...     ("Millie", "Monkey"),
+  ...     ("Jenny", "Jellyfish"),
+  ...     ("Laila", "Lion")
+  ... ]
+  >>> animal_iter = AnimalMeetings(animals)
+  >>> next(animal_iter)
+  "Linda the Lion meets Millie the Monkey"
+  >>> next(animal_iter)
+  "Linda the Lion meets Jenny the Jellyfish"
+  >>> next(animal_iter)
+  "Millie the Monkey meets Jenny the Jellyfish"
+  >>> next(animal_iter)
+  "Millie the Monkey meets Laila the Lion"
+  """
+
+  def __init__(self, animals):
+    self.animals = animals
+    self.first = 0
+    self.second = 1
+
+  def __iter__(self):
+    return self
+
+  def __next__(self):
+    while ⟦a⟧:
+      while self.second < len(self.animals):
+        name1, breed1 = self.animals[self.first]
+        name2, breed2 = self.animals[self.second]
+        self.second = ⟦b⟧
+        if ⟦c⟧:
+          ⟦d⟧
+      self.first += 1
+      self.second = ⟦e⟧
+    raise ⟦f⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-6g': {
+        exam: 'c88-sp25f', number: '6.7', title: 'Animal Party — lions', points: 2,
+        intro: 'One animal likes lions more than other breeds of animals. They modify the `__next__` method so that when a lion is encountered, that lion’s name and breed is appended to the `animals` list. See the modified function below (blanks (a)–(f) are filled in as in Q6.1–Q6.6).',
+        code: code(`
+def __next__(self):
+  while ______(a)______:
+    while self.second < len(self.animals):
+        name1, breed1 = self.animals[self.first]
+        name2, breed2 = self.animals[self.second]
+        self.second = ______(b)______
+        if breed1 == "Lion": # only modification
+          animals.append((name1, breed1))
+        if ______(c)______:
+          ______(d)______
+    self.first += 1
+    self.second = ______(e)______
+  raise ______(f)______
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-7a': {
+        exam: 'c88-sp25f', number: '7.1', title: 'Fun Times with Runtimes — n // 3', points: 1, intro: C88_SP25_RUNTIME_INTRO,
+        code: code(`
+def f(n):
+  result = 0
+  for i in range(n // 3):
+    result += i
+  return result
+`),
+      },
+      'c88-sp25f-7b': {
+        exam: 'c88-sp25f', number: '7.2', title: 'Fun Times with Runtimes — range(5)', points: 1, intro: C88_SP25_RUNTIME_INTRO,
+        code: code(`
+def f(n):
+  return sum([i for i in range(5)])
+`),
+      },
+      'c88-sp25f-7c': {
+        exam: 'c88-sp25f', number: '7.3', title: 'Fun Times with Runtimes — nested loops', points: 1, intro: C88_SP25_RUNTIME_INTRO,
+        code: code(`
+def f(n):
+  i = 0
+  while i < n:
+    j = 0
+    while j < n:
+      j += 1
+    i += 1
+`),
+      },
+      'c88-sp25f-7d': {
+        exam: 'c88-sp25f', number: '7.4', title: 'Fun Times with Runtimes — j not reset', points: 1, intro: C88_SP25_RUNTIME_INTRO,
+        code: code(`
+def f(n):
+  i = 0
+  j = 0
+  while i < n:
+    while j < n:
+      j += 1
+    i += 1
+`),
+      },
+      'c88-sp25f-7e': {
+        exam: 'c88-sp25f', number: '7.5', title: 'Fun Times with Runtimes — halving', points: 1, intro: C88_SP25_RUNTIME_INTRO,
+        code: code(`
+def f(n):
+  if n == 0 or n == 1:
+    return n
+  return f(n // 2)
+`),
+      },
+      'c88-sp25f-8a': {
+        exam: 'c88-sp25f', number: '8.1–8.5', title: 'Air88 — full trips', points: 5, lang: 'sql',
+        intro: C88_SP25_SQL_INTRO + '\n\n**Q8.2–Q8.5:** Complete the SQL query to return passengers’ full trips whose **initial starting point** does NOT match their **final destination** after the connecting flight. Your query should return the columns `pid`, `name`, `start` (the start of the **first** flight), and `end` (the end of the **second** flight).\n\n```\n| pid  | name         | start         | end           |\n|------|--------------|---------------|---------------|\n| 0182 | Mira         | San Francisco | Honolulu      |\n| 1029 | Ramya        | San Francisco | Vancouver     |\n| 2718 | Alicia       | Taipei        | Irvine        |\n| 3413 | Dhruv        | Chicago       | Honolulu      |\n| 3791 | Edwin        | San Diego     | Seoul         |\n| 6371 | Isabelle     | Los Angeles   | San Francisco |\n| 8888 | Ethan        | San Francisco | Bali          |\n| 9201 | John Amongus | Philadelphia  | Phoenix       |\n```\n\n**Note:** There are multiple possible solutions, one of which does not require you to use all blanks. (The official alternate solution leaves out `WHERE` and writes `ON first.pid = second.pid AND first.start != second.end`.)',
+        sqlSetup: C88_SP25_FLIGHTS_SETUP,
+        code: code(`
+SELECT ⟦a⟧
+FROM first_flight AS first
+JOIN ⟦b⟧ AS second
+  ON ⟦c⟧
+WHERE ⟦d⟧;
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-8b': {
+        exam: 'c88-sp25f', number: '8.6–8.10', title: 'Air88 — trip lengths', points: 5, lang: 'sql',
+        intro: C88_SP25_SQL_INTRO + '\n\n**Q8.6–Q8.9:** Complete the SQL query that, only considering trips initially flying out of San Francisco, outputs the names of passengers and their total flight time. Sort the result by total flight time in descending order. Your result should include `name` and `trip_length` (total time spent flying for the entire trip).\n\n```\n| name    | trip_length |\n|---------|-------------|\n| Ethan   | 18.5        |\n| Mira    | 15          |\n| Grace X | 11.0        |\n| Lia     | 9.0         |\n| Ramya   | 3           |\n| Reema   | 3.0         |\n```',
+        sqlSetup: C88_SP25_FLIGHTS_SETUP,
+        code: code(`
+SELECT first.name, ⟦a⟧
+FROM first_flight AS first, ⟦b⟧ AS second
+WHERE ⟦c⟧
+ORDER BY ⟦d⟧;
+`),
+        lineNumbers: true,
+      },
+      'c88-sp25f-8c': {
+        exam: 'c88-sp25f', number: '8.11–8.13', title: 'Air88 — international airlines', points: 3, lang: 'sql',
+        intro: C88_SP25_SQL_INTRO + '\n\nComplete the SQL query to find, for each **airline**, the number of **first connecting flights** that flew internationally. The output should only include airlines with at least 2 international first connecting flights.\n\n```\n| airline | COUNT(*) |\n|---------|----------|\n| United  | 3        |\n```',
+        sqlSetup: C88_SP25_FLIGHTS_SETUP,
+        code: code(`
+SELECT airline, COUNT(*)
+FROM first_flight
+WHERE ⟦a⟧
+GROUP BY ⟦b⟧
+HAVING ⟦c⟧;
+`),
+        lineNumbers: true,
+      },
+    },
+    questions: [
+      { id: 'c88-sp25f-1.1', problem: 'c88-sp25f-1a', label: 'Q1.1', points: 1, topics: ['hof', 'lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What would Python display?', choices: ['6', '14', '28', '39'] },
+      { id: 'c88-sp25f-1.2', problem: 'c88-sp25f-1a', label: 'Q1.2', points: 2, topics: ['oop'], difficulty: 'medium',
+        type: 'multi_select', prompt: 'Select all of the following statements that are true about object-oriented programming.',
+        choices: ['Objects and classes are 2 words for the same thing', 'When implementing the `__init__` method, there is no explicit `return` statement', 'Class attributes can be accessed through the class name or through `self`', 'When implementing a `Square` and `Rectangle` class, a `Square` could inherit from `Rectangle`', 'When implementing an `Account` and `Bank` class, an `Account` could inherit from `Bank` because an account is a type of bank.'] },
+      { id: 'c88-sp25f-1.3', problem: 'c88-sp25f-1b', label: 'Q1.3', points: 2, topics: ['iterators', 'hof'], difficulty: 'easy',
+        type: 'short_answer', prompt: '`>>> white_lotus(group)(2)`' },
+      { id: 'c88-sp25f-1.4', problem: 'c88-sp25f-1b', label: 'Q1.4', points: 2, topics: ['iterators', 'hof'], difficulty: 'medium',
+        type: 'short_answer', prompt: '`>>> white_lotus(group)(5)`' },
+      { id: 'c88-sp25f-1.5', problem: 'c88-sp25f-1c', label: 'Q1.5', points: 1, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What would Python display for `max(ellie, key=joel)`?', choices: ['1', '2', '3', '4', '5', '6'] },
+      { id: 'c88-sp25f-1.6', problem: 'c88-sp25f-1c', label: 'Q1.6', points: 1, topics: ['fundamentals'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: "What would Python display for `('mothma' and 0) or 'luthen' or 5 / 0`?", choices: ['True', 'False', "'mothma'", '0', "'luthen'", 'A ZeroDivisionError would occur'] },
+      { id: 'c88-sp25f-1.7', problem: 'c88-sp25f-1d', label: 'Q1.7', points: 1, topics: ['links'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'What should be changed in order to fix the implementation? **Hint:** It may be useful to reference the `Link` class on the reference sheet.',
+        choices: ['Change line 16 to `if s is Link.empty or s.rest is Link.empty:`', 'Change line 17 to `return Link.empty`', 'Change line 19 to `s = s.rest`', 'Change line 20 to `return every_other(s.rest)`'] },
+
+      { id: 'c88-sp25f-2.1', problem: 'c88-sp25f-2', label: 'Q2.1', points: 1, topics: ['env'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (a).', choices: ['Global', 'f1', 'f2', 'f3'] },
+      { id: 'c88-sp25f-2.2', problem: 'c88-sp25f-2', label: 'Q2.2', points: 1, topics: ['env', 'lists'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (b).', choices: ["['squirrel', 'pears', 'nest']", "['pears', 'squirrel']", "['pears', 'squirrel', 'nest']", "['pears', 'nest']", "['squirrel', 'nest', 'pears']"] },
+      { id: 'c88-sp25f-2.3', problem: 'c88-sp25f-2', label: 'Q2.3', points: 2, topics: ['env', 'hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What are the values of c1, c2, and c3, respectively?', choices: ['False, False, False', 'False, True, False', 'True, True, True', 'False, True, True', 'True, True, False'] },
+      { id: 'c88-sp25f-2.4', problem: 'c88-sp25f-2', label: 'Q2.4', points: 1, topics: ['env', 'hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d).', choices: ['Global', 'f1', 'f2', 'f3'] },
+      { id: 'c88-sp25f-2.5', problem: 'c88-sp25f-2', label: 'Q2.5', points: 2, topics: ['env', 'lists'], difficulty: 'hard',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'c88-sp25f-2.6', problem: 'c88-sp25f-2', label: 'Q2.6', points: 2, topics: ['env', 'lists'], difficulty: 'hard',
+        type: 'short_answer', prompt: 'What does line 13 print out?' },
+      { id: 'c88-sp25f-2.7', problem: 'c88-sp25f-2', label: 'Q2.7', points: 2, topics: ['env', 'lists'], difficulty: 'hard',
+        type: 'short_answer', prompt: 'What does line 14 print out?' },
+
+      { id: 'c88-sp25f-3.1', problem: 'c88-sp25f-3a', label: 'Q3.1', points: null, topics: ['oop'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q3.1.' },
+      { id: 'c88-sp25f-3.2', problem: 'c88-sp25f-3a', label: 'Q3.2', points: null, topics: ['oop'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q3.2.' },
+      { id: 'c88-sp25f-3.3', problem: 'c88-sp25f-3a', label: 'Q3.3', points: null, topics: ['oop'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q3.3.' },
+      { id: 'c88-sp25f-3.4', problem: 'c88-sp25f-3a', label: 'Q3.4', points: 1, topics: ['oop'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'What would these lines print?\n\n```\n>>> r1 = Rocket("Apollo", "Orbiter", 1000, 3000)\n>>> r1.status_report()\n```' },
+      { id: 'c88-sp25f-3.5', problem: 'c88-sp25f-3b', label: 'Q3.5', points: 2, topics: ['oop'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q3.5.' },
+      { id: 'c88-sp25f-3.6', problem: 'c88-sp25f-3b', label: 'Q3.6', points: 1, topics: ['oop'], difficulty: 'easy', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank Q3.6.' },
+      { id: 'c88-sp25f-3.7', problem: 'c88-sp25f-3b', label: 'Q3.7', points: 1, topics: ['oop'], difficulty: 'medium', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank Q3.7.' },
+
+      { id: 'c88-sp25f-4.1', problem: 'c88-sp25f-4', label: 'Q4.1', points: null, topics: ['links'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q4.1.' },
+      { id: 'c88-sp25f-4.2', problem: 'c88-sp25f-4', label: 'Q4.2', points: null, topics: ['links'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q4.2 (a whole statement).' },
+      { id: 'c88-sp25f-4.3', problem: 'c88-sp25f-4', label: 'Q4.3', points: null, topics: ['links'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q4.3.' },
+      { id: 'c88-sp25f-4.4', problem: 'c88-sp25f-4', label: 'Q4.4', points: null, topics: ['links'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q4.4.' },
+      { id: 'c88-sp25f-4.5', problem: 'c88-sp25f-4', label: 'Q4.5', points: null, topics: ['links'], difficulty: 'hard', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank Q4.5.' },
+
+      { id: 'c88-sp25f-5.1', problem: 'c88-sp25f-5', label: 'Q5.1', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-sp25f-5.2', problem: 'c88-sp25f-5', label: 'Q5.2', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-sp25f-5.3', problem: 'c88-sp25f-5', label: 'Q5.3', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-sp25f-5.4', problem: 'c88-sp25f-5', label: 'Q5.4', points: 1, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (d), the arguments to `contains_phrase`.', choices: ['feedback, target[0]', 'b, target', 'b, target[0]', 'b, target[1:]', 'None of the above'] },
+      { id: 'c88-sp25f-5.5', problem: 'c88-sp25f-5', label: 'Q5.5', points: 1, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e), the arguments to `contains_phrase`.', choices: ['feedback, target[0]', 'b, target', 'b, target[0]', 'b, target[1:]', 'None of the above'] },
+
+      { id: 'c88-sp25f-6.1', problem: 'c88-sp25f-6', label: 'Q6.1', points: 2, topics: ['iterators'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-sp25f-6.2', problem: 'c88-sp25f-6', label: 'Q6.2', points: 2, topics: ['iterators'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-sp25f-6.3', problem: 'c88-sp25f-6', label: 'Q6.3', points: 2, topics: ['iterators'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-sp25f-6.4', problem: 'c88-sp25f-6', label: 'Q6.4', points: 1, topics: ['iterators'], difficulty: 'easy', blank: 'd',
+        type: 'single_choice', mono: true, prompt: 'Select which response belongs in blank (d). **Hint:** Imagine `x = "Good"` and `y = "Luck"`. The syntax `f"{x} {y}!"` would give us the sentence `"Good Luck!"`',
+        choices: ['return f"{name1} the {breed1} meets {name2} the {breed2}"', 'print(f"{name1} the {breed1} meets {name2} the {breed2}")', 'self.next = f"{name1} the {breed1} meets {name2} the {breed2}"', 'None of the above'] },
+      { id: 'c88-sp25f-6.5', problem: 'c88-sp25f-6', label: 'Q6.5', points: 1, topics: ['iterators'], difficulty: 'medium', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+      { id: 'c88-sp25f-6.6', problem: 'c88-sp25f-6', label: 'Q6.6', points: 1, topics: ['iterators'], difficulty: 'easy', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+      { id: 'c88-sp25f-6.7', problem: 'c88-sp25f-6g', label: 'Q6.7', points: 2, topics: ['iterators', 'lists'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'What would the result be if we created an `AnimalMeetings` instance using a list with at least one lion in it?',
+        choices: ['The function would run as expected, equivalent to the original `AnimalMeetings` class.', 'Per extra Lion, an extra pair of animals would be returned.', 'An infinite iterator would be created.', 'A `StopIteration` error would be raised immediately.'] },
+
+      { id: 'c88-sp25f-7.1', problem: 'c88-sp25f-7a', label: 'Q7.1', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Select the runtime of `f`.', choices: C88_SP25_GROWTH },
+      { id: 'c88-sp25f-7.2', problem: 'c88-sp25f-7b', label: 'Q7.2', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Select the runtime of `f`.', choices: C88_SP25_GROWTH },
+      { id: 'c88-sp25f-7.3', problem: 'c88-sp25f-7c', label: 'Q7.3', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Select the runtime of `f`.', choices: C88_SP25_GROWTH },
+      { id: 'c88-sp25f-7.4', problem: 'c88-sp25f-7d', label: 'Q7.4', points: 1, topics: ['efficiency'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Select the runtime of `f`.', choices: C88_SP25_GROWTH },
+      { id: 'c88-sp25f-7.5', problem: 'c88-sp25f-7e', label: 'Q7.5', points: 1, topics: ['efficiency', 'recursion'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Select the runtime of `f`.', choices: C88_SP25_GROWTH },
+
+      { id: 'c88-sp25f-8.1', problem: 'c88-sp25f-8a', label: 'Q8.1', points: 1, topics: ['sql-agg'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'If we grouped `second_flight` flights by whether they were **international** or not, how many rows would our resulting table output contain?' },
+      { id: 'c88-sp25f-8.2', problem: 'c88-sp25f-8a', label: 'Q8.2', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q8.2.' },
+      { id: 'c88-sp25f-8.3', problem: 'c88-sp25f-8a', label: 'Q8.3', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q8.3.' },
+      { id: 'c88-sp25f-8.4', problem: 'c88-sp25f-8a', label: 'Q8.4', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q8.4.' },
+      { id: 'c88-sp25f-8.5', problem: 'c88-sp25f-8a', label: 'Q8.5', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q8.5.' },
+      { id: 'c88-sp25f-8.6', problem: 'c88-sp25f-8b', label: 'Q8.6', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q8.6.' },
+      { id: 'c88-sp25f-8.7', problem: 'c88-sp25f-8b', label: 'Q8.7', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q8.7.' },
+      { id: 'c88-sp25f-8.8', problem: 'c88-sp25f-8b', label: 'Q8.8', points: null, topics: ['sql-joins'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q8.8.' },
+      { id: 'c88-sp25f-8.9', problem: 'c88-sp25f-8b', label: 'Q8.9', points: null, topics: ['sql-joins'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank Q8.9.' },
+      { id: 'c88-sp25f-8.10', problem: 'c88-sp25f-8b', label: 'Q8.10', points: 1, topics: ['sql-joins'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Which of the following `WHERE` clauses would correctly match values **that contain a space in between words** (e.g., "San Francisco" or "John Amongus")?',
+        choices: ["WHERE column LIKE '% %'", "WHERE column LIKE '%%'", "WHERE column LIKE '%'", "WHERE column LIKE ' % '"] },
+      { id: 'c88-sp25f-8.11', problem: 'c88-sp25f-8c', label: 'Q8.11', points: null, topics: ['sql-agg'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank Q8.11.' },
+      { id: 'c88-sp25f-8.12', problem: 'c88-sp25f-8c', label: 'Q8.12', points: null, topics: ['sql-agg'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank Q8.12.' },
+      { id: 'c88-sp25f-8.13', problem: 'c88-sp25f-8c', label: 'Q8.13', points: null, topics: ['sql-agg'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank Q8.13.' },
+    ],
+    answers: {
+      'c88-sp25f-1.1': { correct: 1, explanation: 'Even indexes give Vi, Caitlyn and Jayce: 2 + 7 + 5 = 14.' },
+      'c88-sp25f-1.2': { correct: [1, 2, 3], explanation: 'Objects are instances of classes. `__init__` has no explicit return (calling the class returns the new instance). Inheritance is an is-a relationship: a square is a rectangle, but an account is not a bank (a bank *has* accounts).' },
+      'c88-sp25f-1.3': { accepted: ['Kate\nLaurie'], explanation: 'The loop calls `next` twice.' },
+      'c88-sp25f-1.4': { accepted: ['Kate\nLaurie\nJaclyn\nError'], explanation: 'The fourth `next` raises `StopIteration` after the three names are printed.' },
+      'c88-sp25f-1.5': { correct: 3, explanation: '`joel` adds each key and its value: 4 + 5 = 9 is the largest, so `max` returns the key 4.' },
+      'c88-sp25f-1.6': { correct: 4, explanation: '`\'mothma\' and 0` is 0; `0 or \'luthen\'` is `\'luthen\'`, which is truthy, so `5 / 0` is never evaluated.' },
+      'c88-sp25f-1.7': { correct: 0, explanation: '`s` may already be `Link.empty` (a tuple), so check `s` before `s.rest`.' },
+      'c88-sp25f-2.1': { correct: 0, explanation: '`magic` is defined in the global frame.' },
+      'c88-sp25f-2.2': { correct: 2, explanation: '`insert(2, "nest")` adds at the end of a 2-element list, and `s` is the same list as `lst`.' },
+      'c88-sp25f-2.3': { correct: 3, explanation: 'The filter lambda checks whether the length is even: "pears" (5) is odd, "squirrel" (8) and "nest" (4) are even.' },
+      'c88-sp25f-2.4': { correct: 1, explanation: '`cherry_blossom` is defined while `magic` runs, in frame f1.' },
+      'c88-sp25f-2.5': { accepted: ['[None, None]'], explanation: '`y` is the same list as `list_magic`, extended with the two `append` results, which are both `None`.' },
+      'c88-sp25f-2.6': { accepted: ['[None, None]'], explanation: '`z[0]` is `list_magic`, which is `y`.' },
+      'c88-sp25f-2.7': { accepted: ["['squirrel', 'nest', 'owl', 'flower']"], explanation: '`magic_list` had the even-length words, then "owl" and "flower" were appended.' },
+      'c88-sp25f-3.1': { accepted: ['super().__init__(craft_type, payload_capacity)', 'Spacecraft.__init__(self, craft_type, payload_capacity)'], explanation: 'Reuse `Spacecraft`’s constructor for the shared attributes.' },
+      'c88-sp25f-3.2': { accepted: ['self.name = name'] },
+      'c88-sp25f-3.3': { accepted: ['self.thrust = thrust'] },
+      'c88-sp25f-3.4': { accepted: ['Rocket systems nominal'], explanation: '`Rocket` overrides `status_report`.' },
+      'c88-sp25f-3.5': { accepted: ['self.payload_capacity * 0.5 + self.thrust * 0.1', '0.5 * self.payload_capacity + 0.1 * self.thrust'] },
+      'c88-sp25f-3.6': { accepted: ['self.thrust > other_rocket.thrust', 'other_rocket.thrust < self.thrust'] },
+      'c88-sp25f-3.7': { accepted: ['print(f"Fuel required: {self.calculate_fuel_needed()}")', 'print("Fuel required:", self.calculate_fuel_needed())', 'print("Fuel required: " + str(self.calculate_fuel_needed()))'], explanation: 'Call `calculate_fuel_needed` instead of repeating the formula.' },
+      'c88-sp25f-4.1': { accepted: ['current.first'], explanation: 'Save the value before overwriting `first`.' },
+      'c88-sp25f-4.2': { accepted: ['current.first = current.rest'], explanation: 'The next node moves into `first` (the vertical direction).' },
+      'c88-sp25f-4.3': { accepted: ['current.rest'] },
+      'c88-sp25f-4.4': { accepted: ['val'], explanation: '`rest` becomes a new one-node list holding the original value.' },
+      'c88-sp25f-4.5': { accepted: ['current.first'], explanation: 'The next node is now stored in `first`.' },
+      'c88-sp25f-5.1': { accepted: ['feedback.label == target[0]'], explanation: 'At a leaf, the target must be down to its last word, and that word must match.' },
+      'c88-sp25f-5.2': { accepted: ['len(target) == 1'], explanation: 'Only one word left: this node must be it.' },
+      'c88-sp25f-5.3': { accepted: ['feedback.label == target[0]'], explanation: 'If this node matches the current word, look for the rest of the phrase in the branch.' },
+      'c88-sp25f-5.4': { correct: 3, explanation: 'Continue with the branch and the remaining words.' },
+      'c88-sp25f-5.5': { correct: 1, explanation: 'Otherwise the phrase can still start further down, so search the branch for the whole target. (Note: as the course’s exam page points out, this official solution also returns `True` when an extra word sits inside the phrase: `Tree(\'A\', [Tree(\'Foo\', [Tree(\'B\', [Tree(\'C\')])])])` with target `[\'A\', \'B\', \'C\']` should be `False`.)' },
+      'c88-sp25f-6.1': { accepted: ['self.first < len(self.animals) - 1'], explanation: 'The last animal has nobody after it to meet.' },
+      'c88-sp25f-6.2': { accepted: ['self.second + 1'], explanation: 'Move on before returning, so the next call continues after this pair.' },
+      'c88-sp25f-6.3': { accepted: ['breed1 != breed2'] },
+      'c88-sp25f-6.4': { correct: 0, explanation: '`__next__` must return the value.' },
+      'c88-sp25f-6.5': { accepted: ['self.first + 1'], explanation: 'Each animal only meets the animals after it, which avoids duplicates and self-pairings.' },
+      'c88-sp25f-6.6': { accepted: ['StopIteration'] },
+      'c88-sp25f-6.7': { correct: 2, explanation: 'Every time a lion is the first animal, the list grows by one, so `len(self.animals)` keeps increasing and the loops never end.' },
+      'c88-sp25f-7.1': { correct: 1, explanation: 'n/3 iterations is still linear.' },
+      'c88-sp25f-7.2': { correct: 0, explanation: 'Always 5 iterations, whatever `n` is.' },
+      'c88-sp25f-7.3': { correct: 4, explanation: 'n iterations of an inner loop of n.' },
+      'c88-sp25f-7.4': { correct: 1, explanation: '`j` is never reset, so the inner loop does its n steps only once in total.' },
+      'c88-sp25f-7.5': { correct: 2, explanation: '`n` halves on each call.' },
+      'c88-sp25f-8.1': { accepted: ['2'], explanation: 'One group for TRUE and one for FALSE.' },
+      'c88-sp25f-8.2': { accepted: ['first.pid, first.name, first.start, second.end'] },
+      'c88-sp25f-8.3': { accepted: ['second_flight'] },
+      'c88-sp25f-8.4': { accepted: ['first.pid = second.pid', 'second.pid = first.pid'], explanation: 'Match each passenger’s two flights. The PDF prints `first.pid = second_flight.pid`, but once `second_flight` has the alias `second`, SQLite only accepts `second`.' },
+      'c88-sp25f-8.5': { accepted: ['first.start != second.end', 'second.end != first.start', 'first.start <> second.end'] },
+      'c88-sp25f-8.6': { accepted: ['first.duration + second.duration AS trip_length'] },
+      'c88-sp25f-8.7': { accepted: ['second_flight'] },
+      'c88-sp25f-8.8': { accepted: ['first.pid = second.pid AND first.start = "San Francisco"', 'first.start = "San Francisco" AND first.pid = second.pid'], explanation: 'Join the two flights of each passenger, and keep trips starting in San Francisco.' },
+      'c88-sp25f-8.9': { accepted: ['trip_length DESC'] },
+      'c88-sp25f-8.10': { correct: 0, explanation: 'A space with any characters on either side. `%` alone (or `%%`) matches everything, and `\' % \'` needs spaces at both ends.' },
+      'c88-sp25f-8.11': { accepted: ['international', 'international = TRUE', 'international = 1'] },
+      'c88-sp25f-8.12': { accepted: ['airline'] },
+      'c88-sp25f-8.13': { accepted: ['COUNT(*) >= 2', 'COUNT(*) > 1'] },
+    },
+  });
+  // ───────────────────────── Data C88C — Spring 2024 Final ─────────────────────────
+  // Source: Data C88C Final, Spring 2024 (official solutions PDF). 104 points; Q11 (a 0-point bonus page: trivia and a
+  // drawing) is not transcribed.
+  // Q5(a)–(c) and Q10 ask for whole methods / whole queries. Q5(a)–(c) are `code` parts (self-check, no Run Code tests,
+  // like the A+ questions); each Q10 query is one blank with SQL tests.
+  // Q7's official solution reads the label as `t.value`; the course Tree class calls it `label`. Both are accepted, and
+  // the tests' Tree class answers to both.
+  const C88_SP24_GAMES_SETUP = code(`
+CREATE TABLE staff(name, drink_pref, msg_pref, snack_pref, fav_game);
+INSERT INTO staff VALUES
+  ('Ethan', 'soda', 'text', 'chips', 'Mario Party'), ('Rebecca', 'coffee', 'slack', 'cookies', 'Mario Party'),
+  ('Angela', 'tea', 'text', 'fruit', 'Jackbox'), ('John', 'soda', 'email', 'fruit', 'Among Us'),
+  ('Karim', 'water', 'messenger', 'chips', 'Valorant'), ('Lily', 'coffee', 'text', 'cookies', 'Stardew Valley'),
+  ('Michelle', 'coffee', 'email', 'chips', 'Minecraft'), ('Ramya', 'tea', 'slack', 'fruit', 'Stardew Valley'),
+  ('Sean', 'water', 'instagram', 'fruit', 'Valorant'), ('Ethan', 'water', 'slack', 'cookies', 'League'),
+  ('Miha', 'soda', 'text', 'cookies', 'Mario Party'), ('Morgan', 'soda', 'messenger', 'chips', 'Mario Party'),
+  ('Nicholas', 'soda', 'text', 'cookies', 'League'), ('Richik', 'soda', 'instagram', 'fruit', 'Minecraft'),
+  ('Satleen', 'water', 'text', 'chips', 'Minecraft');
+CREATE TABLE games(name, company, genre, max_players);
+INSERT INTO games VALUES
+  ('Mario Party', 'Nintendo', 'Party', 4), ('Jackbox', 'Jackbox Games', 'Party', 10), ('Among Us', 'Innersloth', 'Party', 15),
+  ('Valorant', 'Riot', 'FPS', 5), ('Stardew Valley', 'ConcernedApe', 'Indie', 4), ('Minecraft', 'Mojang', 'Indie', 40),
+  ('League', 'Riot', 'Moba', 5);
+`);
+  const C88_SP24_TABLES = code(`
+staff:
+| name     | drink_pref | msg_pref  | snack_pref | fav_game       |
+|----------|------------|-----------|------------|----------------|
+| Ethan    | soda       | text      | chips      | Mario Party    |
+| Rebecca  | coffee     | slack     | cookies    | Mario Party    |
+| Angela   | tea        | text      | fruit      | Jackbox        |
+| John     | soda       | email     | fruit      | Among Us       |
+| Karim    | water      | messenger | chips      | Valorant       |
+| Lily     | coffee     | text      | cookies    | Stardew Valley |
+| Michelle | coffee     | email     | chips      | Minecraft      |
+| Ramya    | tea        | slack     | fruit      | Stardew Valley |
+| Sean     | water      | instagram | fruit      | Valorant       |
+| Ethan    | water      | slack     | cookies    | League         |
+| Miha     | soda       | text      | cookies    | Mario Party    |
+| Morgan   | soda       | messenger | chips      | Mario Party    |
+| Nicholas | soda       | text      | cookies    | League         |
+| Richik   | soda       | instagram | fruit      | Minecraft      |
+| Satleen  | water      | text      | chips      | Minecraft      |
+
+games:
+| name           | company       | genre | max_players |
+|----------------|---------------|-------|-------------|
+| Mario Party    | Nintendo      | Party | 4           |
+| Jackbox        | Jackbox Games | Party | 10          |
+| Among Us       | Innersloth    | Party | 15          |
+| Valorant       | Riot          | FPS   | 5           |
+| Stardew Valley | ConcernedApe  | Indie | 4           |
+| Minecraft      | Mojang        | Indie | 40          |
+| League         | Riot          | Moba  | 5           |
+`);
+  const C88_SP24_SQL_INTRO = 'The members of the Data C88C staff are organizing a Game Night to unwind after a long semester. All members were asked to fill out a "Game Preferences" form. Below are the two tables showcasing their responses: `staff` for the course staff members and `games` for information about the games.\n\n```\n' + C88_SP24_TABLES + '\n```';
+  const C88_SP24_GROWTH = ['O(1)', 'O(log(n))', 'O(n)', 'O(nlog(n))', 'O(n^2)', 'O(2^n)', 'None of the above'];
+  const C88_SP24_GROWTH2 = ['O(1)', 'O(log(n))', 'O(nlog(n))', 'O(n)', 'O(n^2)', 'O(2^n)', 'None of the above'];
+
+  add({
+    exam: { id: 'c88-sp24f', label: 'C88C Spring 2024 Final', kind: 'final', course: 'c88c', url: 'https://c88c.org/fa25/resources/', complete: true },
+    problems: {
+      'c88-sp24f-1a': {
+        exam: 'c88-sp24f', number: '1(a)', title: 'Conceptual Questions — list methods', points: 1,
+        intro: 'Suppose the following code has been executed:',
+        code: code(`
+x = [1, 2, 3]
+y = [4, 5, 6]
+x.append(y.pop(2))
+x.remove(3)
+`),
+      },
+      'c88-sp24f-1b': {
+        exam: 'c88-sp24f', number: '1(b)', title: 'Conceptual Questions — identity', points: 2,
+        intro: 'Suppose the following code has been executed:',
+        code: code(`
+x = []
+x is [] # This returns False
+y = x
+y.append(88)
+`),
+      },
+      'c88-sp24f-1c': {
+        exam: 'c88-sp24f', number: '1(c)–(d)', title: 'Conceptual Questions — Cat and Kitten', points: 4,
+        intro: 'Each part runs independently of the others.',
+        code: code(`
+# Cat Class
+class Cat:
+    def __init__(self, size, age):
+        self.size = size
+        self.age = age
+    def meow(self):
+        print('meow')
+
+# Kitten Class
+class Kitten(Cat):
+    #Implementation Hidden
+`),
+      },
+      'c88-sp24f-1e': {
+        exam: 'c88-sp24f', number: '1(e)', title: 'Conceptual Questions — trees', points: 1,
+        intro: 'True or false?',
+        // The exam prints no code here, but the app needs a code block for the scratch editor.
+        code: code(`
+# No code for this question. Use this editor for notes.
+`),
+      },
+      'c88-sp24f-2': {
+        exam: 'c88-sp24f', number: '2', title: 'Michael Madness', points: 12,
+        intro: 'Fill in the environment diagram. For short answer questions, use relevant syntax and, if applicable, separate elements using commas. For example, if your answer is a list with integer elements 1, 2, and 3, write `[1, 2, 3]`. For string values, use single quotes, such as `\'cs88\'`.',
+        illustration: { src: 'assets/c88-sp24-final-q2.png', width: 484, height: 318, alt: 'From the exam: an environment diagram. Global binds mic and hael (both [parent=Global]), cs to a list (blank (a)) and ee to the list [\'88\', \'88\']. Frame f1: mic [parent=Global] binds first (to the list (a)), second (to ee), hael (to blank (b)) and returns blank (c). Frame f2: hael [parent = blank (d)] binds blank (e) and blank (f), and returns blank (c).' },
+        code: code(`
+def mic(first, second):
+    if len(first) < len(second):
+        first.append(second[0])
+    if len(first) == len(second):
+        first.extend(second)
+    else:
+        first = first.append(second[0])
+    def hael(second, first):
+        return second[0] + second[1] == cs[0] + ee[1]
+    return hael(first, second)
+
+def hael(first, second):
+    return second[0] + second[1] != cs[0] + ee[1]
+
+cs = ['cs']
+ee = ['88', '88']
+mic(cs, ee)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-3': {
+        exam: 'c88-sp24f', number: '3', title: 'What Would Python Do (WWPD)', points: 8,
+        intro: 'For each expression below, write the output displayed by the interactive Python interpreter. If an error occurs, write "Error" (and include any lines displayed before it). If a function is returned, write "Function". If `None` is returned, write "None".\n\nAssume each part is executed in order: previous parts DO impact the current expression.',
+        code: code(`
+from functools import reduce
+from operator import add, mul
+func = lambda x: lambda: x
+ingredients = {"flour": 5, "eggs": 2}
+def stir(count, elements):
+    res = []
+    for i in range(count):
+        for j, k in elements.items():
+            if k % 2 == 0:
+                res.append(func(k))
+            else:
+                res.extend([func(k)()])
+    return res
+adder = lambda x: [ i + 1 for i in x ]
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-4a': {
+        exam: 'c88-sp24f', number: '4(a)', title: 'Debugging — generate_list', points: 4,
+        intro: 'You’re a new intern at a food review app company named Belly. The previous intern wrote functions that take in a dictionary of restaurants, where each key is a restaurant and each value is a list of its ratings:\n\n```\n>>> restaurants_and_ratings = {\n      \'Sliver\': [2, 3.5, 5],\n      \'Cheeseboard\': [1, 4],\n      \'Artichokes\': [4]\n}\n```\n\n`generate_list` should output a list where each item is a 2-item list `[restaurant, average_rating]`:\n\n```\n>>> generate_list(restaurants_and_ratings)\n[[\'Sliver\', 3.5], [\'Cheeseboard\', 2.5], [\'Artichokes\', 4.0]]\n```',
+        code: code(`
+def generate_list(d):
+    avgs = []
+    for restaurant in d:
+        avg = sum(d) / len(d)
+        avgs.append(restaurant, avg)
+    return avgs
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-4b': {
+        exam: 'c88-sp24f', number: '4(b)', title: 'Debugging — sort_restaurants', points: 4,
+        intro: 'The next function takes in the generated list of restaurants and their average ratings and outputs a list, sorted from highest to lowest average rating. Intended output:\n\n```\n>>> restaurant_list = [[\'Sliver\', 3.5], [\'Cheeseboard\', 3.0], [\'Artichokes\', 4.0]]\n>>> sort_restaurants(restaurant_list)\n[[\'Artichokes\', 4.0], [\'Sliver\', 3.5], [\'Cheeseboard\', 3.0]]\n```',
+        code: code(`
+def sort_restaurants(l):
+    if len(l) <= 1:
+        return l
+    else:
+        first = l[0]
+        lst1 = [e for e in l[1:] if e[1] <= l[0][1]]
+        lst2 = [e for e in l[1:] if e[1] > l[0][1]]
+        return sort_restaurants(lst1) + [first] + sort_restaurants(lst2)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-4c': {
+        exam: 'c88-sp24f', number: '4(c)', title: 'Debugging — mutating the list', points: 4,
+        intro: 'You can now assume that `sort_restaurants` results in the correctly ordered list. To save memory, your manager asks you to modify `sort_restaurants` so that it mutates the list passed in:\n\n```\n>>> restaurant_list = [[\'Sliver\', 3.5], [\'Cheeseboard\', 3.0], [\'Artichokes\', 4.0]]\n>>> sort_restaurants(restaurant_list)\n>>> restaurant_list\n[[\'Artichokes\', 4.0], [\'Sliver\', 3.5], [\'Cheeseboard\', 3.0]]\n```',
+        code: code(`
+def sort_restaurants(l):
+    if len(l) <= 1:
+        return l
+    else:
+        first = l[0]
+        lst1 = [e for e in l[1:] if e[1] <= l[0][1]]
+        lst2 = [e for e in l[1:] if e[1] > l[0][1]]
+        return sort_restaurants(lst1) + [first] + sort_restaurants(lst2)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-5': {
+        exam: 'c88-sp24f', number: '5', title: 'Backyard Zoo', points: 11,
+        intro: 'Michelle is organizing summer gift baskets for her backyard monkeys. Help her implement the class `Monkey` to decide how many m&ms, silly bands, and ring pops to put in each basket.\n\n**(a)** Monkeys are land animals: make the constructor of `Monkey` inherit from `LandAnimal`. In addition to what’s initialized for every `LandAnimal`, each monkey has a `name`.\n\n**(b)** All monkeys start off with 10 silly bands. Add a silly band for each even number between 1 (inclusive) and the length of the monkey’s name (exclusive). You may assume the name is not empty.\n\n**(c)** `items_in_gift_basket` returns a three element list: how many m&ms, silly bands, and ring pops to put in the basket, in that order.',
+        code: code(`
+class LandAnimal():
+    def __init__(self, species, weight):
+        self.species = species
+        self.weight = weight
+        self.ring_pops = 3
+    def count_m_and_ms(self):
+        """return how many m&ms to put in a land animal's basket"""
+        return 5 * self.weight
+
+class Monkey(LandAnimal):
+    def __init__(self, name, species, weight):
+        """
+        >>> george = Monkey("george", "curious monkey", 10)
+        >>> george.name
+        'george'
+        >>> george.species
+        'curious monkey'
+        >>> george.weight
+        10
+        """
+        ⟦a⟧
+
+    def count_silly_bands(self):
+        """
+        >>> monkey1 = Monkey("bob", "monkey", 12)
+        >>> monkey1.count_silly_bands()  # length 3: only 2 is even
+        11
+        >>> monkey2 = Monkey("stephanie", "monkey", 12)
+        >>> monkey2.count_silly_bands()  # length 9: 2, 4, 6, 8
+        14
+        """
+        ⟦b⟧
+
+    def items_in_gift_basket(self):
+        ⟦c⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-6': {
+        exam: 'c88-sp24f', number: '6', title: 'Linked List Chains', points: 12,
+        intro: 'We want to create a linked list chain with length `n`. Given an input list called `lst`, we will go through each element one by one and add each to our new resulting linked list. If there are no more elements left in the input list before the result linked list reaches length `n`, go back to the beginning of the input list to use the elements in order again. Assume that calling `print` on any linked list will format the values in order, enclosed by angle brackets `<` and `>`.',
+        code: code(`
+def link_chain(lst, n):
+    """
+    >>> res_lnk = link_chain(['o_O'], 3)
+    >>> res_lnk
+    Link('o_O', Link('o_O', Link('o_O')))
+    >>> print(res_lnk)
+    <'o_O', 'o_O', 'o_O'>
+    >>> print(link_chain([1, 2], 7))
+    <1, 2, 1, 2, 1, 2, 1>
+    >>> print(link_chain([], 2))
+    <>
+    """
+    if ⟦a⟧ or ⟦b⟧:
+        return ⟦c⟧
+    lnk_rest = link_chain(⟦d⟧, ⟦e⟧)
+    lnk_first = ⟦f⟧
+    return Link(lnk_first, lnk_rest)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-7': {
+        exam: 'c88-sp24f', number: '7', title: 'Trees', points: 10,
+        intro: 'Implement `sum_depth_k`, which takes in a `Tree` instance and returns the sum of the values at depth `k`. Assume that `k` will always be less than or equal to the height of the tree.',
+        code: code(`
+def sum_depth_k(t, depth):
+    """
+    >>> t = Tree(1, [Tree(2, [Tree(4), Tree(5)]), Tree(6, [Tree(7)])])
+    >>> sum_depth_k(t, 0)
+    1
+    >>> sum_depth_k(t, 1) # 2 + 6
+    8
+    >>> sum_depth_k(t, 2) # 4 + 5 + 7
+    16
+    """
+    if depth == 0:
+        return ⟦a⟧
+    elif t.is_leaf():
+        return ⟦b⟧
+    else:
+        total = ⟦c⟧
+        for ⟦d⟧:
+            ⟦e⟧
+        return total
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-8': {
+        exam: 'c88-sp24f', number: '8', title: 'Cyclic Generator', points: 11,
+        intro: 'Implement the generator function `cyclic_generator` which takes in a non-empty list of one-argument functions `fns` and a non-empty list `values`, and applies the functions to the elements of `values` in a cyclic fashion infinitely. Note that `len(fns)` is NOT necessarily the same as `len(values)`.\n\n**Hint:** Use the modulo (`%`) operator. What do you notice when you do 0 % 3, 1 % 3, 2 % 3, 3 % 3, 4 % 3, …?',
+        code: code(`
+def cyclic_generator(fns, values):
+    """
+    >>> f1 = lambda x: x
+    >>> f2 = lambda x: x + 1
+    >>> f3 = lambda x: 10 - x
+    >>> fns = [f1, f2, f3]
+    >>> values = [2, 3, 4]
+    >>> gen = cyclic_generator(fns, values)
+    >>> next(gen) # f1(2) = 2
+    2
+    >>> next(gen) # f2(3) = 4
+    4
+    >>> next(gen) # f3(4) = 6
+    6
+    >>> next(gen) # cycle repeats infinitely afterward
+    2
+    >>> values = [2, 3, 4, 5] # len(values) != len(fns)
+    >>> gen = cyclic_generator(fns, values)
+    >>> [next(gen) for _ in range(7)]  # f1(2), f2(3), f3(4), f1(5), f2(2), f3(3), f1(4)
+    [2, 4, 6, 5, 3, 7, 4]
+    """
+    fns_index = 0
+    values_index = 0
+    while ⟦a⟧:
+        curr_fn = ⟦b⟧
+        curr_val = ⟦c⟧
+        ⟦d⟧ curr_fn(curr_val)
+        fns_index += ⟦e⟧
+        values_index += ⟦e⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp24f-9a': {
+        exam: 'c88-sp24f', number: '9(a)', title: 'Efficient or Not — counter_squared', points: 1,
+        intro: 'What is the run time of `counter_squared`? Let n be the length of `lst`.',
+        code: code(`
+def counter_squared(lst):
+    counter = 0
+    new_lst = []
+    for i in lst:
+        counter *= i * i
+        new_lst.append(counter)
+    return new_lst
+`),
+      },
+      'c88-sp24f-9b': {
+        exam: 'c88-sp24f', number: '9(b)–(c)', title: 'Efficient or Not — random_func', points: 2,
+        intro: 'What is the run time of `random_func`? (Hint: you don’t need to calculate the exact runtime.)\n\nFor (c), `random_func_new` is the same as `random_func` except the 5th line has been changed from `val += sum(...)` to `val += (n - j) ** 2`:\n\n```\ndef random_func_new(n):\n    val = 0\n    for i in range(n):\n        for j in range(i):\n            val += (n - j) ** 2\n    return val/n\n```',
+        code: code(`
+def random_func(n):
+    val = 0
+    for i in range(n):
+        for j in range(i):
+            val += sum(map(lambda x: x * x, range(n)))
+    return val/n
+`),
+      },
+      'c88-sp24f-9d': {
+        exam: 'c88-sp24f', number: '9(d)', title: 'Efficient or Not — weird_func', points: 1,
+        intro: 'What is the run time of `weird_func`?',
+        code: code(`
+def weird_func(n):
+    val = 0
+    while n > 0:
+        val += n
+        val //= 2
+        n //= 2
+    return val
+`),
+      },
+      'c88-sp24f-9e': {
+        exam: 'c88-sp24f', number: '9(e)', title: 'Efficient or Not — maps_on_maps_maps', points: 1,
+        intro: 'What is the run time of `maps_on_maps_maps`?',
+        code: code(`
+def maps_on_maps_maps(n):
+    return list(map(lambda x: x ** x, filter(lambda y: y % 2 == 0, range(n))))
+`),
+      },
+      'c88-sp24f-10a': {
+        exam: 'c88-sp24f', number: '10(a)', title: 'C88C Game Night — Riot fans', points: 3, lang: 'sql',
+        intro: C88_SP24_SQL_INTRO + '\n\nWrite a query that outputs the `name` and `msg_pref` of all staff members whose favorite game is made by Riot.\n\n```\n| name     | msg_pref  |\n|----------|-----------|\n| Karim    | messenger |\n| Sean     | instagram |\n| Ethan    | slack     |\n| Nicholas | text      |\n```',
+        sqlSetup: C88_SP24_GAMES_SETUP,
+        code: code(`
+⟦a⟧;
+`),
+      },
+      'c88-sp24f-10b': {
+        exam: 'c88-sp24f', number: '10(b)', title: 'C88C Game Night — big games', points: 3, lang: 'sql',
+        intro: C88_SP24_SQL_INTRO + '\n\nWrite a query to list the names of staff members who prefer games that can accommodate 10 or more players, along with their snack preferences. Order the results alphabetically (ascending) by the staff member’s name.\n\n```\n| name     | snack_pref |\n|----------|------------|\n| Angela   | fruit      |\n| John     | fruit      |\n| Michelle | chips      |\n| Richik   | fruit      |\n| Satleen  | chips      |\n```',
+        sqlSetup: C88_SP24_GAMES_SETUP,
+        code: code(`
+⟦a⟧;
+`),
+      },
+      'c88-sp24f-10c': {
+        exam: 'c88-sp24f', number: '10(c)', title: 'C88C Game Night — popular genres', points: 4, lang: 'sql',
+        intro: C88_SP24_SQL_INTRO + '\n\nWrite a query that outputs the `genre` and the total number of staff that prefers the genre (`total_staff`). List the genres in descending order by the number of staff. Break ties by alphabetical order of the genre (ascending).\n\n```\n| genre | total_staff |\n|-------|-------------|\n| Party | 6           |\n| Indie | 5           |\n| FPS   | 2           |\n| Moba  | 2           |\n```',
+        sqlSetup: C88_SP24_GAMES_SETUP,
+        code: code(`
+⟦a⟧;
+`),
+      },
+      'c88-sp24f-10d': {
+        exam: 'c88-sp24f', number: '10(d)', title: 'C88C Game Night — drinks and games', points: 5, lang: 'sql',
+        intro: C88_SP24_SQL_INTRO + '\n\nWrite a query to count how many staff members prefer each game, grouped by their drink preference. Display the `fav_game`, the `drink_pref`, and the count of staff members (`staff_count`). Only include rows where the total count of `fav_game` is more than 1 for that particular drink. Order the results by the number of staff members in descending order.\n\n```\n| fav_game    | drink_pref | staff_count |\n|-------------|------------|-------------|\n| Mario Party | soda       | 3           |\n| Valorant    | water      | 2           |\n```',
+        sqlSetup: C88_SP24_GAMES_SETUP,
+        code: code(`
+⟦a⟧;
+`),
+      },
+    },
+    questions: [
+      { id: 'c88-sp24f-1a', problem: 'c88-sp24f-1a', label: '(a)', points: 1, topics: ['lists'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'What is the value of `x` now?' },
+      { id: 'c88-sp24f-1b', problem: 'c88-sp24f-1b', label: '(b)', points: 2, topics: ['lists'], difficulty: 'medium',
+        type: 'multi_select', mono: true, prompt: 'Which of the following return `True`? (Select all that apply.)', choices: ['x is y', 'y is [88]', 'x == y', 'x == []'] },
+      { id: 'c88-sp24f-1c', problem: 'c88-sp24f-1c', label: '(c)', points: 2, topics: ['oop'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'Sally wants to use inheritance to help her create the `Kitten` class. Does the following code for Kitten’s `__init__` method correctly use inheritance?\n\n```\ndef __init__(self, age):\n    super().__init__(age)\n```',
+        choices: ['No, the code will error because the Kitten class does not properly inherit from the Cat class', 'Yes, the code uses inheritance to succesfully create the init method.', 'No, the code will error because of a missing argument'] },
+      { id: 'c88-sp24f-1d', problem: 'c88-sp24f-1c', label: '(d)', points: 2, topics: ['oop'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Now Sally wants to implement the `meow` method for the `Kitten` class. Suppose that the `Kitten` class no longer inherits from the `Cat` class. We want a kitten to both meow and mew when the `meow` method is called. Does the code below accomplish this?\n\n```\ndef meow(self):\n    Cat.meow(self)\n    print(\'mew\')\n```',
+        choices: ['No, the method does not get the kitten to both meow and mew', 'Yes, this implementation of the `meow` method works correctly.', 'No, the code does not properly call the `meow` method from the Cat class'] },
+      { id: 'c88-sp24f-1e', problem: 'c88-sp24f-1e', label: '(e)', points: 1, topics: ['trees'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'All branches of a tree are also themselves trees (i.e. they are all instances of the `Tree` class).', choices: ['False', 'True'] },
+
+      { id: 'c88-sp24f-2a', problem: 'c88-sp24f-2', label: '(a)', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'Fill in the space denoted by (a).' },
+      { id: 'c88-sp24f-2b', problem: 'c88-sp24f-2', label: '(b)', points: 2, topics: ['env'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the function or object denoted by (b)?', choices: ['The list object denoted by (a)', "The list object ['88', '88']", 'func hael(first, second) [parent=Global]', 'func hael(second, first) [parent=f1]'] },
+      { id: 'c88-sp24f-2c', problem: 'c88-sp24f-2', label: '(c)', points: 2, topics: ['env'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'Fill in the spaces denoted by (c).' },
+      { id: 'c88-sp24f-2d', problem: 'c88-sp24f-2', label: '(d)', points: 2, topics: ['env'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the value denoted by (d)?', choices: ['Global', 'f2', 'f3', 'f1'] },
+      { id: 'c88-sp24f-2e', problem: 'c88-sp24f-2', label: '(e)', points: 2, topics: ['env'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the variable, pointer pair denoted by (e)?', choices: ['first, pointing to the list object denoted by (a)', 'second, pointing to the list object denoted by (a)', "first, pointing to the list object ['88', '88']", "second, pointing to the list object ['88', '88']"] },
+      { id: 'c88-sp24f-2f', problem: 'c88-sp24f-2', label: '(f)', points: 2, topics: ['env'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the variable, pointer pair denoted by (f)?', choices: ['first, pointing to the list object denoted by (a)', "first, pointing to the list object ['88', '88']", 'second, pointing to the list object denoted by (a)', "second, pointing to the list object ['88', '88']"] },
+
+      { id: 'c88-sp24f-3a', problem: 'c88-sp24f-3', label: '(a)', points: 1, topics: ['hof'], difficulty: 'easy',
+        type: 'short_answer', prompt: '```\n>>> a = func([5,6])()\n>>> a\n```' },
+      { id: 'c88-sp24f-3b', problem: 'c88-sp24f-3', label: '(b)', points: 1, topics: ['lists', 'hof'], difficulty: 'easy',
+        type: 'short_answer', prompt: '```\n>>> b = adder(a)\n>>> b\n```' },
+      { id: 'c88-sp24f-3c', problem: 'c88-sp24f-3', label: '(c)', points: 1, topics: ['lists'], difficulty: 'easy',
+        type: 'short_answer', prompt: '```\n>>> a = [1]\n>>> print(a.extend([b]))\n```' },
+      { id: 'c88-sp24f-3d', problem: 'c88-sp24f-3', label: '(d)', points: 1, topics: ['lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: '```\n>>> a\n```' },
+      { id: 'c88-sp24f-3e', problem: 'c88-sp24f-3', label: '(e)', points: 1, topics: ['hof', 'lists'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: '```\n>>> c = stir(2, ingredients)\n>>> c\n```', choices: ['[5, Function]', 'Error', '[5, 5, 5, 5]', '[5, 5]', '[5, Function, 5, Function]'] },
+      { id: 'c88-sp24f-3f', problem: 'c88-sp24f-3', label: '(f)', points: 1, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '```\n>>> adder = lambda x: [ i + 1 for i in x ]\n>>> list(map(lambda x: adder, range(3)))\n```', choices: ['Error', '[None, None, None]', '[5, 5, 5]', '[Function, Function, Function]'] },
+      { id: 'c88-sp24f-3g', problem: 'c88-sp24f-3', label: '(g)', points: 1, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '```\n>>> reduce(lambda x, y: x and y, [True, False, True])\n```', choices: ['[]', 'Error', 'False', 'None', 'True'] },
+      { id: 'c88-sp24f-3h', problem: 'c88-sp24f-3', label: '(h)', points: 1, topics: ['iterators', 'hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: "```\n>>> good_schools = filter(lambda s: s[0:2] == 'UC', ['UC Berkeley', 'Stanford'])\n>>> next(good_schools)\n```", choices: ['None', 'Error', "['UC Berkeley']", "'Stanford'", "'UC Berkeley'"] },
+
+      { id: 'c88-sp24f-4a', problem: 'c88-sp24f-4a', label: '(a)', points: 4, topics: ['lists', 'fundamentals'], difficulty: 'medium',
+        type: 'multi_select', prompt: 'How would you fix this function so the code does not error and calling the function results in the correct output? (Select all that apply. Multiple choices may need to be selected for the code to run correctly.)',
+        choices: ['Replace `sum(d) / len(d)` with `sum(d[restaurant]) / len(d[restaurant])`', 'Replace `d` with `d.items()`.', 'Replace `avgs.append(restaurant, avg)` with `avgs.append([restaurant, avg])`', 'Replace `avgs.append(restaurant, avg)` with `avgs.extend(restaurant, avg)`'] },
+      { id: 'c88-sp24f-4b', problem: 'c88-sp24f-4b', label: '(b)', points: 4, topics: ['recursion', 'lists'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Will the previous intern’s code result in the correct output and run without erroring? Select only the option that has the correct combination of Yes/No.',
+        choices: ['No, this code will order the list incorrectly (ascending). Yes, this code will not error.', 'Yes, this code will order the list correctly (descending). Yes, this code will not error.', 'Yes, this code will order the list correctly (descending). No, this code will error; `l[0][1]` should be replaced with `l[0]`.', 'No, this code will order the list incorrectly (ascending). No, this code will error; `len(l) <= 1` should be replaced with `len(l) == 0`.'] },
+      { id: 'c88-sp24f-4c', problem: 'c88-sp24f-4c', label: '(c)', points: 4, topics: ['lists', 'recursion'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Will you need to modify `sort_restaurants` further? Select only the option that has the correct combination of Yes/No and reasoning.',
+        choices: ['No, the current code mutates the list passed in.', 'Yes, but we cannot use recursion because it is not possible to mutate a list using recursion.', 'Yes, because list slicing creates a copy of the given list and doesn’t mutate it directly.', 'Yes, and we need to use list functions such as `.append()`, `.extend()`, and `pop()`.'] },
+
+      { id: 'c88-sp24f-5a', problem: 'c88-sp24f-5', label: '(a)', points: 3, topics: ['oop'], difficulty: 'easy', blank: 'a',
+        type: 'code', prompt: 'Write the body of `__init__`.' },
+      { id: 'c88-sp24f-5b', problem: 'c88-sp24f-5', label: '(b)', points: 3, topics: ['oop', 'fundamentals'], difficulty: 'medium', blank: 'b',
+        type: 'code', prompt: 'Write the body of `count_silly_bands`.' },
+      { id: 'c88-sp24f-5c', problem: 'c88-sp24f-5', label: '(c)', points: 3, topics: ['oop'], difficulty: 'easy', blank: 'c',
+        type: 'code', prompt: 'Write the body of `items_in_gift_basket`.' },
+      { id: 'c88-sp24f-5d', problem: 'c88-sp24f-5', label: '(d)', points: 2, topics: ['oop'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Michelle has now decided that all the Monkeys of the species `\'curious monkey\'` deserve an additional 3 ring pops, but only if the Monkey’s name is longer than 5 letters. Which of these actions should Michelle take to adapt her code? (The change should not break any of the other parts of this question.)',
+        choices: ['Modify the constructor method of the `Monkey` class', 'Add a new method `count_ring_pops` to the `Monkey` class', 'Modify the constructor method of the `LandAnimal` class', 'Add a new method `count_ring_pops` to the `LandAnimal` class'] },
+
+      { id: 'c88-sp24f-6a', problem: 'c88-sp24f-6', label: '(a)', points: 2, topics: ['links', 'lists'], difficulty: 'easy', blank: 'a',
+        type: 'multi_select', mono: true, prompt: 'Fill in blank (a). Select all options that would correctly fill in the blank.', choices: ['lst is List.empty', 'lst == []', 'lst is Link.empty', 'not lst', 'lst is []'] },
+      { id: 'c88-sp24f-6b', problem: 'c88-sp24f-6', label: '(b)', points: 2, topics: ['links', 'recursion'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-sp24f-6c', problem: 'c88-sp24f-6', label: '(c)', points: 2, topics: ['links'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-sp24f-6d', problem: 'c88-sp24f-6', label: '(d)', points: 2, topics: ['links', 'lists', 'recursion'], difficulty: 'hard', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'c88-sp24f-6e', problem: 'c88-sp24f-6', label: '(e)', points: 2, topics: ['links', 'recursion'], difficulty: 'easy', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Fill in blank (e).', choices: ['n', 'n-1', 'len(lst) - n', 'len(lst)'] },
+      { id: 'c88-sp24f-6f', problem: 'c88-sp24f-6', label: '(f)', points: 2, topics: ['links'], difficulty: 'easy', blank: 'f',
+        type: 'short_answer', prompt: 'Fill in blank (f).' },
+
+      { id: 'c88-sp24f-7a', problem: 'c88-sp24f-7', label: '(a)', points: 2, topics: ['trees'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Fill in blank (a).' },
+      { id: 'c88-sp24f-7b', problem: 'c88-sp24f-7', label: '(b)', points: 2, topics: ['trees', 'recursion'], difficulty: 'easy', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-sp24f-7c', problem: 'c88-sp24f-7', label: '(c)', points: 2, topics: ['trees'], difficulty: 'easy', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-sp24f-7d', problem: 'c88-sp24f-7', label: '(d)', points: 2, topics: ['trees'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d), what follows `for`.' },
+      { id: 'c88-sp24f-7e', problem: 'c88-sp24f-7', label: '(e)', points: 2, topics: ['trees', 'recursion'], difficulty: 'medium', blank: 'e',
+        type: 'short_answer', prompt: 'Fill in blank (e).' },
+
+      { id: 'c88-sp24f-8a', problem: 'c88-sp24f-8', label: '(a)', points: 2, topics: ['generators'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'What should fill in blank (a)?', choices: ['True', 'values_index < len(values)', 'fns_index < len(fns)', 'False'] },
+      { id: 'c88-sp24f-8b', problem: 'c88-sp24f-8', label: '(b)', points: 3, topics: ['generators', 'lists'], difficulty: 'medium', blank: 'b',
+        type: 'short_answer', prompt: 'What should fill in blank (b)?' },
+      { id: 'c88-sp24f-8c', problem: 'c88-sp24f-8', label: '(c)', points: 3, topics: ['generators', 'lists'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'What should fill in blank (c)?' },
+      { id: 'c88-sp24f-8d', problem: 'c88-sp24f-8', label: '(d)', points: 1, topics: ['generators'], difficulty: 'easy', blank: 'd',
+        type: 'short_answer', prompt: 'What should fill in blank (d)?' },
+      { id: 'c88-sp24f-8e', problem: 'c88-sp24f-8', label: '(e)', points: 2, topics: ['generators'], difficulty: 'easy', blank: 'e',
+        type: 'short_answer', prompt: 'What should fill in blank (e)? (It occurs twice; both have the same value.)' },
+
+      { id: 'c88-sp24f-9a', problem: 'c88-sp24f-9a', label: '(a)', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the run time of `counter_squared`?', choices: C88_SP24_GROWTH },
+      { id: 'c88-sp24f-9b', problem: 'c88-sp24f-9b', label: '(b)', points: 1, topics: ['efficiency'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the run time of `random_func`?', choices: ['O(1)', 'O(log(n))', 'O(n)', 'O(n^2)', 'O(n^3)', 'O(2^n)', 'None of the above'] },
+      { id: 'c88-sp24f-9c', problem: 'c88-sp24f-9b', label: '(c)', points: 1, topics: ['efficiency'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'How will the run time of `random_func_new` change in relation to `random_func`?', choices: ['random_func_new is more efficient than random_func.', 'random_func_new is equally as efficient as random_func.', 'random_func_new is less efficient than random_func.'] },
+      { id: 'c88-sp24f-9d', problem: 'c88-sp24f-9d', label: '(d)', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the run time of `weird_func`?', choices: C88_SP24_GROWTH2 },
+      { id: 'c88-sp24f-9e', problem: 'c88-sp24f-9e', label: '(e)', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the run time of `maps_on_maps_maps`?', choices: C88_SP24_GROWTH2 },
+
+      { id: 'c88-sp24f-10a', problem: 'c88-sp24f-10a', label: '(a)', points: 3, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+      { id: 'c88-sp24f-10b', problem: 'c88-sp24f-10b', label: '(b)', points: 3, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+      { id: 'c88-sp24f-10c', problem: 'c88-sp24f-10c', label: '(c)', points: 4, topics: ['sql-joins', 'sql-agg'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+      { id: 'c88-sp24f-10d', problem: 'c88-sp24f-10d', label: '(d)', points: 5, topics: ['sql-agg'], difficulty: 'hard', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+    ],
+    answers: {
+      'c88-sp24f-1a': { accepted: ['[1, 2, 6]'], explanation: '`y.pop(2)` removes and returns 6, which is appended; then the value 3 is removed.' },
+      'c88-sp24f-1b': { correct: [0, 2], explanation: '`y = x` makes both names refer to the same list, now `[88]`. `y is [88]` is `False` because `[88]` is a new list.' },
+      'c88-sp24f-1c': { correct: 2, explanation: '`Cat.__init__` needs both `size` and `age`.' },
+      'c88-sp24f-1d': { correct: 1, explanation: 'Calling `Cat.meow(self)` works on any object (it only prints), then `\'mew\'` is printed.' },
+      'c88-sp24f-1e': { correct: 1, explanation: 'Each branch is itself a `Tree`.' },
+      'c88-sp24f-2a': { accepted: ["['cs', '88', '88', '88']"], explanation: '`cs` gets `\'88\'` appended (lengths 1 < 2), then the lengths are equal, so it is extended by `ee`.' },
+      'c88-sp24f-2b': { correct: 3, explanation: '`mic` defines its own `hael(second, first)` inside f1.' },
+      'c88-sp24f-2c': { accepted: ['True'], explanation: 'The inner `hael` compares `\'cs\' + \'88\'` with `cs[0] + ee[1]`, which is the same.' },
+      'c88-sp24f-2d': { correct: 3, explanation: 'The inner `hael` was defined in f1.' },
+      'c88-sp24f-2e': { correct: 1, explanation: 'The inner `hael`’s first parameter is named `second`, and it is passed `first`, the list (a).' },
+      'c88-sp24f-2f': { correct: 1, explanation: 'Its second parameter is named `first`, and it is passed `second`, `ee`.' },
+      'c88-sp24f-3a': { accepted: ['[5, 6]'] },
+      'c88-sp24f-3b': { accepted: ['[6, 7]'] },
+      'c88-sp24f-3c': { accepted: ['None'], explanation: '`extend` returns `None`.' },
+      'c88-sp24f-3d': { accepted: ['[1, [6, 7]]'], explanation: 'Extending by `[b]` adds the list `b` as one element.' },
+      'c88-sp24f-3e': { correct: 4, explanation: 'For each of 2 rounds: 5 is odd, so `func(5)()` (the value 5) is added; 2 is even, so the function `func(2)` is added.' },
+      'c88-sp24f-3f': { correct: 3, explanation: 'Each element is the function `adder` itself.' },
+      'c88-sp24f-3g': { correct: 2, explanation: '`True and False` is `False`, and `False and True` is `False`.' },
+      'c88-sp24f-3h': { correct: 4 },
+      'c88-sp24f-4a': { correct: [0, 2], explanation: 'Average each restaurant’s own list, and append one 2-item list.' },
+      'c88-sp24f-4b': { correct: 0, explanation: 'Smaller ratings go first, so the result is ascending. The base case is fine.' },
+      'c88-sp24f-4c': { correct: 2, explanation: 'Slicing and `+` build new lists; the list passed in is never changed.' },
+      'c88-sp24f-5a': { accepted: ['super().__init__(species, weight)\nself.name = name'], explanation: 'Official answer shown. Self-check: reuse `LandAnimal`’s constructor, then set `name`.' },
+      'c88-sp24f-5b': { accepted: ['res = 10\nfor i in range(1, len(self.name)):\n    if i % 2 == 0:\n        res += 1\nreturn res'], explanation: 'Official answer shown. Self-check: start at 10 and add 1 for each even number from 1 up to (not including) the name’s length.' },
+      'c88-sp24f-5c': { accepted: ['return [self.count_m_and_ms(), self.count_silly_bands(), self.ring_pops]'], explanation: 'Official answer shown. Self-check: call the two methods and read the attribute.' },
+      'c88-sp24f-5d': { correct: 0, explanation: 'The constructor knows the name and the species, so it can set `ring_pops` for those monkeys without changing `LandAnimal`.' },
+      'c88-sp24f-6a': { correct: [1, 3], explanation: '`lst` is a Python list, so compare with `[]` or use its truthiness. `lst is []` is always `False`.' },
+      'c88-sp24f-6b': { accepted: ['n == 0', 'n <= 0', 'not n'] },
+      'c88-sp24f-6c': { accepted: ['Link.empty'] },
+      'c88-sp24f-6d': { accepted: ['lst[1:] + [lst[0]]', 'lst[1:] + lst[:1]'], explanation: 'Rotate the list: the first element moves to the end.' },
+      'c88-sp24f-6e': { correct: 1 },
+      'c88-sp24f-6f': { accepted: ['lst[0]'] },
+      'c88-sp24f-7a': { accepted: ['t.label', 't.value'], explanation: 'The official solution writes `t.value`; with the course `Tree` class it is `t.label`.' },
+      'c88-sp24f-7b': { accepted: ['0'], explanation: 'A leaf above the target depth has nothing at that depth.' },
+      'c88-sp24f-7c': { accepted: ['0'] },
+      'c88-sp24f-7d': { accepted: ['b in t.branches'] },
+      'c88-sp24f-7e': { accepted: ['total += sum_depth_k(b, depth - 1)', 'total = total + sum_depth_k(b, depth - 1)'], explanation: 'Each branch is one level closer to the target depth.' },
+      'c88-sp24f-8a': { correct: 0, explanation: 'The generator runs forever.' },
+      'c88-sp24f-8b': { accepted: ['fns[fns_index % len(fns)]'] },
+      'c88-sp24f-8c': { accepted: ['values[values_index % len(values)]'] },
+      'c88-sp24f-8d': { accepted: ['yield'] },
+      'c88-sp24f-8e': { accepted: ['1'] },
+      'c88-sp24f-9a': { correct: 2, explanation: 'One pass over the list with constant work each time.' },
+      'c88-sp24f-9b': { correct: 4, explanation: 'About n²/2 iterations, each summing n values.' },
+      'c88-sp24f-9c': { correct: 0, explanation: 'Each iteration is now constant time instead of O(n), so it is O(n^2).' },
+      'c88-sp24f-9d': { correct: 1, explanation: '`n` halves each time.' },
+      'c88-sp24f-9e': { correct: 3, explanation: 'One pass over `range(n)`.' },
+      'c88-sp24f-10a': { accepted: ["SELECT staff.name, msg_pref FROM staff, games WHERE staff.fav_game = games.name AND games.company = 'Riot'"], explanation: 'Join each staff member with their favorite game, and keep Riot games.' },
+      'c88-sp24f-10b': { accepted: ['SELECT staff.name, snack_pref FROM staff, games WHERE fav_game = games.name AND max_players >= 10 ORDER BY staff.name ASC', 'SELECT staff.name, snack_pref FROM staff, games WHERE fav_game = games.name AND max_players >= 10 ORDER BY staff.name'] },
+      'c88-sp24f-10c': { accepted: ['SELECT genre, COUNT(*) AS total_staff FROM staff JOIN games ON staff.fav_game = games.name GROUP BY genre ORDER BY total_staff DESC, genre ASC'], explanation: 'One group per genre; sort by the count, then by genre name.' },
+      'c88-sp24f-10d': { accepted: ['SELECT fav_game, drink_pref, COUNT(*) as staff_count FROM staff GROUP BY fav_game, drink_pref HAVING COUNT(*) > 1 ORDER BY staff_count DESC'], explanation: 'Group by both columns, and keep only groups with more than one person.' },
+    },
+  });
+  // ───────────────────────── Data C88C — Spring 2023 Final ─────────────────────────
+  // Source: Data C88C Final, Spring 2023 (official solutions PDF). 91 points by its own question headers; Q14 (0 points,
+  // a drawing) is not transcribed.
+  // Q5–Q10 print the official answers as whole functions; the exam's skeleton lines are the blanks here, filled from
+  // those functions (one part per blank, `points: null`, the question's points on its PROBLEMS entry). Q8's header says
+  // 5 points but its only part says 4; Q10's header says 15 but its parts total 13. The headers are used (Q10's blanks
+  // share 14 points; the last part, (f) in the PDF, is the separate 1-point choice).
+  // This exam's Tree class names the label `value` (like the C88C reference sheet that semester).
+  // Official errata (course exam page) applied: Q2(c)'s answer is -1, which none of the printed choices were, so it is
+  // a written answer here; Q7(a)'s doctest shows the float keys; Q12(c) calls squared_experience (not square).
+  const C88_SP23_FRIENDS_SETUP = code(`
+CREATE TABLE friends(name, age, year, animal);
+INSERT INTO friends VALUES
+  ('Jade', 18, 'Freshman', 'Frog'), ('Shuming', 20, 'Junior', 'Prairie Dog'), ('Jay', 19, 'Sophomore', 'Capybara'),
+  ('Annie', 19, 'Sophomore', 'Cat'), ('Emma', 20, 'Junior', 'Cat');
+CREATE TABLE animals(animal, sound, size, color);
+INSERT INTO animals VALUES
+  ('Frog', 'ribbit', 'tiny', 'green'), ('Prairie Dog', 'bark', 'small', 'brown'), ('Capybara', 'bark', 'large', 'brown'),
+  ('Cat', 'meow', 'small', 'black');
+`);
+  const C88_SP23_SQL_INTRO = 'You have a table `friends` that contains demographic information about your friends, including the column `animal`, which is the type of animal energy you think they give off the most. You also have a table `animals` that describes each animal; the `animal` column in `friends` corresponds to the `animal` column in `animals`. Not all rows are shown for brevity, but your code should work even if there are more rows (no hardcoding to match output).\n\n```\nfriends:\n| name    | age | year      | animal      |\n|---------|-----|-----------|-------------|\n| Jade    | 18  | Freshman  | Frog        |\n| Shuming | 20  | Junior    | Prairie Dog |\n| Jay     | 19  | Sophomore | Capybara    |\n| Annie   | 19  | Sophomore | Cat         |\n| Emma    | 20  | Junior    | Cat         |\n\nanimals:\n| animal      | sound  | size  | color |\n|-------------|--------|-------|-------|\n| Frog        | ribbit | tiny  | green |\n| Prairie Dog | bark   | small | brown |\n| Capybara    | bark   | large | brown |\n| Cat         | meow   | small | black |\n```';
+  const C88_SP23_TRY = (key) => code(`
+d = {1:2}
+try:
+       print(d[${key}])
+except NameError as e:
+       print('nyaooooooooooooooo')
+except KeyError as e:
+       print('donkey')
+except ZeroDivisionError as e:
+       print('Wowzas!')
+`);
+  const C88_SP23_RUNTIME_INTRO = 'Jolyne and Johnny are trying to compare different ways of squaring a positive number `n`. Give the WORST-CASE time complexity. Assume each basic operation (addition, multiplication, assignment) takes constant time.';
+
+  add({
+    exam: { id: 'c88-sp23f', label: 'C88C Spring 2023 Final', kind: 'final', course: 'c88c', url: 'https://c88c.org/fa25/resources/', complete: true },
+    problems: {
+      'c88-sp23f-1a': { exam: 'c88-sp23f', number: '1(a)', title: 'ConceptMan — try d[1]', points: 1, intro: 'What is displayed?', code: C88_SP23_TRY('1') },
+      'c88-sp23f-1b': { exam: 'c88-sp23f', number: '1(b)', title: 'ConceptMan — try d[2]', points: 1, intro: 'What is displayed?', code: C88_SP23_TRY('2') },
+      'c88-sp23f-1c': { exam: 'c88-sp23f', number: '1(c)', title: 'ConceptMan — try d[1/0]', points: 1, intro: 'What is displayed?', code: C88_SP23_TRY('1/0') },
+      'c88-sp23f-1d': {
+        exam: 'c88-sp23f', number: '1(d)', title: 'ConceptMan — Link abstraction', points: 1,
+        intro: 'Consider this implementation of a `Link` from lecture. No other methods are implemented.',
+        code: code(`
+class Link:
+    empty = ()
+    def __init__(self, first, rest=empty):
+        self.first = first
+        self.rest = rest
+
+x = Link(1, Link(2))
+x.rest.rest = 3
+`),
+      },
+      'c88-sp23f-1e': {
+        exam: 'c88-sp23f', number: '1(e)', title: 'ConceptMan — SQL keywords', points: 1, intro: 'Choose the SQL keyword.',
+        code: code(`
+-- No code for this question. Use this editor for notes.
+`),
+      },
+      'c88-sp23f-2': {
+        exam: 'c88-sp23f', number: '2', title: 'Psych!', points: 10,
+        intro: 'Fill in the blanks to complete the environment diagram. All the code used is shown, and the code runs to completion. Boxes with the same label will have the same value.',
+        illustration: { src: 'assets/c88-sp23-final-q2.png', width: 460, height: 474, alt: 'From the exam: an environment diagram. Global binds theme (values hidden), song (func song(maturity) [parent=Global]), deception (func know [parent=f1]), bend (box d) and psych (box e). Frame f1: song binds maturity (box a), i = 1, run (box c), know, and returns know. Frame f2: know [parent=f1] binds i (box b), u = 1, theme (a list "any", "proof") and returns box d. Frame f3 (box c) binds crawl = 88 and returns box d.' },
+        code: code(`
+theme = ["line", "obscurity", "line"]
+def song(maturity):
+  if maturity:
+    theme.append(["alot", "maturity"])
+  else:
+    theme.extend(["right", "wrong"])
+  i = 1
+  run = lambda crawl: theme[1]
+  def know(i, u):
+    theme = ["any", "proof"]
+    if i and u:
+      return run(88)
+    else:
+      return run
+  return know
+
+deception = song(8 % 4)
+bend = deception(-1, 1)
+psych = len(theme)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-3': {
+        exam: 'c88-sp23f', number: '3', title: 'What Would Python Do (WWPD)', points: 8,
+        intro: 'For each expression below, select the output displayed by the interactive Python interpreter. If an error occurs, select "Error".',
+        code: code(`
+>>> func = lambda x, y: add(mystery(x), y)
+>>> def add(x, y):
+...   return x + y
+>>> def cond(x):
+...   return x < (lambda y: y / x)(18)
+>>> def mystery(x):
+...   arr = [1, 4, 5, 2, 3]
+...   return (lambda x: (arr[-1] * x))(x)
+...   x += 1
+`),
+      },
+      'c88-sp23f-4': {
+        exam: 'c88-sp23f', number: '4', title: 'Bugging Out', points: 4,
+        intro: 'We are writing the function `cumulative_link`, which accepts a linked list `lnk` and mutates it such that each node is the sum of itself and all nodes to its right in the old `lnk`:\n\n```\n>>> lnk = Link(1, Link(2, Link(3)))\n>>> cumulative_link(lnk)\n>>> lnk\nLink(6, Link(5, Link(3)))\n```\n\nBelow is a buggy implementation. **Hint:** It can be helpful to draw out the linked lists to follow the execution of the code.',
+        code: code(`
+def cumulative_link(lnk):
+    if lnk.rest is Link.empty:
+        return
+    else:
+        cumulative_link(lnk.rest)
+        lnk.first = 1 + lnk.rest.first
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-5': {
+        exam: 'c88-sp23f', number: '5', title: 'Multi-Caller', points: 7,
+        intro: 'Write the `multi_caller` function, which takes in `functions` (a list of two-argument functions) and returns a function `apply`. `apply` takes in `arguments` (a list of two-element lists) and returns a new list containing the outputs from calling each function in `functions` on its respective arguments in `arguments`. The first and second arguments for the function at `functions[i]` are the first and second elements of the list at `arguments[i]`. You can assume that `functions` and `arguments` will always have the same length.',
+        code: code(`
+def multi_caller(functions):
+    """
+    >>> add = lambda a, b: a + b
+    >>> sub = lambda a, b: a - b
+    >>> mul = lambda a, b: a * b
+    >>> functions = [add, sub, mul]
+    >>> apply = multi_caller(functions)
+    >>> arguments = [[2, 5], [10, 5], [11, 8]]
+    >>> apply(arguments) # [add(2,5), sub(10, 5), mul(11, 8)]
+    [7, 5, 88]
+    """
+    def apply(arguments):
+        result = ⟦a⟧
+        for i in range(⟦b⟧):
+            func = ⟦c⟧
+            args = ⟦d⟧
+            output = ⟦e⟧
+            ⟦f⟧
+        return ⟦g⟧
+    return ⟦h⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-6': {
+        exam: 'c88-sp23f', number: '6', title: 'Product of List', points: 6,
+        intro: 'Given a nested list, return the product of all the elements using recursion. For an empty list, the product returned should be 1.\n\n**Hint:** `isinstance` takes in an instance and the name of a class, and returns `True` if the first argument is an instance of the class. Lists belong to the `list` class.',
+        code: code(`
+def nested_product(lst):
+    """
+    >>> lst = [2, 3, [4, 1, [5], 1]]
+    >>> nested_product(lst)
+    120
+    >>> lst2 = [1, [2, [3]]]
+    >>> nested_product(lst2)
+    6
+    >>> nested_product([])
+    1
+    """
+    if not lst:
+        return ⟦a⟧
+    if ⟦b⟧:
+        return ⟦c⟧ * ⟦d⟧
+    else:
+        return ⟦e⟧ * ⟦f⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-7': {
+        exam: 'c88-sp23f', number: '7', title: 'Test Distribution', points: 4,
+        intro: 'Given a list of test scores that range from 0 to 100, return a dictionary `distribution` that contains bins of test scores in 10s, and the fraction of scores in those bins. Keys are 0, 10, 20, …, 90. Bin 0 holds the fraction of scores between 0 and 10 (excluding 10), bin 10 those between 10 and 20 (excluding 20), etc. You do not need to include bins with no test scores, and the order of bins does not matter.',
+        code: code(`
+def dist_dictionary(scores):
+    """
+    >>> test_scores = [11.2, 13.4, 6, 78.5, 92.6]
+    >>> dist = dist_dictionary(test_scores)
+    >>> dist
+    {0.0: 0.2, 10.0: 0.4, 70.0: 0.2, 90.0: 0.2}
+    """
+    distribution = {}
+    for score in scores: # getting counts of scores
+        bin = ⟦a⟧
+        if bin in distribution:
+            ⟦b⟧
+        else:
+            ⟦c⟧
+    for bin in distribution: # making every value into a decimal value
+        ⟦d⟧
+    return distribution
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-8': {
+        exam: 'c88-sp23f', number: '8', title: 'Cherry Tree Blossom', points: 5,
+        intro: 'A cherry tree is a `Tree` instance where each node contains an integer `value`. When a tree blossoms, start from the top of the tree and increment every node’s value by its parent’s value. The root node is not incremented. Implement `cherry_tree_blossom`, which makes a tree blossom by mutating it. The two lines after the `for` are inside the loop; you cannot use more lines than given.',
+        code: code(`
+def cherry_tree_blossom(t):
+    """
+    >>> t = Tree(1, [Tree(1, [Tree(1), Tree(1)]), Tree(1, [Tree(1), Tree(1)])])
+    >>> cherry_tree_blossom(t)
+    >>> print(t)
+    1
+      2
+        3
+        3
+      2
+        3
+        3
+    >>> cherry_tree_blossom(t)
+    >>> print(t)
+    1
+      3
+        6
+        6
+      3
+        6
+        6
+    """
+    for ⟦a⟧:
+        ⟦b⟧
+        ⟦c⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-9': {
+        exam: 'c88-sp23f', number: '9', title: 'Out of Order', points: 8,
+        intro: 'Given a linked list `lnk` containing integers, write `out_of_order`, which returns the number that breaks the sorted property in `lnk` (every value must be larger than or equal to the value before it). The function should also mutate `lnk` to skip over that value. If `lnk` is already sorted, return `None` without mutating `lnk`. You can assume that `lnk` has at most one value that breaks the sorted property, and that after you remove it, `lnk` will be sorted.',
+        code: code(`
+def out_of_order(lnk):
+    """
+    >>> lnk1 = Link(1, Link(2, Link(2, Link(0))))
+    >>> out_of_order(lnk1)
+    0
+    >>> lnk1
+    Link(1, Link(2, Link(2)))
+    >>> lnk2 = Link(5, Link(3, Link(7, Link(9))))
+    >>> out_of_order(lnk2)
+    3
+    >>> lnk2
+    Link(5, Link(7, Link(9)))
+    >>> lnk3 = Link(6, Link(7, Link(10, Link(11))))
+    >>> out_of_order(lnk3) # lnk is already sorted, returns None
+    >>> lnk3 # Not mutated
+    Link(6, Link(7, Link(10, Link(11))))
+    """
+    if ⟦a⟧:
+        return ⟦b⟧
+    if ⟦c⟧:
+        unsorted_value = ⟦d⟧
+        ⟦e⟧ = ⟦f⟧
+        return ⟦g⟧
+    return ⟦h⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-10': {
+        exam: 'c88-sp23f', number: '10', title: 'Final Countdown', points: 14,
+        intro: 'C88C has decided to use Object-Oriented Programming to write exams. Each `Question` instance has the instance attributes `text`, `solution`, `points` and `serial_no` (its unique serial number). The class attribute `Question.serial_no` stores the serial number for the next instance to be created, so the constructor must update it.\n\n`grade` accepts `student_sol`: if it equals the question’s solution, return the points the question is worth; else, return 0.\n\nAn `Exam` has `questions` (a list of `Question` instances), `submissions` (a list of student submissions; each maps a question serial number to the student’s answer, for every question) and `scores` (a list of submission scores). `total_score` returns the sum of the points of all questions. `grade_submission` returns a submission’s score, the sum of its question scores (use `.grade()`). `grade_all` adds the overall score of every submission to `self.scores`.',
+        code: code(`
+class Question:
+    serial_no = 1000
+    def __init__(self, text, solution, points):
+        """
+        >>> q1 = Question("True or False?", "False", 2)
+        >>> q1.serial_no
+        1000
+        >>> q2 = Question("True or False?", "True", 1)
+        >>> q2.serial_no
+        1001
+        >>> q1.grade("True")
+        0
+        >>> q1.grade("False")
+        2
+        """
+        self.text = text
+        self.solution = solution
+        self.points = points
+        self.serial_no = ⟦a⟧
+        ⟦b⟧
+
+    def grade(self, student_sol):
+        if ⟦c⟧:
+            return ⟦d⟧
+        else:
+            return 0
+
+class Exam:
+    def __init__(self, questions, submissions):
+        """
+        >>> q1 = Question("True or False?", "False", 2)
+        >>> q2 = Question("True or False?", "True", 1)
+        >>> final = Exam([q1, q2], [{1000: "False", 1001: "True"}, {1000: "False", 1001: "False"}])
+        >>> final.scores # final.scores is empty initially
+        []
+        >>> final.total_score()
+        3
+        >>> final.grade_submission(final.submissions[0])
+        3
+        >>> final.scores # calling grade_submission does not modify final.scores
+        []
+        >>> final.grade_all()
+        >>> final.scores # calling grade_all modifies final.scores
+        [3, 2]
+        """
+        self.questions = questions
+        self.submissions = submissions
+        self.scores = []
+
+    def total_score(self):
+        return sum([⟦e⟧ for q in ⟦f⟧])
+
+    def grade_submission(self, submission):
+        score = ⟦g⟧
+        for ⟦h⟧:
+            score += ⟦i⟧.grade(⟦j⟧)
+        return score
+
+    def grade_all(self):
+        for ⟦k⟧:
+            ⟦l⟧.append(⟦m⟧)
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-11': {
+        exam: 'c88-sp23f', number: '11', title: 'Tree Sort', points: 5,
+        intro: 'Write a generator function, `tree_sort`, that takes in a `Tree` instance whose values are integers and yields all values from the tree in ascending order. You may assume that all values in the tree are unique.',
+        code: code(`
+def tree_sort(t):
+    """
+    >>> t = Tree(1, [Tree(3, [Tree(4)]), Tree(2), Tree(6, [Tree(5)])])
+    >>> for val in tree_sort(t):
+    ...     print(val)
+    1
+    2
+    3
+    4
+    5
+    6
+    """
+    # create a list of generators, one for each branch
+    sorted_branches = [tree_sort(b) for b in t.branches]
+    # smallest values from each branch
+    next_smallest = [next(gen) for gen in sorted_branches]
+    value_yielded = False
+    while len(next_smallest) > 0:
+        # find the index of the smallest value from the branches
+        min_index = min(range(len(next_smallest)), key=lambda i: ⟦a⟧)
+        if not value_yielded and ⟦b⟧:
+            yield t.value
+            value_yielded = True
+        yield ⟦c⟧
+        try:
+            # update the value at the yielded position
+            next_smallest[min_index] = ⟦d⟧
+        except StopIteration: # if no elements left in the generator
+            next_smallest.⟦e⟧(min_index)
+            sorted_branches.⟦e⟧(min_index)
+    # yield the value of t if it is not yielded during the while loop
+    if not value_yielded:
+        yield t.value
+`),
+        lineNumbers: true,
+      },
+      'c88-sp23f-12a': { exam: 'c88-sp23f', number: '12(a)', title: 'Squared-venture — squared_platinum', points: 1, intro: C88_SP23_RUNTIME_INTRO, code: code(`
+def squared_platinum(n):
+    res = 0
+    for za_warudo in range(n):
+        res += n
+    return res
+`) },
+      'c88-sp23f-12b': { exam: 'c88-sp23f', number: '12(b)', title: 'Squared-venture — squared-mit_purple', points: 1, intro: C88_SP23_RUNTIME_INTRO, code: code(`
+def squared-mit_purple(n):
+    return n * n
+`) },
+      'c88-sp23f-12c': { exam: 'c88-sp23f', number: '12(c)', title: 'Squared-venture — squared_experience', points: 1, intro: C88_SP23_RUNTIME_INTRO, code: code(`
+def squared_experience(n):
+    if n % 2 == 0:
+        return 4 * squared_experience(n // 2)
+    return n * n
+`) },
+      'c88-sp23f-12d': { exam: 'c88-sp23f', number: '12(d)', title: 'Squared-venture — squared-y_diamond', points: 1, intro: C88_SP23_RUNTIME_INTRO, code: code(`
+def squared-y_diamond(n):
+    res = 0
+    for kira_queen in range(n):
+        for j in range(n):
+            res += 1
+    return res
+`) },
+      'c88-sp23f-13a': {
+        exam: 'c88-sp23f', number: '13(a)', title: 'Froggy Friends — frogs', points: 2, lang: 'sql',
+        intro: C88_SP23_SQL_INTRO + '\n\nWrite a query to output the `name` and `year` of all friends from `friends` that have "Frog" as their animal.\n\n```\n| name | year     |\n|------|----------|\n| Jade | Freshman |\n```',
+        sqlSetup: C88_SP23_FRIENDS_SETUP, code: code(`
+⟦a⟧;
+`),
+      },
+      'c88-sp23f-13b': {
+        exam: 'c88-sp23f', number: '13(b)', title: 'Froggy Friends — average age', points: 3, lang: 'sql',
+        intro: C88_SP23_SQL_INTRO + '\n\nWrite a query to output the `animal` and the average age as `avg_age` of your friends for each animal, ordered by `avg_age` descending. **Hint:** Use `AVG`.\n\n```\n| animal      | avg_age |\n|-------------|---------|\n| Prairie Dog | 20      |\n| Cat         | 19.5    |\n| Capybara    | 19      |\n| Frog        | 18      |\n```',
+        sqlSetup: C88_SP23_FRIENDS_SETUP, code: code(`
+⟦a⟧;
+`),
+      },
+      'c88-sp23f-13c': {
+        exam: 'c88-sp23f', number: '13(c)', title: 'Froggy Friends — sounds', points: 5, lang: 'sql',
+        intro: C88_SP23_SQL_INTRO + '\n\nWrite a query to output the `sound` and count of each sound corresponding to the animal of each friend in `friends`, ordered by the count ascending. **Hint:** You will have to join the two tables and use `COUNT(*)`.\n\n```\n| sound  | COUNT(*) |\n|--------|----------|\n| ribbit | 1        |\n| bark   | 2        |\n| meow   | 2        |\n```',
+        sqlSetup: C88_SP23_FRIENDS_SETUP, code: code(`
+⟦a⟧;
+`),
+      },
+    },
+    questions: [
+      { id: 'c88-sp23f-1a', problem: 'c88-sp23f-1a', label: '(a)', points: 1, topics: ['fundamentals'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is displayed?', choices: ['Wowzas!', 'donkey', 'nyaooooooooooooooo', '2', 'None'] },
+      { id: 'c88-sp23f-1b', problem: 'c88-sp23f-1b', label: '(b)', points: 1, topics: ['fundamentals'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is displayed?', choices: ['donkey', 'nyaooooooooooooooo', 'Wowzas!', 'None', '2'] },
+      { id: 'c88-sp23f-1c', problem: 'c88-sp23f-1c', label: '(c)', points: 1, topics: ['fundamentals'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is displayed?', choices: ['None', '2', 'donkey', 'Wowzas!', 'nyaooooooooooooooo'] },
+      { id: 'c88-sp23f-1d', problem: 'c88-sp23f-1d', label: '(d)', points: 1, topics: ['links'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'Does setting `x.rest.rest = 3` follow the programming principles we learned in class?',
+        choices: ['No, because this would result in an invalid Link object.', 'Yes, because the code is syntactically correct.', 'Yes, because the code uses the attributes of the class.', 'No, because while directly setting the data value of the first Link is acceptable, doing so for later Links requires a setter method.'] },
+      { id: 'c88-sp23f-1e', problem: 'c88-sp23f-1e', label: '(e)', points: 1, topics: ['sql-agg'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Which SQL keyword is used to filter the groups created by `GROUP BY`?', choices: ['WITH', 'HAVING', 'SELECT', 'WHERE'] },
+
+      { id: 'c88-sp23f-2a', problem: 'c88-sp23f-2', label: '(a)', points: 2, topics: ['env'], difficulty: 'easy',
+        type: 'short_answer', prompt: 'What is the value of the variable `maturity` in frame f1? (box a)' },
+      { id: 'c88-sp23f-2b', problem: 'c88-sp23f-2', label: '(b)', points: 2, topics: ['env', 'hof', 'lists'], difficulty: 'hard',
+        type: 'single_choice', mono: true, prompt: 'What is the value of `bend` at the end of the environment diagram? (box d)', choices: ['["alot", "maturity"]', '"alot"', '"obscurity"', '"proof"', '"any"', '"wrong"', '"line"'] },
+      { id: 'c88-sp23f-2c', problem: 'c88-sp23f-2', label: '(c)', points: 2, topics: ['env'], difficulty: 'hard',
+        type: 'short_answer', prompt: 'What is the value of `i` in frame 2 at the end of the environment diagram? (box b) (The exam offered only string choices; per the official errata none of them is correct, so write the value.)' },
+      { id: 'c88-sp23f-2d', problem: 'c88-sp23f-2', label: '(d)', points: 2, topics: ['env', 'hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What function is being called in the f3 frame? (box c)', choices: ['func know [parent = f2]', 'func song [parent = global]', 'func lambda <line 8> [parent = f2]', 'func lambda <line 8> [parent = f1]', 'func know [parent = f1]'] },
+      { id: 'c88-sp23f-2e', problem: 'c88-sp23f-2', label: '(e)', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'What is the value of `psych` at the end of the environment diagram? (box e)' },
+
+      { id: 'c88-sp23f-3a', problem: 'c88-sp23f-3', label: '(a)', points: 1.5, topics: ['hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: '`>>> mystery(0)`', choices: ['Error', '12', '6', '0'] },
+      { id: 'c88-sp23f-3b', problem: 'c88-sp23f-3', label: '(b)', points: 1.5, topics: ['hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: '`>>> mystery(2)`', choices: ['6', '0', '12', 'Error'] },
+      { id: 'c88-sp23f-3c', problem: 'c88-sp23f-3', label: '(c)', points: 1.5, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '`>>> cond(0)`', choices: ['True', 'Error', 'False'] },
+      { id: 'c88-sp23f-3d', problem: 'c88-sp23f-3', label: '(d)', points: 1.5, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '`>>> cond(9)`', choices: ['Error', 'True', 'False'] },
+      { id: 'c88-sp23f-3e', problem: 'c88-sp23f-3', label: '(e)', points: 2, topics: ['hof'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: '`>>> func(4, -2)`', choices: ['18', 'Error', '14', '10'] },
+
+      { id: 'c88-sp23f-4a', problem: 'c88-sp23f-4', label: '(a)', points: 1, topics: ['links'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Select the value of `lnk` such that the buggy `cumulative_link(lnk)` mutates `lnk` correctly and does not error.', choices: ['lnk = Link(1, Link(1, Link(5)))', 'lnk = Link("s", Link("u", Link("m")))', 'lnk = Link("h", Link("i", Link(88)))'] },
+      { id: 'c88-sp23f-4b', problem: 'c88-sp23f-4', label: '(b)', points: 1, topics: ['links'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Select the value of `lnk` such that the buggy `cumulative_link(lnk)` causes an error.', choices: ['lnk = Link("h", Link("i", Link(88)))', 'lnk = Link(1, Link(1, Link(5)))', 'lnk = Link("s", Link("u", Link("m")))'] },
+      { id: 'c88-sp23f-4c', problem: 'c88-sp23f-4', label: '(c)', points: 1, topics: ['links'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Select the value of `lnk` such that the buggy `cumulative_link(lnk)` mutates `lnk` incorrectly and does not error.', choices: ['lnk = Link(1, Link(1, Link(5)))', 'lnk = Link("s", Link("u", Link("m")))', 'lnk = Link("h", Link("i", Link(88)))'] },
+      { id: 'c88-sp23f-4d', problem: 'c88-sp23f-4', label: '(d)', points: 2, topics: ['links'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'The bug in this function can be fixed by modifying one line of code. Indicate which line you are changing, and how you will replace it. (Format: `Line N, new code`.)' },
+
+      ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((b, i) => ({ id: 'c88-sp23f-5' + b, problem: 'c88-sp23f-5', label: '(' + b + ')', points: null,
+        topics: i === 7 ? ['hof'] : ['hof', 'lists'], difficulty: i === 4 ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      ...['a', 'b', 'c', 'd', 'e', 'f'].map((b) => ({ id: 'c88-sp23f-6' + b, problem: 'c88-sp23f-6', label: '(' + b + ')', points: null,
+        topics: ['recursion', 'lists'], difficulty: b === 'b' || b === 'c' ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      ...['a', 'b', 'c', 'd'].map((b) => ({ id: 'c88-sp23f-7' + b, problem: 'c88-sp23f-7', label: '(' + b + ')', points: null,
+        topics: ['fundamentals'], difficulty: b === 'a' ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      ...['a', 'b', 'c'].map((b) => ({ id: 'c88-sp23f-8' + b, problem: 'c88-sp23f-8', label: '(' + b + ')', points: null,
+        topics: ['trees', 'recursion'], difficulty: 'medium', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((b) => ({ id: 'c88-sp23f-9' + b, problem: 'c88-sp23f-9', label: '(' + b + ')', points: null,
+        topics: ['links', 'recursion'], difficulty: b === 'a' || b === 'c' ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm'].map((b) => ({ id: 'c88-sp23f-10' + b, problem: 'c88-sp23f-10', label: '(' + b + ')', points: null,
+        topics: ['oop'], difficulty: b === 'j' || b === 'b' ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      { id: 'c88-sp23f-10n', problem: 'c88-sp23f-10', label: '(n)', points: 1, topics: ['oop'], difficulty: 'easy',
+        type: 'single_choice', prompt: 'Currently, neither `Question` nor `Exam` inherit from each other. Should `Question` be a subclass of `Exam`?',
+        choices: ['No, the `Question` class implements methods that Exams should not have', 'No, the `Exam` class implements methods that Questions should not have', 'Yes, a `Question` is a type of `Exam`'] },
+
+      { id: 'c88-sp23f-11a', problem: 'c88-sp23f-11', label: '(a)', points: 1, topics: ['generators', 'trees'], difficulty: 'medium', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'Which of the following can fill in blank (a)?', choices: ['next(sorted_branches[i])', 'i', 'next_smallest[i]', 'sorted_branches[i]'] },
+      { id: 'c88-sp23f-11b', problem: 'c88-sp23f-11', label: '(b)', points: 1, topics: ['generators', 'trees'], difficulty: 'hard', blank: 'b',
+        type: 'short_answer', prompt: 'Fill in blank (b).' },
+      { id: 'c88-sp23f-11c', problem: 'c88-sp23f-11', label: '(c)', points: 1, topics: ['generators'], difficulty: 'medium', blank: 'c',
+        type: 'short_answer', prompt: 'Fill in blank (c).' },
+      { id: 'c88-sp23f-11d', problem: 'c88-sp23f-11', label: '(d)', points: 1, topics: ['generators', 'iterators'], difficulty: 'hard', blank: 'd',
+        type: 'short_answer', prompt: 'Fill in blank (d).' },
+      { id: 'c88-sp23f-11e', problem: 'c88-sp23f-11', label: '(e)', points: 1, topics: ['lists'], difficulty: 'easy', blank: 'e',
+        type: 'single_choice', mono: true, prompt: 'Which of the following can fill in blank (e)? (Both blanks labeled (e) have the same solution.)', choices: ['append', 'extend', 'remove', 'pop'] },
+
+      { id: 'c88-sp23f-12a', problem: 'c88-sp23f-12a', label: '(a)', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Worst-case time complexity?', choices: ['O(1)', 'O(n)', 'O(log(n))', 'O(n^2)', 'O(2^n)'] },
+      { id: 'c88-sp23f-12b', problem: 'c88-sp23f-12b', label: '(b)', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Worst-case time complexity?', choices: ['O(log(n))', 'O(2^n)', 'O(n)', 'O(1)', 'O(n^2)'] },
+      { id: 'c88-sp23f-12c', problem: 'c88-sp23f-12c', label: '(c)', points: 1, topics: ['efficiency'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'Worst-case time complexity?', choices: ['O(n)', 'O(n^2)', 'O(2^n)', 'O(1)', 'O(log(n))'] },
+      { id: 'c88-sp23f-12d', problem: 'c88-sp23f-12d', label: '(d)', points: 1, topics: ['efficiency'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Worst-case time complexity?', choices: ['O(log(n))', 'O(n^2)', 'O(1)', 'O(n)', 'O(2^n)'] },
+
+      { id: 'c88-sp23f-13a', problem: 'c88-sp23f-13a', label: '(a)', points: 2, topics: ['sql-joins'], difficulty: 'easy', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+      { id: 'c88-sp23f-13b', problem: 'c88-sp23f-13b', label: '(b)', points: 3, topics: ['sql-agg'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+      { id: 'c88-sp23f-13c', problem: 'c88-sp23f-13c', label: '(c)', points: 5, topics: ['sql-joins', 'sql-agg'], difficulty: 'medium', blank: 'a',
+        type: 'short_answer', prompt: 'Write the query.' },
+    ],
+    answers: {
+      'c88-sp23f-1a': { correct: 3, explanation: '`d[1]` is 2; no error happens.' },
+      'c88-sp23f-1b': { correct: 0, explanation: 'Key 2 is missing: `KeyError`.' },
+      'c88-sp23f-1c': { correct: 3, explanation: '`1/0` raises `ZeroDivisionError` before the lookup.' },
+      'c88-sp23f-1d': { correct: 0, explanation: '`rest` must be a `Link` or `Link.empty`; 3 breaks the linked list.' },
+      'c88-sp23f-1e': { correct: 1 },
+      'c88-sp23f-2a': { accepted: ['0'], explanation: '`8 % 4` is 0.' },
+      'c88-sp23f-2b': { correct: 2, explanation: '`deception(-1, 1)` returns `run(88)`, and `run` reads the global `theme[1]`, `"obscurity"` (`know`’s local `theme` doesn’t matter to `run`).' },
+      'c88-sp23f-2c': { accepted: ['-1'], explanation: '`i` in f2 (`know`) is the first argument of `deception(-1, 1)`. The original key marked `"obscurity"`; the official errata says none of the printed choices is correct and the answer is -1.' },
+      'c88-sp23f-2d': { correct: 3, explanation: '`run(88)` calls the lambda defined on line 8 inside `song` (f1).' },
+      'c88-sp23f-2e': { accepted: ['5'], explanation: '`maturity` is 0, so the global `theme` was extended by 2 elements: 3 + 2.' },
+      'c88-sp23f-3a': { correct: 3, explanation: '`arr[-1] * 0` is 0. The line after `return` never runs.' },
+      'c88-sp23f-3b': { correct: 0, explanation: '3 * 2.' },
+      'c88-sp23f-3c': { correct: 1, explanation: '`18 / 0` raises `ZeroDivisionError`.' },
+      'c88-sp23f-3d': { correct: 2, explanation: '`9 < 18 / 9` is `9 < 2.0`.' },
+      'c88-sp23f-3e': { correct: 3, explanation: '`mystery(4)` is 12, and 12 + (-2) is 10.' },
+      'c88-sp23f-4a': { correct: 0, explanation: 'With a first element of 1, adding 1 is the same as adding `lnk.first`.' },
+      'c88-sp23f-4b': { correct: 2, explanation: 'The middle node computes `1 + "m"`, a `TypeError`.' },
+      'c88-sp23f-4c': { correct: 2, explanation: 'The letters are overwritten by numbers before they are used: 1 + 88 = 89, then 1 + 89 = 90. No error, but the result should be built from "h" and "i".' },
+      'c88-sp23f-4d': { accepted: ['Line 6, lnk.first = lnk.first + lnk.rest.first'], explanation: 'Add the node’s own value instead of 1.' },
+      'c88-sp23f-5a': { accepted: ['[]'] },
+      'c88-sp23f-5b': { accepted: ['len(arguments)', 'len(functions)'] },
+      'c88-sp23f-5c': { accepted: ['functions[i]'] },
+      'c88-sp23f-5d': { accepted: ['arguments[i]'] },
+      'c88-sp23f-5e': { accepted: ['func(args[0], args[1])', 'func(*args)'] },
+      'c88-sp23f-5f': { accepted: ['result.append(output)', 'result += [output]'] },
+      'c88-sp23f-5g': { accepted: ['result'] },
+      'c88-sp23f-5h': { accepted: ['apply'], explanation: 'Return the inner function itself.' },
+      'c88-sp23f-6a': { accepted: ['1'] },
+      'c88-sp23f-6b': { accepted: ['isinstance(lst[0], list)', 'type(lst[0]) == list'] },
+      'c88-sp23f-6c': { accepted: ['nested_product(lst[0])'], explanation: 'A nested list: multiply its product with the product of the rest.' },
+      'c88-sp23f-6d': { accepted: ['nested_product(lst[1:])'] },
+      'c88-sp23f-6e': { accepted: ['lst[0]'] },
+      'c88-sp23f-6f': { accepted: ['nested_product(lst[1:])'] },
+      'c88-sp23f-7a': { accepted: ['(score // 10) * 10', 'score // 10 * 10'], explanation: 'Round down to a multiple of 10.' },
+      'c88-sp23f-7b': { accepted: ['distribution[bin] += 1', 'distribution[bin] = distribution[bin] + 1'] },
+      'c88-sp23f-7c': { accepted: ['distribution[bin] = 1'] },
+      'c88-sp23f-7d': { accepted: ['distribution[bin] = distribution[bin] / len(scores)', 'distribution[bin] /= len(scores)'], explanation: 'Turn each count into a fraction of all scores.' },
+      'c88-sp23f-8a': { accepted: ['b in t.branches'] },
+      'c88-sp23f-8b': { accepted: ['b.value += t.value', 'b.value = b.value + t.value'], explanation: 'Add the parent’s (already updated) value before going down.' },
+      'c88-sp23f-8c': { accepted: ['cherry_tree_blossom(b)'] },
+      'c88-sp23f-9a': { accepted: ['lnk is Link.empty or lnk.rest is Link.empty'], explanation: 'Fewer than two nodes left: nothing is out of order.' },
+      'c88-sp23f-9b': { accepted: ['None'] },
+      'c88-sp23f-9c': { accepted: ['lnk.first > lnk.rest.first'] },
+      'c88-sp23f-9d': { accepted: ['lnk.rest.first'] },
+      'c88-sp23f-9e': { accepted: ['lnk.rest'] },
+      'c88-sp23f-9f': { accepted: ['lnk.rest.rest'], explanation: 'Skip over the out-of-order node.' },
+      'c88-sp23f-9g': { accepted: ['unsorted_value'] },
+      'c88-sp23f-9h': { accepted: ['out_of_order(lnk.rest)'] },
+      'c88-sp23f-10a': { accepted: ['Question.serial_no'] },
+      'c88-sp23f-10b': { accepted: ['Question.serial_no += 1', 'Question.serial_no = Question.serial_no + 1'], explanation: 'Update the class attribute, not the instance attribute.' },
+      'c88-sp23f-10c': { accepted: ['self.solution == student_sol', 'student_sol == self.solution'] },
+      'c88-sp23f-10d': { accepted: ['self.points'] },
+      'c88-sp23f-10e': { accepted: ['q.points'] },
+      'c88-sp23f-10f': { accepted: ['self.questions'] },
+      'c88-sp23f-10g': { accepted: ['0'] },
+      'c88-sp23f-10h': { accepted: ['q in self.questions'] },
+      'c88-sp23f-10i': { accepted: ['q'] },
+      'c88-sp23f-10j': { accepted: ['submission[q.serial_no]'], explanation: 'Look up this student’s answer to the question by its serial number.' },
+      'c88-sp23f-10k': { accepted: ['s in self.submissions'] },
+      'c88-sp23f-10l': { accepted: ['self.scores'] },
+      'c88-sp23f-10m': { accepted: ['self.grade_submission(s)'] },
+      'c88-sp23f-10n': { correct: 1, explanation: 'Inheritance means "is a": a question is not an exam, and `Exam`’s methods make no sense for a question.' },
+      'c88-sp23f-11a': { correct: 2, explanation: 'Compare the branches by the smallest value each has left.' },
+      'c88-sp23f-11b': { accepted: ['t.value < next_smallest[min_index]'], explanation: 'Yield the root value as soon as it is smaller than everything left in the branches.' },
+      'c88-sp23f-11c': { accepted: ['next_smallest[min_index]'] },
+      'c88-sp23f-11d': { accepted: ['next(sorted_branches[min_index])'] },
+      'c88-sp23f-11e': { correct: 3, explanation: '`pop(min_index)` removes by position (`remove` removes by value).' },
+      'c88-sp23f-12a': { correct: 1 },
+      'c88-sp23f-12b': { correct: 3 },
+      'c88-sp23f-12c': { correct: 4, explanation: 'n halves at each even step. (The exam printed `square(n // 2)`; the official errata corrects it to `squared_experience(n // 2)`.)' },
+      'c88-sp23f-12d': { correct: 1 },
+      'c88-sp23f-13a': { accepted: ['SELECT name, year FROM friends WHERE animal = "Frog"'] },
+      'c88-sp23f-13b': { accepted: ['SELECT animal, AVG(age) as avg_age FROM friends GROUP BY animal ORDER BY avg_age DESC'] },
+      'c88-sp23f-13c': { accepted: ['SELECT a.sound, COUNT(*) FROM friends as f, animals as a WHERE f.animal = a.animal GROUP BY a.sound ORDER BY COUNT(*)'] },
+    },
+  });
+  // ───────────────────────── Data C88C — Fall 2023 Final ─────────────────────────
+  // Source: Data C88C Final, Fall 2023: the original exam PDF for the questions, and a Gradescope rubric export for the
+  // answers (the rubric's "Correct" items). 100 points. Q12 (a 0-point bonus) is not transcribed.
+  // Q7's rubric gives its last two lines (curr_lnk.rest = node_lnk; curr_lnk = curr_lnk.rest) and only names the first
+  // three (creating node_lnk, reassigning agg_lnk and curr_lnk); those are filled in to match, checked with the doctest.
+  // Q9(a)'s rubric gives no code; its answer key is built from the rubric's notes (start at 1, compare i > k, k % i)
+  // and checked by running the doctests.
+  // Official errata (course exam page) applied: Q1(g)'s second option is ["Odd", "Even", "Odd", "Even"]; Q3(b)'s answer
+  // is "errors and does not run" (RuntimeError: dictionary changed size during iteration); Q11(b)'s join also needs
+  // staff.fav_player = players.name. Q11(a): the errata notes that the official query selects a column that is neither
+  // grouped nor aggregated, which SQLite allows; it returns one row per food order (3 rows) instead of the exam's 5, so
+  // Q11(a) has no Run Code tests. For Q11(c) the rubric's aliased version is used, because the unaliased
+  // SELECT name, food_order is ambiguous with both tables in FROM.
+  const C88_FA23_NBA_SETUP = code(`
+CREATE TABLE staff(name, number, frequent_word, food_order, fav_player);
+INSERT INTO staff VALUES
+  ('Rebecca', 88, 'bruh', 'rice', 'Kawhi Leonard'), ('Jessica', 64, 'slay', 'rice', 'Lebron James'),
+  ('Miha', 21, 'slay', 'chicken', 'Kawhi Leonard'), ('Christy', 30, 'bruh', 'soup', 'Stephen Curry'),
+  ('Morgan', 22, 'slay', 'beef', 'Luka Doncic'), ('Ramya', 8, 'bruh', 'tofu', 'Stephen Curry'),
+  ('Lily', 21, 'slay', 'chicken', 'Lebron James'), ('Angela', 39, 'bruh', 'rice', 'Kevin Durant'),
+  ('Michelle', 54, 'slay', 'chicken', 'Luka Doncic'), ('Ananyaa', 3, 'slay', 'tofu', 'Kawhi Leonard');
+CREATE TABLE players(name, team, juice, food_order);
+INSERT INTO players VALUES
+  ('Stephen Curry', 'Warriors', 'apple', 'soup'), ('Lebron James', 'Lakers', 'orange', 'chicken'),
+  ('Kevin Durant', 'Suns', 'grape', 'beef'), ('Kawhi Leonard', 'Clippers', 'apple', 'tofu'),
+  ('Luka Doncic', 'Mavericks', 'guava', 'chicken');
+`);
+  const C88_FA23_SQL_INTRO = 'The female-identifying members of Data C88C staff are having a Girl’s Night by networking with some NBA players. Everyone invited filled out "About Me" forms: `staff` for course staff members, `players` for NBA players.\n\n```\nstaff:\n| name     | number | frequent_word | food_order | fav_player    |\n|----------|--------|---------------|------------|---------------|\n| Rebecca  | 88     | bruh          | rice       | Kawhi Leonard |\n| Jessica  | 64     | slay          | rice       | Lebron James  |\n| Miha     | 21     | slay          | chicken    | Kawhi Leonard |\n| Christy  | 30     | bruh          | soup       | Stephen Curry |\n| Morgan   | 22     | slay          | beef       | Luka Doncic   |\n| Ramya    | 8      | bruh          | tofu       | Stephen Curry |\n| Lily     | 21     | slay          | chicken    | Lebron James  |\n| Angela   | 39     | bruh          | rice       | Kevin Durant  |\n| Michelle | 54     | slay          | chicken    | Luka Doncic   |\n| Ananyaa  | 3      | slay          | tofu       | Kawhi Leonard |\n\nplayers:\n| name          | team      | juice  | food_order |\n|---------------|-----------|--------|------------|\n| Stephen Curry | Warriors  | apple  | soup       |\n| Lebron James  | Lakers    | orange | chicken    |\n| Kevin Durant  | Suns      | grape  | beef       |\n| Kawhi Leonard | Clippers  | apple  | tofu       |\n| Luka Doncic   | Mavericks | guava  | chicken    |\n```';
+  const C88_FA23_GROWTH = ['O(1)', 'O(log(n))', 'O(n)', 'O(n^2)', 'O(2^n)'];
+
+  add({
+    exam: { id: 'c88-fa23f', label: 'C88C Fall 2023 Final', kind: 'final', course: 'c88c', url: 'https://c88c.org/fa25/resources/', complete: true },
+    problems: {
+      'c88-fa23f-1a': {
+        exam: 'c88-fa23f', number: '1(a)–(c)', title: 'WWPD — tricky', points: 6,
+        intro: 'For each expression, write the output displayed by the interactive Python interpreter. If an error occurs, write "Error". If a function is returned, write "Function". Each part is executed in order.',
+        code: code(`
+f = lambda x, y: 10 - (x + y)
+def tricky(f, n):
+    if n < 10:
+        n *= 2
+    y = 15
+    return lambda x, y: f(x, n) + y
+`),
+      },
+      'c88-fa23f-1d': {
+        exam: 'c88-fa23f', number: '1(d)', title: 'WWPD — inner and outer', points: 1, intro: 'What is displayed?',
+        code: code(`
+def outer_function():
+    a = 5
+    def inner_function():
+        a = 10
+        return a
+    b = inner_function()
+    print(f"Inner: {b}, Outer: {a}")
+
+outer_function()
+`),
+      },
+      'c88-fa23f-1e': {
+        exam: 'c88-fa23f', number: '1(e)', title: 'WWPD — filter', points: 1,
+        intro: 'Given a list of numbers, which code snippet uses `filter` to return a list with all negative numbers removed? (Note: `filter` in Python returns an iterator that needs to be converted to a list.)',
+        code: code(`
+numbers = [4, -1, -3, 2, 0, -5, 8]
+`),
+      },
+      'c88-fa23f-1f': {
+        exam: 'c88-fa23f', number: '1(f)', title: 'WWPD — try/except', points: 1, intro: 'What happens?',
+        code: code(`
+def square(number):
+    try:
+        return number ** 2
+    except TypeError:
+        return "hello"
+
+print(square("two"))
+`),
+      },
+      'c88-fa23f-1g': {
+        exam: 'c88-fa23f', number: '1(g)', title: 'WWPD — map', points: 1, intro: 'What is displayed?',
+        code: code(`
+def check_even(number):
+    return "Even" if number % 2 == 0 else "Odd"
+
+numbers = [1, 2, 3, 4]
+result = map(check_even, numbers)
+print(list(result))
+`),
+      },
+      'c88-fa23f-2': {
+        exam: 'c88-fa23f', number: '2', title: 'Let’s Explore!', points: 10,
+        intro: 'Fill in the blanks to complete the environment diagram. The code runs to completion. Boxes with the same label have the same value.',
+        illustration: { src: 'assets/c88-fa23-final-q2.png', width: 502, height: 338, alt: 'From the exam: an environment diagram. Global binds loc to a list ["soda", box (b)], explore (func explore(places) [parent=Global]) and bob (box (a)). Frame f1: explore binds places (to loc), add_location (box (a)) and returns box (a). Frame f2: add_location [parent=f1] binds new_location (box (b)), func (func lambda(x) <line 4> [parent = box (c)]), result (box (e)) and returns box (e). Frame f3: lambda <line 4> [parent = box (c)] binds x (box (b)) and returns box (d).' },
+        code: code(`
+loc = ["soda"]
+def explore(places):
+  def add_location(new_location):
+    func = lambda x: loc.append(x)
+    result = func(new_location)
+    return result
+  return add_location
+
+bob = explore(loc)
+bob(["moffitt", "mlk"])
+`),
+        lineNumbers: true,
+      },
+      'c88-fa23f-3a': {
+        exam: 'c88-fa23f', number: '3(a)', title: 'A Broken Phone…Book — compromised contacts', points: 2,
+        intro: 'Siya lent her phone book to Sanjana, who tampered with some contacts:\n\n`phonebook = [ {"Oski": 4084170388}, {"Carol": 609627}, {"Michael": 510921913888} ]`\n\nSiya writes a program that will output a list of all her compromised contacts. A contact is valid if the phone number is exactly 10 digits long, and is compromised otherwise. She expects it to output `ans = ["Carol", "Michael"]`.',
+        code: code(`
+def funky_phonebook(phonebook):
+  ans = []
+  for item in phonebook:
+    for k in item:
+      if len(str(item[0])) < 10 or len(str(item[0])) > 10:
+        ans.append(k)
+  return ans
+`),
+      },
+      'c88-fa23f-3b': {
+        exam: 'c88-fa23f', number: '3(b)', title: 'A Broken Phone…Book — nicknames', points: 2,
+        intro: 'Siya’s next program takes in a phone book (now a single dictionary) and gives all the contacts a nickname: the first three letters of a person’s actual name. Assume that all names are at least 3 letters long. The desired output:\n\n```\n>>> new_phonebook = {"Varun": 732789744, "Derrick": 510994933, "Oski": 408984443}\n>>> nicknames(new_phonebook)\n{"Var": 732789744, "Der": 510994933, "Osk": 408984443}\n```',
+        code: code(`
+def nicknames(original_dict):
+  names = {}
+  for d in original_dict.keys():
+    x = original_dict.pop(d)
+    names[ d[:2] ] = x
+  return names
+`),
+      },
+      'c88-fa23f-4': {
+        exam: 'c88-fa23f', number: '4', title: 'Your Mileage May Vary', points: 6,
+        intro: 'You’re given a Python list `mpgs` that contains the mpg (miles per gallon) of many different cars, and the goal is to calculate the variance of the data set. You may assume that any function or variable defined in an earlier part is correct.\n\n**(a)** `avg` takes a list of numbers and returns their mean.\n\n**(b)** Filter the `mpgs` list, using `filter` to keep all values greater than or equal to 20 (e.g. `[11, 26, 36, 14, 5]` becomes `[26, 36]`).\n\n**(c)** Using `map`, subtract the average of the data set (`mean`) from each element and square the difference. Assign the result to `squared_difference` (for `[1, 2, 3, 4, 5]`, it is `[4, 1, 0, 1, 4]`).\n\n**(d)** Find the mean of the `squared_difference` list, assigning it to `variance`.',
+        code: code(`
+def avg(lst):
+    return ⟦a⟧
+
+# (b)
+mpgs = list(filter(⟦b1⟧, ⟦b2⟧))
+
+# (c)
+mean = avg(mpgs)
+squared_difference = list(map(⟦c1⟧, ⟦c2⟧))
+
+# (d)
+variance = ⟦d⟧
+`),
+      },
+      'c88-fa23f-5': {
+        exam: 'c88-fa23f', number: '5', title: 'CineDict', points: 10,
+        intro: '**(a)** `create_movie` creates a new movie dictionary from a title, director, and release year.\n\n**(b)** `add_movie_to_catalog` updates the movie catalog with the new movie dictionary. If the director does not exist in the catalog, add them.\n\n**(c)** `get_movies_by_director` retrieves a list of all movies by a given director. **Hint:** `dict.get(key, value)` returns `dict[key]` if `key` exists, otherwise returns `value`.',
+        code: code(`
+def create_movie(title, director, year):
+    """
+    >>> create_movie("Inception", "Christopher Nolan", 2010)
+    {'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}
+    """
+    return ⟦a⟧
+
+def add_movie_to_catalog(movie_catalog, movie):
+    """
+    >>> movie_catalog = {}
+    >>> inception = create_movie("Inception", "Christopher Nolan", 2010)
+    >>> add_movie_to_catalog(movie_catalog, inception)
+    {'Christopher Nolan': [{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}]}
+    """
+    director = movie[⟦b1⟧]
+    if ⟦b2⟧ not in ⟦b3⟧:
+        movie_catalog[⟦b4⟧] = [movie]
+    else:
+        movie_catalog[director].append(⟦b5⟧)
+    return movie_catalog
+
+def get_movies_by_director(movie_catalog, director):
+    """
+    >>> movie_catalog = {'Christopher Nolan': [{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}]}
+    >>> get_movies_by_director(movie_catalog, "Christopher Nolan")
+    [{'title': 'Inception', 'director': 'Christopher Nolan', 'release_year': 2010}]
+    >>> get_movies_by_director(movie_catalog, "Quentin Tarantino")
+    []
+    """
+    return ⟦c1⟧.get(⟦c2⟧, ⟦c3⟧)
+`),
+        lineNumbers: true,
+      },
+      'c88-fa23f-6': {
+        exam: 'c88-fa23f', number: '6', title: 'Composing Trees with Trees', points: 10,
+        intro: 'In this question, you will manipulate a `Tree` which contains a function, in addition to the value for each node. A compound function, h(x), is the composition of two functions, f(x) and g(x). Suppose f(x) = x + 2 and g(x) = 3 * x. Thus the compound function h(x) = f(g(x)) is (3 * x) + 2.\n\nWe have added an instance attribute to the `Tree` class, `fn`, which is a function that takes in one integer and returns an integer:\n\n```\nclass Tree:\n    def __init__(self, value, fn, branches=()):\n        self.value = value\n        self.fn = fn # NEW!\n        for branch in branches:\n            assert isinstance(branch, Tree)\n        self.branches = list(branches)\n    def is_leaf(self):\n        return not self.branches\n```\n\nComplete `compound`, which composes the function at every intermediate node with its parent node’s function, and applies the compound function to the `value` of each leaf node, modifying each leaf in place. Every leaf node’s function is `lambda x: x`. You may modify `tree.fn` and `tree.value` for any node. Only the `value` of the leaf nodes will be checked.\n\nFor example, if one path from the root to a leaf is (lambda x: 3 * x) -> (lambda x: x + 2) -> 4, the compound function is (lambda x: 3*x + 2), which is applied to the leaf value 4, giving 14. The picture shows the steps for a whole tree.\n\n**Hint:** The child’s function is the outer function (`f`), and the parent function is the inner function (`g`) of the composition.',
+        illustration: { src: 'assets/c88-fa23-final-q6.png', width: 344, height: 542, alt: 'From the exam: steps 1 to 3 for a tree whose root has g(x) = 3*x, with children w(x) = x**2 (leaves 1 and 4) and f(x) = x + 2 (leaves 0 and 4). Step 2 composes the children with the root: w(g(x)) = (3*x)**2 and f(g(x)) = 3*x + 2. Step 3 applies them to the leaves: 9, 144, 2 and 14.' },
+        code: code(`
+def compound(tree):
+    if ⟦a⟧:
+        tree.value = ⟦b⟧
+    else:
+        g = tree.fn
+        for branch in ⟦c⟧:
+            f = ⟦d⟧
+            h = lambda x: ⟦e⟧
+            branch.fn = h
+            compound(branch)
+`),
+        lineNumbers: true,
+      },
+      'c88-fa23f-7': {
+        exam: 'c88-fa23f', number: '7', title: 'Shopping List 2', points: 8,
+        intro: 'You have a shopping list that is a dictionary of the format `{"itemname 1": totalprice 1, "itemname 2": totalprice 2, ...}`, where each item name is a string and each total price is an int. Define a function that takes in such a dictionary and returns a linked list. The value of each node should be a 2-node linked list where the first node stores the item’s name and the second node stores its total price (see the diagram).',
+        illustration: { src: 'assets/c88-fa23-final-q7.png', width: 326, height: 195, alt: 'From the exam: a linked list of three nodes. Each node’s first points down to a two-node list: "Itemname" then totalprice.' },
+        code: code(`
+def lnk_aggregate(d):
+    """
+    >>> shopping_dict = {"apple": 45, "banana": 28, "milk": 3, "carrots": 15}
+    >>> res = lnk_aggregate(shopping_dict)
+    >>> res
+    Link(Link('apple', Link(45)), Link(Link('banana', Link(28)), Link(Link('milk', Link(3)), Link(Link('carrots', Link(15))))))
+    """
+    agg_lnk = None
+    curr_lnk = None
+    for item_name, total_price in d.items():
+        node_lnk = ⟦a⟧
+        if agg_lnk == None:
+            agg_lnk = ⟦b⟧
+            curr_lnk = ⟦c⟧
+        else:
+            ⟦d⟧
+            ⟦e⟧
+    return agg_lnk
+`),
+        lineNumbers: true,
+      },
+      'c88-fa23f-8': {
+        exam: 'c88-fa23f', number: '8', title: 'Mario Kart', points: 14,
+        intro: 'Mario Kart is a popular racing video game. Let’s implement some classes to make the game work.\n\n**(a)–(b)** Over the course of a race, vehicles can pick up items and throw them to slow down their opponents. When a driver picks up an item, the `weight` of their vehicle increases by `item_weight` and the `item_name` gets added to the vehicle’s list of `items`.\n\n**(c)–(e)** `use_item` takes in a list of `Vehicle` objects. The order of the list represents the positions of each vehicle in the race: the vehicle at index 0 is **behind** the vehicle at index 1. When `use_item` is called, the item at the end of the vehicle’s `items` list is removed, and the vehicle in front of it has its speed reduced by 1. You may assume the vehicle that calls `use_item` is in the list, has at least 1 item, and has another vehicle in front of it, and that speeds stay positive.\n\n**(f)** `Bike` is identical to `Vehicle` except it overrides `pick_up_item`: when a `Bike` picks up an item, its `acceleration` is decreased by half the weight of the item. Its `weight` and `items` change just like in the original `pick_up_item`.',
+        code: code(`
+class Vehicle:
+    def __init__(self, speed, acceleration, weight):
+        self.speed = speed
+        self.acceleration = acceleration
+        self.weight = weight
+        self.items = []
+
+    def pick_up_item(self, item_name, item_weight):
+        """
+        >>> v = Vehicle(10, 10, 15)
+        >>> v.pick_up_item('red shell', 1)
+        >>> v.weight
+        16
+        >>> v.items
+        ['red shell']
+        >>> v.pick_up_item('banana', 2)
+        >>> v.weight
+        18
+        >>> v.items
+        ['red shell', 'banana']
+        """
+        ⟦a⟧
+        ⟦b⟧
+
+    def use_item(self, vehicles):
+        """
+        >>> second_place = Vehicle(5, 5, 5)
+        >>> first_place = Vehicle(10, 10, 10)
+        >>> vehicles = [second_place, first_place]
+        >>> second_place.pick_up_item('green shell', 1)
+        >>> second_place.items
+        ['green shell']
+        >>> second_place.use_item(vehicles)
+        >>> second_place.items
+        []
+        >>> first_place.speed
+        9
+        """
+        self.items.pop()
+        for i in range(len(vehicles)):
+            if ⟦c⟧:
+                curr_location = i
+                break
+        next_location = curr_location + 1
+        if next_location < len(vehicles):
+            next_vehicle = ⟦d⟧
+            ⟦e⟧
+
+class Bike(Vehicle):
+    def pick_up_item(self, item_name, item_weight):
+        """
+        >>> b = Bike(10, 10, 10)
+        >>> b.pick_up_item('blue shell', 4)
+        >>> b.weight
+        14
+        >>> b.items
+        ['blue shell']
+        >>> b.acceleration
+        8.0
+        """
+        ⟦f1⟧
+        ⟦f2⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa23f-9': {
+        exam: 'c88-fa23f', number: '9', title: 'Generate Factors', points: 10,
+        intro: 'Implement the generator function `generate_factors`. The input `k` is a positive integer. It continuously yields the next factor of `k` from smallest to largest. If all of the factors are used, then the generator will yield again from the first (smallest) factor. A factor of a number divides the given number evenly.',
+        code: code(`
+def generate_factors(k):
+    """
+    >>> gen = generate_factors(4)
+    >>> next(gen)
+    1
+    >>> next(gen)
+    2
+    >>> next(gen)
+    4
+    >>> next(gen)
+    1
+    >>> next(gen)
+    2
+    >>> next(gen)
+    4
+    >>> next(gen)
+    1
+    """
+    i = ⟦a⟧
+    ⟦b⟧:
+        if i ⟦c⟧ k:
+            i = ⟦d⟧
+        elif ⟦e⟧ % ⟦f⟧ == ⟦g⟧:
+            ⟦h⟧
+        i += ⟦i⟧
+`),
+        lineNumbers: true,
+      },
+      'c88-fa23f-10': {
+        exam: 'c88-fa23f', number: '10', title: 'May I take your order?', points: 4,
+        intro: 'Consider the following functions. Each one accomplishes the same task (`sum_nums_X(10)` is 55 for all three).',
+        code: code(`
+def sum_nums_A(n):
+    result = 0
+    for i in range(n):
+        for j in range(0, i + 1):
+            result = result + 1
+    return result
+
+def sum_nums_B(n):
+    return (n ** 2 + n ) // 2
+
+def sum_nums_C(n):
+    if n < 2:
+        return n
+    return n + sum_nums_C(n - 1)
+`),
+      },
+      'c88-fa23f-11a': {
+        exam: 'c88-fa23f', number: '11(a)', title: 'NBA Networking — numbers over 23', points: 4, lang: 'sql',
+        intro: C88_FA23_SQL_INTRO + '\n\nWrite a query that selects the `name`s of staff members whose favorite number is greater than 23 grouped by their food order in alphabetical order (ascending). Expected output:\n\n```\n| name     |\n|----------|\n| Michelle |\n| Rebecca  |\n| Jessica  |\n| Angela   |\n| Christy  |\n```',
+        sqlSetup: C88_FA23_NBA_SETUP,
+        code: code(`
+SELECT ⟦a⟧
+FROM ⟦b⟧
+WHERE ⟦c⟧
+GROUP BY ⟦d⟧
+ORDER BY ⟦e⟧;
+`),
+      },
+      'c88-fa23f-11b': {
+        exam: 'c88-fa23f', number: '11(b)', title: 'NBA Networking — same food order', points: 3, lang: 'sql',
+        intro: C88_FA23_SQL_INTRO + '\n\nWrite a query that outputs the staff member’s `name` and their favorite player’s name `fav_player` where they have the same food order. The rows should be ordered by the staff members’ names in alphabetical order (ascending). Expected output:\n\n```\n| name     | fav_player    |\n|----------|---------------|\n| Ananyaa  | Kawhi Leonard |\n| Christy  | Stephen Curry |\n| Lily     | Lebron James  |\n| Michelle | Luka Doncic   |\n```',
+        sqlSetup: C88_FA23_NBA_SETUP,
+        code: code(`
+SELECT ⟦a⟧
+FROM ⟦b⟧
+⟦c⟧
+ORDER BY ⟦d⟧;
+`),
+      },
+      'c88-fa23f-11c': {
+        exam: 'c88-fa23f', number: '11(c)', title: 'NBA Networking — apple juice', points: 3, lang: 'sql',
+        intro: C88_FA23_SQL_INTRO + '\n\nWrite a query that outputs the `name` and `food_order` of all staff members whose favorite player prefers apple juice. Expected output:\n\n```\n| name    | food_order |\n|---------|------------|\n| Rebecca | rice       |\n| Miha    | chicken    |\n| Christy | soup       |\n| Ramya   | tofu       |\n| Ananyaa | tofu       |\n```',
+        sqlSetup: C88_FA23_NBA_SETUP,
+        code: code(`
+SELECT ⟦a⟧
+FROM ⟦b⟧
+WHERE ⟦c⟧;
+`),
+      },
+      'c88-fa23f-11d': {
+        exam: 'c88-fa23f', number: '11(d)', title: 'NBA Networking — popular teams', points: 4, lang: 'sql',
+        intro: C88_FA23_SQL_INTRO + '\n\nWe want to find out what teams are most popular among C88C staff. Write a query that outputs the `team` and the total number of staff members as `total_staff` whose favorite player is on each team. The rows should be ordered by `total_staff` numerically descending. Expected output:\n\n```\n| team      | total_staff |\n|-----------|-------------|\n| Clippers  | 3           |\n| Lakers    | 2           |\n| Mavericks | 2           |\n| Warriors  | 2           |\n| Suns      | 1           |\n```',
+        sqlSetup: C88_FA23_NBA_SETUP,
+        code: code(`
+SELECT ⟦a⟧
+FROM ⟦b⟧
+WHERE ⟦c⟧
+GROUP BY ⟦d⟧
+ORDER BY ⟦e⟧;
+`),
+      },
+    },
+    questions: [
+      { id: 'c88-fa23f-1a', problem: 'c88-fa23f-1a', label: '(a)', points: 2, topics: ['hof'], difficulty: 'easy', type: 'short_answer', prompt: '`>>> tricky(f, 5)`' },
+      { id: 'c88-fa23f-1b', problem: 'c88-fa23f-1a', label: '(b)', points: 2, topics: ['hof'], difficulty: 'medium', type: 'short_answer', prompt: '`>>> tricky(f, 5)(3)`' },
+      { id: 'c88-fa23f-1c', problem: 'c88-fa23f-1a', label: '(c)', points: 2, topics: ['hof', 'env'], difficulty: 'hard', type: 'short_answer', prompt: '`>>> tricky(f, 5)(3, 20)`' },
+      { id: 'c88-fa23f-1d', problem: 'c88-fa23f-1d', label: '(d)', points: 1, topics: ['env'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What does `outer_function()` print?', choices: ['Inner: 5, Outer: 10', 'Inner: 10, Outer: 5', 'Inner: 10, Outer: 10', 'The code will result in an error.'] },
+      { id: 'c88-fa23f-1e', problem: 'c88-fa23f-1e', label: '(e)', points: 1, topics: ['hof', 'iterators'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'Which snippet works?', choices: ['filter(lambda x: x < 0, numbers)', 'filter(lambda x: x > 0, numbers)', 'list(filter(lambda x: x < 0, numbers))', 'list(filter(lambda x: x >= 0, numbers))'] },
+      { id: 'c88-fa23f-1f', problem: 'c88-fa23f-1f', label: '(f)', points: 1, topics: ['fundamentals'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What happens?', choices: ['It will print "two"', 'It will print 4', 'It will print "hello"', 'It will display a TypeError'] },
+      { id: 'c88-fa23f-1g', problem: 'c88-fa23f-1g', label: '(g)', points: 1, topics: ['hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is displayed?', choices: ['[False, True, False, True]', '["Odd", "Even", "Odd", "Even"]', '[1, 2, 3, 4]', '[None, None, None, None]'] },
+
+      { id: 'c88-fa23f-2a', problem: 'c88-fa23f-2', label: '(a)', points: 2, topics: ['env', 'hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the value of box (a)?', choices: ['func add_location(new_location) [parent=f1]', 'func add_location(new_location) [parent=Global]', 'func explore(places) [parent=f1]', 'func explore(places) [parent=Global]', '["moffitt", "mlk"]', '["soda", "moffitt", "mlk"]'] },
+      { id: 'c88-fa23f-2b', problem: 'c88-fa23f-2', label: '(b)', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'short_answer', prompt: 'What is the second element in the list `loc`, item (b)?' },
+      { id: 'c88-fa23f-2c', problem: 'c88-fa23f-2', label: '(c)', points: 2, topics: ['env', 'hof'], difficulty: 'easy',
+        type: 'single_choice', mono: true, prompt: 'What is the parent of the `lambda` function in frame 3, item (c)?', choices: ['Global', 'f1', 'f2', 'f3'] },
+      { id: 'c88-fa23f-2d', problem: 'c88-fa23f-2', label: '(d)', points: 2, topics: ['env', 'lists'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the return value of the lambda function in f3, item (d)?', choices: ['An arrow pointing to the list loc', '["soda", ["moffitt", "mlk"] ]', '["soda", "moffitt", "mlk"]', '["soda"]', 'None'] },
+      { id: 'c88-fa23f-2e', problem: 'c88-fa23f-2', label: '(e)', points: 2, topics: ['env'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What is the value of `result` and the Return Value of `add_location` in f2, item (e)?', choices: ['None', 'Error', 'An arrow pointing to the box (a)', 'An arrow pointing to the list loc', '"soda"'] },
+
+      { id: 'c88-fa23f-3a', problem: 'c88-fa23f-3a', label: '(a)', points: 2, topics: ['lists', 'fundamentals'], difficulty: 'medium',
+        type: 'single_choice', prompt: 'Select the option which describes the result of this code.', choices: ['The code errors and will return a key error', 'The code errors and will return a syntax error', 'The code is incorrect and will return a list of valid contacts', 'The code is correct and will return a list of compromised contacts'] },
+      { id: 'c88-fa23f-3b', problem: 'c88-fa23f-3b', label: '(b)', points: 2, topics: ['fundamentals'], difficulty: 'hard',
+        type: 'single_choice', prompt: 'How will this code behave?', choices: ['The code block runs as expected, no changes needed.', 'The code block errors and does not run.', 'The code block runs but does not run as expected.'] },
+
+      { id: 'c88-fa23f-4a', problem: 'c88-fa23f-4', label: '(a)', points: 1, topics: ['fundamentals'], difficulty: 'easy', blank: 'a', type: 'short_answer', prompt: 'Fill in the `return` of `avg`.' },
+      { id: 'c88-fa23f-4b1', problem: 'c88-fa23f-4', label: '(b) i.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'b1', type: 'short_answer', prompt: 'Fill in the first argument of `filter`.' },
+      { id: 'c88-fa23f-4b2', problem: 'c88-fa23f-4', label: '(b) ii.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'b2', type: 'short_answer', prompt: 'Fill in the second argument of `filter`.' },
+      { id: 'c88-fa23f-4c1', problem: 'c88-fa23f-4', label: '(c) i.', points: 1, topics: ['hof'], difficulty: 'medium', blank: 'c1', type: 'short_answer', prompt: 'Fill in the first argument of `map`.' },
+      { id: 'c88-fa23f-4c2', problem: 'c88-fa23f-4', label: '(c) ii.', points: 1, topics: ['hof'], difficulty: 'easy', blank: 'c2', type: 'short_answer', prompt: 'Fill in the second argument of `map`.' },
+      { id: 'c88-fa23f-4d', problem: 'c88-fa23f-4', label: '(d)', points: 1, topics: ['fundamentals'], difficulty: 'easy', blank: 'd', type: 'short_answer', prompt: 'Fill in `variance`.' },
+
+      { id: 'c88-fa23f-5a', problem: 'c88-fa23f-5', label: '(a)', points: 2, topics: ['fundamentals'], difficulty: 'easy', blank: 'a', type: 'short_answer', prompt: 'Fill in the `return` of `create_movie`.' },
+      ...['b1', 'b2', 'b3', 'b4', 'b5'].map((b, i) => ({ id: 'c88-fa23f-5' + b, problem: 'c88-fa23f-5', label: '(b) ' + ['i.', 'ii.', 'iii.', 'iv.', 'v.'][i], points: 1,
+        topics: ['fundamentals', 'lists'], difficulty: 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank ' + ['i', 'ii', 'iii', 'iv', 'v'][i] + ' of `add_movie_to_catalog`.' })),
+      ...['c1', 'c2', 'c3'].map((b, i) => ({ id: 'c88-fa23f-5' + b, problem: 'c88-fa23f-5', label: '(c) ' + ['i.', 'ii.', 'iii.'][i], points: 1,
+        topics: ['fundamentals'], difficulty: i === 2 ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank ' + ['i', 'ii', 'iii'][i] + ' of `get_movies_by_director`.' })),
+
+      ...['a', 'b', 'c', 'd', 'e'].map((b) => ({ id: 'c88-fa23f-6' + b, problem: 'c88-fa23f-6', label: '(' + b + ')', points: 2,
+        topics: b === 'e' ? ['hof', 'trees'] : ['trees', 'recursion'], difficulty: b === 'e' || b === 'b' ? 'hard' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank (' + b + ').' })),
+      ...['a', 'b', 'c', 'd', 'e'].map((b) => ({ id: 'c88-fa23f-7' + b, problem: 'c88-fa23f-7', label: '(' + b + ')', points: null,
+        topics: ['links'], difficulty: b === 'a' || b === 'd' ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in line (' + b + ').' })),
+      { id: 'c88-fa23f-8a', problem: 'c88-fa23f-8', label: '(a)', points: 2, topics: ['oop'], difficulty: 'easy', blank: 'a',
+        type: 'single_choice', mono: true, prompt: 'What should go in blank (a)?', choices: ['self.items.append(item_weight)', 'self.items.append(self.weight)', 'self.speed += item_weight', 'self.acceleration += item_weight', 'self.weight += item_weight'] },
+      { id: 'c88-fa23f-8b', problem: 'c88-fa23f-8', label: '(b)', points: 2, topics: ['oop', 'lists'], difficulty: 'easy', blank: 'b',
+        type: 'single_choice', mono: true, prompt: 'What should go in blank (b)?', choices: ['self.items.append(item_name)', 'self.items.append(item_weight)', 'self.items += item_name', 'self.weight += item_name', 'self.items += [item_weight]'] },
+      { id: 'c88-fa23f-8c', problem: 'c88-fa23f-8', label: '(c)', points: 2, topics: ['oop', 'lists'], difficulty: 'medium', blank: 'c', type: 'short_answer', prompt: 'What should fill in blank (c)?' },
+      { id: 'c88-fa23f-8d', problem: 'c88-fa23f-8', label: '(d)', points: 2, topics: ['oop', 'lists'], difficulty: 'easy', blank: 'd', type: 'short_answer', prompt: 'What should fill in blank (d)?' },
+      { id: 'c88-fa23f-8e', problem: 'c88-fa23f-8', label: '(e)', points: 2, topics: ['oop'], difficulty: 'easy', blank: 'e', type: 'short_answer', prompt: 'What should fill in blank (e)?' },
+      { id: 'c88-fa23f-8f1', problem: 'c88-fa23f-8', label: '(f) i.', points: 2, topics: ['oop'], difficulty: 'medium', blank: 'f1', type: 'short_answer', prompt: 'First line of `Bike.pick_up_item`: change the acceleration.' },
+      { id: 'c88-fa23f-8f2', problem: 'c88-fa23f-8', label: '(f) ii.', points: 2, topics: ['oop'], difficulty: 'medium', blank: 'f2', type: 'short_answer', prompt: 'Second line of `Bike.pick_up_item`: pick up the item like any vehicle.' },
+
+      ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'].map((b) => ({ id: 'c88-fa23f-9' + b, problem: 'c88-fa23f-9', label: '(a) ' + b, points: null,
+        topics: ['generators'], difficulty: b === 'd' || b === 'b' ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in blank ' + b + '.' })),
+      { id: 'c88-fa23f-9j', problem: 'c88-fa23f-9', label: '(b)', points: 2, topics: ['generators'], difficulty: 'medium',
+        type: 'single_choice', mono: true, prompt: 'What would the output be if we called `list(generate_factors(10))`? (Note: `list`, not `next`.)', choices: ['RecursionError: maximum recursion depth exceeded error.', 'StopIteration error.', '[1, 2, 5, 10]', '[1, 2, 5, 10, 1, 2, ...]', 'An infinite loop'] },
+
+      { id: 'c88-fa23f-10a', problem: 'c88-fa23f-10', label: '(a)', points: 1, topics: ['efficiency'], difficulty: 'easy', type: 'single_choice', mono: true, prompt: 'What is the order of growth of `sum_nums_A`?', choices: C88_FA23_GROWTH },
+      { id: 'c88-fa23f-10b', problem: 'c88-fa23f-10', label: '(b)', points: 1, topics: ['efficiency'], difficulty: 'easy', type: 'single_choice', prompt: '`sum_nums_A` will perform faster than `sum_nums_B` for large inputs.', choices: ['True', 'False'] },
+      { id: 'c88-fa23f-10c', problem: 'c88-fa23f-10', label: '(c)', points: 1, topics: ['efficiency'], difficulty: 'easy', type: 'single_choice', prompt: '`sum_nums_B` will perform faster than `sum_nums_C` for large inputs.', choices: ['True', 'False'] },
+      { id: 'c88-fa23f-10d', problem: 'c88-fa23f-10', label: '(d)', points: 1, topics: ['efficiency'], difficulty: 'easy', type: 'single_choice', prompt: '`sum_nums_C` will perform faster than `sum_nums_A` for large inputs.', choices: ['True', 'False'] },
+
+      ...['a', 'b', 'c', 'd', 'e'].map((b, i) => ({ id: 'c88-fa23f-11a' + b, problem: 'c88-fa23f-11a', label: '(a) ' + ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY'][i], points: null,
+        topics: ['sql-agg'], difficulty: 'easy', blank: b, type: 'short_answer', prompt: 'Fill in the ' + ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY'][i] + ' line.' })),
+      ...['a', 'b', 'c', 'd'].map((b, i) => ({ id: 'c88-fa23f-11b' + b, problem: 'c88-fa23f-11b', label: '(b) ' + ['SELECT', 'FROM', 'join', 'ORDER BY'][i], points: null,
+        topics: ['sql-joins'], difficulty: i === 2 ? 'hard' : 'easy', blank: b, type: 'short_answer', prompt: i === 2 ? 'Fill in the third line (the join).' : 'Fill in the ' + ['SELECT', 'FROM', '', 'ORDER BY'][i] + ' line.' })),
+      ...['a', 'b', 'c'].map((b, i) => ({ id: 'c88-fa23f-11c' + b, problem: 'c88-fa23f-11c', label: '(c) ' + ['SELECT', 'FROM', 'WHERE'][i], points: null,
+        topics: ['sql-joins'], difficulty: i === 2 ? 'medium' : 'easy', blank: b, type: 'short_answer', prompt: 'Fill in the ' + ['SELECT', 'FROM', 'WHERE'][i] + ' line.' })),
+      ...['a', 'b', 'c', 'd', 'e'].map((b, i) => ({ id: 'c88-fa23f-11d' + b, problem: 'c88-fa23f-11d', label: '(d) ' + ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY'][i], points: null,
+        topics: ['sql-joins', 'sql-agg'], difficulty: 'medium', blank: b, type: 'short_answer', prompt: 'Fill in the ' + ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY'][i] + ' line.' })),
+    ],
+    answers: {
+      'c88-fa23f-1a': { accepted: ['Function'], explanation: '`tricky` returns a lambda.' },
+      'c88-fa23f-1b': { accepted: ['Error'], explanation: 'The returned lambda needs two arguments.' },
+      'c88-fa23f-1c': { accepted: ['17'], explanation: '`n` became 10, so `f(3, 10) + 20` is `10 - 13 + 20`. The `y = 15` inside `tricky` is not used: the lambda’s own `y` is 20.' },
+      'c88-fa23f-1d': { correct: 1, explanation: '`a = 10` inside `inner_function` makes a new local `a`; the outer `a` stays 5.' },
+      'c88-fa23f-1e': { correct: 3 },
+      'c88-fa23f-1f': { correct: 2, explanation: '`"two" ** 2` raises a `TypeError`, which is caught.' },
+      'c88-fa23f-1g': { correct: 1, explanation: '`map` calls `check_even` on each number. (The exam printed this option without quotes; the official errata adds them.)' },
+      'c88-fa23f-2a': { correct: 0, explanation: '`bob` and f1’s return value are the inner function, defined in f1.' },
+      'c88-fa23f-2b': { accepted: ['["moffitt", "mlk"]'], explanation: 'The whole list is appended as one element.' },
+      'c88-fa23f-2c': { correct: 2, explanation: 'The lambda is created when `add_location` runs (f2).' },
+      'c88-fa23f-2d': { correct: 4, explanation: '`append` returns `None`.' },
+      'c88-fa23f-2e': { correct: 0 },
+      'c88-fa23f-3a': { correct: 0, explanation: 'Each `item` is a dictionary; `item[0]` looks up the key 0, which doesn’t exist.' },
+      'c88-fa23f-3b': { correct: 1, explanation: 'Python does not allow changing the size of a dictionary while looping over it: `pop` raises `RuntimeError: dictionary changed size during iteration`. (The original key said the code runs; the official errata corrects it. `d[:2]` would also give 2-letter nicknames.)' },
+      'c88-fa23f-4a': { accepted: ['sum(lst) / len(lst)'] },
+      'c88-fa23f-4b1': { accepted: ['lambda x: x >= 20'] },
+      'c88-fa23f-4b2': { accepted: ['mpgs'] },
+      'c88-fa23f-4c1': { accepted: ['lambda x: (x - mean) ** 2', 'lambda x: (x - mean) * (x - mean)'] },
+      'c88-fa23f-4c2': { accepted: ['mpgs'] },
+      'c88-fa23f-4d': { accepted: ['avg(squared_difference)', 'sum(squared_difference) / len(squared_difference)'] },
+      'c88-fa23f-5a': { accepted: ['{"title": title, "director": director, "release_year": year}'] },
+      'c88-fa23f-5b1': { accepted: ['"director"'] },
+      'c88-fa23f-5b2': { accepted: ['director'] },
+      'c88-fa23f-5b3': { accepted: ['movie_catalog'] },
+      'c88-fa23f-5b4': { accepted: ['director'] },
+      'c88-fa23f-5b5': { accepted: ['movie'] },
+      'c88-fa23f-5c1': { accepted: ['movie_catalog'] },
+      'c88-fa23f-5c2': { accepted: ['director'] },
+      'c88-fa23f-5c3': { accepted: ['[]'], explanation: 'A director with no movies gives an empty list.' },
+      'c88-fa23f-6a': { accepted: ['tree.is_leaf()'] },
+      'c88-fa23f-6b': { accepted: ['tree.fn(tree.value)'], explanation: 'By the time a leaf is reached, its `fn` is the whole composed function from the root.' },
+      'c88-fa23f-6c': { accepted: ['tree.branches'] },
+      'c88-fa23f-6d': { accepted: ['branch.fn'] },
+      'c88-fa23f-6e': { accepted: ['f(g(x))'], explanation: 'The parent’s function runs first (inner), then the child’s (outer).' },
+      'c88-fa23f-7a': { accepted: ['Link(Link(item_name, Link(total_price)))'], explanation: 'A one-node piece of the main list whose value is the 2-node list (name, price).' },
+      'c88-fa23f-7b': { accepted: ['node_lnk'] },
+      'c88-fa23f-7c': { accepted: ['agg_lnk', 'node_lnk'] },
+      'c88-fa23f-7d': { accepted: ['curr_lnk.rest = node_lnk'], explanation: 'Attach the new node at the end…' },
+      'c88-fa23f-7e': { accepted: ['curr_lnk = curr_lnk.rest', 'curr_lnk = node_lnk'], explanation: '…and move to it.' },
+      'c88-fa23f-8a': { correct: 4 },
+      'c88-fa23f-8b': { correct: 0 },
+      'c88-fa23f-8c': { accepted: ['vehicles[i] == self', 'vehicles[i] is self'], explanation: 'Find this vehicle’s position.' },
+      'c88-fa23f-8d': { accepted: ['vehicles[next_location]', 'vehicles[curr_location + 1]'] },
+      'c88-fa23f-8e': { accepted: ['next_vehicle.speed -= 1', 'next_vehicle.speed = next_vehicle.speed - 1'] },
+      'c88-fa23f-8f1': { accepted: ['self.acceleration -= item_weight / 2', 'self.acceleration = self.acceleration - item_weight / 2'], explanation: 'The rubric gives credit for changing the acceleration and for picking up the item; the order of the two lines doesn’t matter.' },
+      'c88-fa23f-8f2': { accepted: ['super().pick_up_item(item_name, item_weight)', 'Vehicle.pick_up_item(self, item_name, item_weight)'], explanation: 'Reuse `Vehicle`’s method for `weight` and `items`.' },
+      'c88-fa23f-9a': { accepted: ['1'], explanation: 'Start at 1 (0 would divide by zero).' },
+      'c88-fa23f-9b': { accepted: ['while True'], explanation: 'The generator never stops.' },
+      'c88-fa23f-9c': { accepted: ['>'] },
+      'c88-fa23f-9d': { accepted: ['0'], explanation: 'Reset to 0; the `i += 1` at the end of the loop makes it 1 again.' },
+      'c88-fa23f-9e': { accepted: ['k'] },
+      'c88-fa23f-9f': { accepted: ['i'] },
+      'c88-fa23f-9g': { accepted: ['0'] },
+      'c88-fa23f-9h': { accepted: ['yield i'] },
+      'c88-fa23f-9i': { accepted: ['1'] },
+      'c88-fa23f-9j': { correct: 4, explanation: 'The generator never ends, so `list` never finishes.' },
+      'c88-fa23f-10a': { correct: 3 },
+      'c88-fa23f-10b': { correct: 1, explanation: 'B is constant time.' },
+      'c88-fa23f-10c': { correct: 0 },
+      'c88-fa23f-10d': { correct: 0, explanation: 'C is linear; A is quadratic.' },
+      'c88-fa23f-11aa': { accepted: ['name'] },
+      'c88-fa23f-11ab': { accepted: ['staff'] },
+      'c88-fa23f-11ac': { accepted: ['number > 23'] },
+      'c88-fa23f-11ad': { accepted: ['food_order'], explanation: 'The official answer. As the official errata notes, `name` is neither grouped nor aggregated: many SQL systems reject this query, and SQLite returns one row per food order (3 rows), not the 5 names printed in the exam. Leaving out `GROUP BY` gives the printed output.' },
+      'c88-fa23f-11ae': { accepted: ['food_order ASC', 'food_order'] },
+      'c88-fa23f-11ba': { accepted: ['staff.name, staff.fav_player'] },
+      'c88-fa23f-11bb': { accepted: ['staff'] },
+      'c88-fa23f-11bc': { accepted: ['JOIN players ON staff.food_order = players.food_order AND staff.fav_player = players.name', 'JOIN players ON staff.fav_player = players.name AND staff.food_order = players.food_order'], explanation: 'Match each staff member with their favorite player, and keep the rows where the food orders agree. (The original key left out `staff.fav_player = players.name`; the official errata adds it.)' },
+      'c88-fa23f-11bd': { accepted: ['staff.name ASC', 'staff.name'] },
+      'c88-fa23f-11ca': { accepted: ['s.name, s.food_order'], explanation: 'Both tables have `name` and `food_order`, so the columns need a table name or alias.' },
+      'c88-fa23f-11cb': { accepted: ['staff AS s, players AS p', 'staff s, players p'] },
+      'c88-fa23f-11cc': { accepted: ["s.fav_player = p.name AND p.juice = 'apple'", "p.juice = 'apple' AND s.fav_player = p.name"] },
+      'c88-fa23f-11da': { accepted: ['team, COUNT(*) AS total_staff'] },
+      'c88-fa23f-11db': { accepted: ['staff, players'] },
+      'c88-fa23f-11dc': { accepted: ['staff.fav_player = players.name', 'players.name = staff.fav_player'] },
+      'c88-fa23f-11dd': { accepted: ['team'] },
+      'c88-fa23f-11de': { accepted: ['total_staff DESC'] },
+    },
+  });
 })();
