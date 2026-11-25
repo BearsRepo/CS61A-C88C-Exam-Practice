@@ -27,6 +27,8 @@ const CORE = sqlCore();
 // SQL questions without Run Code tests, and why.
 const NO_TESTS = {
   'fa22f-12': 'The official answer for (a) fails in SQLite as printed: its WHERE Type != "None" belongs to the second SELECT, where there is no column Type.',
+  // Data C88C Fall 2023 Final: the official answer doesn't produce the exam's own expected output in SQLite.
+  'c88-fa23f-11a': 'The official GROUP BY food_order returns one row per food order (3 rows); the exam prints 5 names.',
 };
 
 // Plausible wrong answers for written blanks (the suite must catch each one).
@@ -75,6 +77,111 @@ const WRONG = {
     { c: 'ON discussion_id = id GROUP BY id HAVING COUNT(*) > 20 LIMIT 1' },
     { c: 'ON discussion_id = id GROUP BY id ORDER BY COUNT(*) DESC LIMIT 1' },
     { c: 'ON discussion_id = id GROUP BY id' },
+  ],
+  // Data C88C Fall 2024 Final
+  'c88-fa24f-2a': [
+    { a: "SELECT brand FROM dumplings ORDER BY weight / count LIMIT 3" },
+    { a: "SELECT brand FROM dumplings ORDER BY count / weight DESC LIMIT 3" },
+    { a: "SELECT brand FROM dumplings ORDER BY weight DESC LIMIT 3" },
+    { a: "SELECT brand FROM dumplings ORDER BY weight / count DESC" },
+  ],
+  'c88-fa24f-2b': [
+    { a: "brand" },
+    { a: "b.storeB" },
+    { b: "b.storeA > b.storeB" },
+    { b: "a.brand = b.brand AND b.storeA < b.storeB" },
+    { b: "a.brand = b.brand AND b.storeA >= b.storeB" },
+    { c: "b.storeB / a.weight DESC" },
+    { c: "b.storeB" },
+    { c: "a.weight / b.storeB" },
+    { c: "b.storeA / a.weight" },
+  ],
+  // Data C88C Fall 2025 and Spring 2025 Finals
+  'c88-fa25f-9b': [
+    { a: "a.rent - s.budget" },
+    { b: "staff" },
+    { c: "s.location = a.name" },
+    { d: "s.in_state = a.single" },
+    { e: "s.budget - a.rent > 0" },
+    { e: "a.rent >= s.budget" },
+    { f: "apartment_name" },
+    { g: "a.rent" },
+  ],  'c88-fa25f-9c': [
+    { a: "SUM" },
+    { a: "MAX" },
+    { b: "budget_surplus" },
+    { b: "budget_surplus * 98" },
+    { b: "budget_surplus - 0.98" },
+  ],  'c88-sp25f-8a': [
+    { a: "first.pid, first.name, second.start, second.end" },
+    { b: "first_flight" },
+    { c: "first.pid = second_flight.pid" },
+    { c: "first.name = second.pid" },
+    { d: "first.start = second.end" },
+    { d: "first.end != second.start" },
+  ],  'c88-sp25f-8b': [
+    { a: "first.duration AS trip_length" },
+    { a: "second.duration AS trip_length" },
+    { b: "first_flight" },
+    { c: "first.pid = second.pid" },
+    { c: "first.start = \"San Francisco\"" },
+    { d: "trip_length ASC" },
+    { d: "trip_length" },
+  ],  'c88-sp25f-8c': [
+    { a: "NOT international" },
+    { a: "international = FALSE" },
+    { b: "international" },
+    { b: "pid" },
+    { c: "COUNT(*) > 2" },
+    { c: "COUNT(*) >= 1" },
+  ],
+  // Data C88C Spring 2024 Final
+  'c88-sp24f-10a': [
+    { a: "SELECT staff.name, msg_pref FROM staff, games WHERE games.company = 'Riot'" },
+    { a: "SELECT staff.name, msg_pref FROM staff, games WHERE staff.fav_game = games.name AND games.company = 'Nintendo'" },
+  ],  'c88-sp24f-10b': [
+    { a: "SELECT staff.name, snack_pref FROM staff, games WHERE fav_game = games.name AND max_players >= 10" },
+    { a: "SELECT staff.name, snack_pref FROM staff, games WHERE fav_game = games.name AND max_players > 10 ORDER BY staff.name ASC" },
+    { a: "SELECT staff.name, snack_pref FROM staff, games WHERE fav_game = games.name AND max_players >= 10 ORDER BY staff.name DESC" },
+  ],  'c88-sp24f-10c': [
+    { a: "SELECT genre, COUNT(*) AS total_staff FROM staff JOIN games ON staff.fav_game = games.name GROUP BY genre ORDER BY total_staff ASC, genre ASC" },
+    { a: "SELECT genre, COUNT(*) AS total_staff FROM staff JOIN games ON staff.fav_game = games.name GROUP BY genre ORDER BY total_staff DESC, genre DESC" },
+    { a: "SELECT genre, COUNT(*) AS total_staff FROM staff JOIN games ON staff.fav_game = games.name GROUP BY genre ORDER BY genre ASC" },
+  ],  'c88-sp24f-10d': [
+    { a: "SELECT fav_game, drink_pref, COUNT(*) as staff_count FROM staff GROUP BY fav_game, drink_pref HAVING COUNT(*) >= 1 ORDER BY staff_count DESC" },
+    { a: "SELECT fav_game, drink_pref, COUNT(*) as staff_count FROM staff GROUP BY fav_game HAVING COUNT(*) > 1 ORDER BY staff_count DESC" },
+    { a: "SELECT fav_game, drink_pref, COUNT(*) as staff_count FROM staff GROUP BY fav_game, drink_pref HAVING COUNT(*) > 1 ORDER BY staff_count ASC" },
+  ],
+  // Data C88C Spring 2023 Final
+  'c88-sp23f-13a': [
+    { a: "SELECT name, year FROM friends WHERE animal = \"Cat\"" },
+    { a: "SELECT name, age FROM friends WHERE animal = \"Frog\"" },
+  ],  'c88-sp23f-13b': [
+    { a: "SELECT animal, AVG(age) as avg_age FROM friends GROUP BY animal" },
+    { a: "SELECT animal, AVG(age) as avg_age FROM friends GROUP BY animal ORDER BY avg_age" },
+    { a: "SELECT animal, SUM(age) as avg_age FROM friends GROUP BY animal ORDER BY avg_age DESC" },
+  ],  'c88-sp23f-13c': [
+    { a: "SELECT a.sound, COUNT(*) FROM friends as f, animals as a WHERE f.animal = a.animal GROUP BY a.sound ORDER BY COUNT(*) DESC" },
+    { a: "SELECT a.sound, COUNT(*) FROM friends as f, animals as a WHERE f.animal = a.animal GROUP BY f.animal ORDER BY COUNT(*)" },
+    { a: "SELECT a.sound, COUNT(*) FROM friends as f, animals as a GROUP BY a.sound ORDER BY COUNT(*)" },
+  ],
+  // Data C88C Fall 2023 Final
+  'c88-fa23f-11c': [
+    { a: "s.name, p.food_order" },
+    { c: "s.fav_player = p.name" },
+    { c: "p.juice = 'apple'" },
+  ],  'c88-fa23f-11d': [
+    { a: "team, COUNT(*)" },
+    { c: "staff.food_order = players.food_order" },
+    { d: "staff.name" },
+    { e: "total_staff ASC" },
+  ],
+  // Data C88C Fall 2023 Final (Q11(b), corrected by the official errata)
+  'c88-fa23f-11b': [
+    { c: "JOIN players ON staff.food_order = players.food_order" },
+    { c: "JOIN players ON staff.fav_player = players.name" },
+    { d: "staff.name DESC" },
+    { d: "staff.fav_player" },
   ],
 };
 
